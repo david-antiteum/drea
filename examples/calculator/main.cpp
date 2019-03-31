@@ -8,6 +8,7 @@
 
 #include <numeric>
 #include <exception>
+#include <optional>
 
 int main( int argc, char * argv[] )
 {
@@ -29,14 +30,21 @@ int main( int argc, char * argv[] )
 
     app.commander().addDefaults().add(
         {
-            "sum", "sum all the arguments", { "round" }, { "equal" }
-        }
+            "sum", "sum all the arguments", {}, { "round", "equal" }
+		}
+	).add(
+        {
+            "power", "raise the first argument to the power of the second", {}, { "round", "equal" }
+        }		
     );
 
 	app.parse( argc, argv );
 
 	app.commander().run( [ &app ]( std::string cmd ){
 		app.logger()->debug( "Run called for command {}", cmd );
+
+		std::optional<double>		valueMaybe;
+
 		if( cmd == "sum"){
 			double sum = 0.0;
 
@@ -47,17 +55,34 @@ int main( int argc, char * argv[] )
 					app.logger()->error( "Argument {} is not a number: {}", arg, e.what() );
 				}
 			}
-			if( app.config().contains( "round" ) ){
-				sum = std::round( sum );
+			valueMaybe = sum;
+		}else if( cmd == "power" ){
+			if( app.commander().arguments().size() == 2 ){
+				try{
+					double 	base = std::stod( app.commander().arguments().at( 0 ) );
+					double 	exponent = std::stod( app.commander().arguments().at( 1 ) );
+
+					valueMaybe = std::pow( base, exponent );
+				}catch( std::exception & e ){
+					app.logger()->error( "Argument is not a number: {}", e.what() );
+				}
+			}else{
+				app.logger()->error( "Power needs two arguments" );
 			}
-			app.logger()->info( "SUM: {}", sum );
+		}
+		if( valueMaybe ){
+			double	value = valueMaybe.value();
+			if( app.config().contains( "round" ) ){
+				value = std::round( value );
+			}
+			app.logger()->info( "Result: {}", value );
 
 			if( app.config().contains( "equal" ) ){
 				try{
-					if( std::stod( app.config().value( "equal") ) == sum ){
-						app.logger()->info( "RES is EQUAL" );
+					if( std::stod( app.config().value( "equal") ) == value ){
+						app.logger()->info( "Result is equal" );
 					}else{
-						app.logger()->info( "RES is DIFFERENT" );
+						app.logger()->info( "Result is different" );
 					}
 				}catch( std::exception & e ){
 					app.logger()->error( "Argument {} is not a number: {}", app.config().value( "equal"), e.what() );
