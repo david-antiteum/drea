@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <optional>
 
 #include "Export.h"
 
@@ -10,10 +11,10 @@ namespace drea { namespace core {
 
 struct DREA_CORE_API Option
 {
-	std::string 				name;
-	std::string					paramName;
-	std::string					description;
-	std::vector<std::string>	values;
+	std::string 				mName;
+	std::string					mParamName;
+	std::string					mDescription;
+	std::vector<std::string>	mValues;
 };
 
 class DREA_CORE_API Config
@@ -26,6 +27,8 @@ public:
 
 	Config & addDefaults();
     Config & add( Option option );
+
+	std::optional<Option*> find( const std::string & flag ) const;
 
 	bool contains( const std::string & flag ) const;
 	std::string value( const std::string & flag ) const;

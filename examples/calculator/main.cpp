@@ -13,8 +13,8 @@ int main( int argc, char * argv[] )
 {
     drea::core::App     app;
 
-	app.setName( "basic" );
-    app.setDescription( "An app example." );
+	app.setName( "calculator" );
+    app.setDescription( "A basic calculator as an example for the Drea Framework.\n\nDrea is available at https://github.com/david-antiteum/drea." );
     app.setVersion( "0.0.1" );
     
 	app.config().addDefaults().add(
@@ -29,7 +29,7 @@ int main( int argc, char * argv[] )
 
     app.commander().addDefaults().add(
         {
-            "sum", "sum <args>"
+            "sum", "sum all the arguments", { "round" }, { "equal" }
         }
     );
 

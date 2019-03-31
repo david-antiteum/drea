@@ -4,6 +4,8 @@
 
 #include <vector>
 #include <algorithm>
+#include <optional>
+
 #include <spdlog/fmt/fmt.h>
 
 struct drea::core::Commander::Private
@@ -11,6 +13,18 @@ struct drea::core::Commander::Private
 	std::string						mCommand;
 	std::vector<std::string>		mArguments;
 	std::vector<Command>			mCommands;
+
+	std::optional<Command*> find( const std::string & cmdName ){
+		std::optional<Command*>	res;
+
+		for( Command & cmd: mCommands ){
+			if( cmd.mName == cmdName ){
+				res = &cmd;
+				break;
+			}
+		}
+		return res;
+	}
 };
 
 drea::core::Commander::Commander()
@@ -24,15 +38,7 @@ drea::core::Commander::~Commander()
 
 drea::core::Commander & drea::core::Commander::addDefaults()
 {
-	return add(
-		{
-			"version", "show app version and quits"
-		} 
-	).add(
-		{
-			"help", "show app help and quits"
-		}
-	);
+	return *this;
 }
 
 drea::core::Commander & drea::core::Commander::add( drea::core::Command cmd )
@@ -56,10 +62,14 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 
 void drea::core::Commander::run( std::function<void( std::string )> f )
 {
-	if( d->mCommand == "version" || App::instance().config().contains( "version" )){
+	if( App::instance().config().contains( "version" )){
 		App::instance().showVersion();
-	}else if( d->mCommand == "help" || App::instance().config().contains( "help" ) ){
-		App::instance().showHelp();
+	}else if( App::instance().config().contains( "help" ) ){
+		if( d->mCommand.empty() ){
+			App::instance().showHelp();
+		}else{
+			showHelp( d->mCommand );
+		}
 	}else if( !d->mCommand.empty() ){
 		f( d->mCommand );
 	}
@@ -70,20 +80,53 @@ std::vector<std::string> drea::core::Commander::arguments()
 	return d->mArguments;
 }
 
-void drea::core::Commander::showHelp()
+void drea::core::Commander::showHelp( const std::string & command )
 {
 	if( d->mCommands.empty() ){
 		fmt::print( "This app has no commands\n" );
 	}else{
-		fmt::print( "Commands:\n\n" );
+		if( command.empty() ){
+			fmt::print( "Available Commands:\n" );
 
-		int offset = 1;
-		for( const Command & command: d->mCommands ){
-			offset = std::max<int>( offset, command.name.size() + 2 );
-		}
-		for( const Command & command: d->mCommands ){
-			fmt::print( "- {:<{}}", command.name, offset );
-			fmt::print( "{}\n", command.description );
+			std::string::size_type offset = 1;
+			for( const Command & command: d->mCommands ){
+				offset = std::max<std::string::size_type>( offset, command.mName.size() + 2 );
+			}
+			for( const Command & command: d->mCommands ){
+				fmt::print( "  {:<{}}", command.mName, offset );
+				fmt::print( "{}\n", command.mDescription );
+			}
+		}else{
+			auto cmdMaybe = d->find( command );
+
+			if( cmdMaybe ){
+				auto cmd = cmdMaybe.value();
+				fmt::print( "{}\n\n", cmd->mDescription );
+
+				fmt::print( "Usage:\n");
+				fmt::print( "  {} {}\n", App::instance().name(), cmd->mName );
+
+				if( !cmd->mLocalParameters.empty() ){
+					fmt::print( "\nFlags:\n");
+					for( const std::string & arg: cmd->mLocalParameters ){
+						auto configMaybe = App::instance().config().find( arg );
+
+						if( configMaybe ){
+							fmt::print( "  --{} {}\n", configMaybe.value()->mName, configMaybe.value()->mDescription );
+						}
+					}
+				}
+				if( !cmd->mGlobalParameters.empty() ){
+					fmt::print( "\nGlobal Flags:\n");
+					for( const std::string & arg: cmd->mGlobalParameters ){
+						auto configMaybe = App::instance().config().find( arg );
+
+						if( configMaybe ){
+							fmt::print( "  --{} {}\n", configMaybe.value()->mName, configMaybe.value()->mDescription );
+						}
+					}
+				}				
+			}
 		}
 	}
 }

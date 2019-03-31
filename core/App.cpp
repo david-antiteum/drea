@@ -71,6 +71,21 @@ drea::core::App & drea::core::App::instance()
 	return *mInstanceApp;
 }
 
+const std::string & drea::core::App::name() const
+{
+	return d->mAppExeName;
+}
+
+const std::string & drea::core::App::description() const
+{
+	return d->mDescription;
+}
+
+const std::string & drea::core::App::version() const
+{
+	return d->mVersion;
+}
+
 void drea::core::App::setName( const std::string & value )
 {
 	d->mAppExeName = value;
@@ -109,11 +124,15 @@ void drea::core::App::showVersion()
 
 void drea::core::App::showHelp()
 {
-	int pos = std::string( "usage: " + d->mAppExeName + " " ).size();
+	std::string::size_type pos = std::string( "usage: " + d->mAppExeName + " " ).size();
+
+	fmt::print( "{}\n\n", description() );
 
 	std::cout << "usage: " << d->mAppExeName << " <command> [<args>]\n";
-	d->mConfig.showHelp( pos );
-	d->mCommander.showHelp();
-	
+	d->mConfig.showHelp( static_cast<int>( pos ) );
+	d->mCommander.showHelp( {} );
+
+	fmt::print( "\nUse \"{} [command] --help\" for more information about a command.\n", name() );
+
 	std::exit( 0 );
 }

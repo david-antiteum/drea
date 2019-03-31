@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.10 )
 
-project( basic )
+project( calculator )
 add_executable( ${PROJECT_NAME} main.cpp )
 set_target_properties( ${PROJECT_NAME}
     PROPERTIES

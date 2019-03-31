@@ -22,6 +22,10 @@ public:
 
 	static App & instance();
 
+	const std::string & name() const;
+	const std::string & description() const;
+	const std::string & version() const;
+
 	void setName( const std::string & value );
     void setDescription( const std::string & value );
     void setVersion( const std::string & value );

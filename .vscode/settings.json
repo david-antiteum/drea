@@ -71,5 +71,6 @@
 		"iomanip": "cpp"
 	},
 	"editor.insertSpaces": false,
-	"editor.detectIndentation": false
+	"editor.detectIndentation": false,
+	"C_Cpp.configurationWarnings": "Disabled"
 }

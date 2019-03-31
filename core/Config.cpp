@@ -17,7 +17,7 @@ struct drea::core::Config::Private
 		std::optional<Option*>	res;
 
 		for( Option & opt: mOptions ){
-			if( opt.name == flag ){
+			if( opt.mName == flag ){
 				res = &opt;
 				break;
 			}
@@ -62,6 +62,11 @@ drea::core::Config & drea::core::Config::add( drea::core::Option option )
 	return *this;
 }
 
+std::optional<drea::core::Option*> drea::core::Config::find( const std::string & flag ) const
+{
+	return d->find( flag );
+}
+
 std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] )
 {
 	std::vector<std::string>	others;
@@ -74,18 +79,18 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 			
 			if( auto option = d->find( arg ) ){
 				d->mFlags.push_back( arg );
-				if( !option.value()->paramName.empty() ){
+				if( !option.value()->mParamName.empty() ){
 					while( i < argc ){
 						std::string subArg = argv[i];
 						
 						if( subArg.find( "-" ) == 0 ){
 							break;
 						}else{
-							option.value()->values.push_back( subArg );
+							option.value()->mValues.push_back( subArg );
 							i++;
 						}
 					}
-					if( option.value()->values.empty() ){
+					if( option.value()->mValues.empty() ){
 						spdlog::warn( "Missing arguments for flag {}", arg );
 					}
 				}
@@ -98,8 +103,8 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 	}
 	// Add values with defaults not in argv
 	for( const Option & option: d->mOptions ){
-		if( !option.values.empty() && !contains( option.name )){
-			d->mFlags.push_back( option.name );
+		if( !option.mValues.empty() && !contains( option.mName )){
+			d->mFlags.push_back( option.mName );
 		}
 	}
 	return others;
@@ -116,8 +121,8 @@ std::string drea::core::Config::value( const std::string & flag ) const
 	std::optional<Option*> 	option = d->find( flag );
 			
 	if( option ){
-		if( !option.value()->values.empty() ){
-			res = option.value()->values.front();
+		if( !option.value()->mValues.empty() ){
+			res = option.value()->mValues.front();
 		}
 	}
 	return res;
@@ -129,12 +134,12 @@ void drea::core::Config::showHelp( int offset )
 		for( int i = 0; i < offset; i++ ){
 			std::cout << " ";
 		}
-		if( option.paramName.empty() ){
-			fmt::print( "[--{}] {}\n", option.name, option.description );
+		if( option.mParamName.empty() ){
+			fmt::print( "[--{}] {}\n", option.mName, option.mDescription );
 		}else{
-			fmt::print( "[--{} ", option.name );
-			fmt::print( "<{}>", option.paramName );
-			fmt::print( "] {}\n", option.description );
+			fmt::print( "[--{} ", option.mName );
+			fmt::print( "<{}>", option.mParamName );
+			fmt::print( "] {}\n", option.mDescription );
 		}
 	}
 	fmt::print( "\n" );

@@ -1,6 +1,8 @@
 #pragma once
 
 #ifdef DREA_CORE_DLL
+	#pragma warning(disable:4251)
+
 	#ifdef  DREA_CORE_EXPORTS 
 		#define DREA_CORE_API __declspec(dllexport)
 	#else
