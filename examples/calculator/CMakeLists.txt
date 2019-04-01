@@ -22,3 +22,11 @@ include(GNUInstallDirs)
 install(TARGETS ${PROJECT_NAME}
     RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
+endif()
+
+if(WIN32)
+	set(CMAKE_CXX_FLAGS_DEBUG "/MD")
+endif()

@@ -2,10 +2,13 @@ cmake_minimum_required( VERSION 3.10 )
 
 project( DreaCore VERSION 0.0.1 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
 
+find_package( yaml-cpp REQUIRED )
+
 add_library( ${PROJECT_NAME} SHARED 
 	App.cpp
 	Config.cpp
-	Commander.cpp 
+	Commander.cpp
+	Option.cpp
 )
 set_target_properties( ${PROJECT_NAME}
     PROPERTIES
@@ -18,12 +21,14 @@ set_target_properties( ${PROJECT_NAME} PROPERTIES
 	SOVERSION 0
 )
 
+target_link_libraries( ${PROJECT_NAME} ${YAML_CPP_LIBRARIES} )
+
 add_compile_definitions(DREA_CORE_DLL)
 add_compile_definitions(DREA_CORE_EXPORTS)
 
 set_property( TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17 )
 
-include_directories( ../include/core ../include/thirdparty )
+include_directories( ../include/core ../include/thirdparty ${YAML_CPP_INCLUDE_DIR} )
 
 include(GNUInstallDirs)
 
@@ -37,3 +42,11 @@ install(DIRECTORY ../include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(EXPORT ${PROJECT_NAME}Config DESTINATION share/${PROJECT_NAME}/cmake)
 
 export(TARGETS ${PROJECT_NAME} FILE ${PROJECT_NAME}Config.cmake)
+
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
+endif()
+
+if(WIN32)
+	set(CMAKE_CXX_FLAGS_DEBUG "/MD")
+endif()

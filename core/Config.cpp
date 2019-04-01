@@ -2,11 +2,13 @@
 
 #include <vector>
 #include <optional>
+#include <iostream>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/fmt.h>
 
-#include <iostream>
+#include <filesystem>
+#include <yaml-cpp/yaml.h>
 
 struct drea::core::Config::Private
 {
@@ -23,6 +25,59 @@ struct drea::core::Config::Private
 			}
 		}
 		return res;
+	}
+
+	void readConfig( int argc, char * argv[] )
+	{
+		std::filesystem::path		configFile;
+
+		for( int i = 1; i < argc-1; i++ ){
+			if( std::string( argv[i] ) == "--config-file" ){
+				configFile = argv[i+1];
+				break;
+			}
+		}
+		if( !configFile.empty() && std::filesystem::exists( configFile ) ){
+			YAML::Node config = YAML::LoadFile( configFile.string() );
+
+			for( auto node: config ){
+				std::string arg = node.first.as<std::string>();
+				if( auto option = find( arg ) ){
+					mFlags.push_back( arg );
+					if( !option.value()->mParamName.empty() ){
+						// discard data: config file and defaults
+						option.value()->mValues.clear();
+
+						if( node.second.Type() == YAML::NodeType::Scalar ){
+							OptionValue	val = option.value()->fromString( node.second.as<std::string>() );
+
+							if( val.index() > 0 ){
+								option.value()->mValues.push_back( val );
+							}else{
+								exit( -1 );
+							}
+						}else if( node.second.Type() == YAML::NodeType::Sequence ){
+							for( auto seqVal: node.second ){
+								if( seqVal.Type() == YAML::NodeType::Scalar ){
+									OptionValue	val = option.value()->fromString( seqVal.as<std::string>() );
+
+									if( val.index() > 0 ){
+										option.value()->mValues.push_back( val );
+									}else{
+										exit( -1 );
+									}
+								}
+							}
+						}
+						if( option.value()->mValues.empty() ){
+							spdlog::warn( "Missing arguments for flag {}", arg );
+						}
+					}
+				}else{
+					spdlog::warn( "Unknown argument {}", arg );
+				}
+			}
+		}
 	}
 };
 
@@ -51,7 +106,11 @@ drea::core::Config & drea::core::Config::addDefaults()
 		}
 	).add(
 		{
-			"log-file", "file name", "log messages to the file <file name>" 
+			"log-file", "file name", "log messages to the file <file name>", {}, typeid( std::string )
+		}
+	).add(
+		{
+			"config-file", "file name", "read configs from file <file name>", {}, typeid( std::string )
 		}
 	);
 }
@@ -69,6 +128,8 @@ std::optional<drea::core::Option*> drea::core::Config::find( const std::string &
 
 std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] )
 {
+	d->readConfig( argc, argv );
+
 	std::vector<std::string>	others;
 
 	for( int i = 1; i < argc; ){
@@ -80,14 +141,22 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 			if( auto option = d->find( arg ) ){
 				d->mFlags.push_back( arg );
 				if( !option.value()->mParamName.empty() ){
+					// discard data: config file and defaults
+					option.value()->mValues.clear();
 					while( i < argc ){
 						std::string subArg = argv[i];
 						
 						if( subArg.find( "-" ) == 0 ){
 							break;
 						}else{
-							option.value()->mValues.push_back( subArg );
-							i++;
+							OptionValue	val = option.value()->fromString( subArg );
+
+							if( val.index() > 0 ){
+								option.value()->mValues.push_back( val );
+								i++;
+							}else{
+								exit( -1 );
+							}
 						}
 					}
 					if( option.value()->mValues.empty() ){
@@ -115,19 +184,6 @@ bool drea::core::Config::contains( const std::string & flag ) const
 	return std::find( d->mFlags.begin(), d->mFlags.end(), flag ) != d->mFlags.end();
 }
 
-std::string drea::core::Config::value( const std::string & flag ) const
-{
-	std::string				res;
-	std::optional<Option*> 	option = d->find( flag );
-			
-	if( option ){
-		if( !option.value()->mValues.empty() ){
-			res = option.value()->mValues.front();
-		}
-	}
-	return res;
-}
-
 void drea::core::Config::showHelp( int offset )
 {
 	for( const Option & option: d->mOptions ){
@@ -135,11 +191,19 @@ void drea::core::Config::showHelp( int offset )
 			std::cout << " ";
 		}
 		if( option.mParamName.empty() ){
-			fmt::print( "[--{}] {}\n", option.mName, option.mDescription );
+			fmt::print( "[--{}]", option.mName );
 		}else{
-			fmt::print( "[--{} ", option.mName );
-			fmt::print( "<{}>", option.mParamName );
-			fmt::print( "] {}\n", option.mDescription );
+			fmt::print( "[--{} <{}>]", option.mName, option.mParamName );
+		}
+		fmt::print( " {}", option.mDescription );
+		if( option.mValues.empty() ){
+			fmt::print( "\n" );
+		}else{
+			fmt::print( ". Default" );
+			for( auto v: option.mValues ){
+				fmt::print( " {}", option.toString( v ));
+			}
+			fmt::print( "\n" );
 		}
 	}
 	fmt::print( "\n" );

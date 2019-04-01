@@ -24,7 +24,7 @@ int main( int argc, char * argv[] )
 		}
 	).add(
 		{
-			"equal", "number", "check if the result is equal to <number>"
+			"equal", "number", "check if the result is equal to <number>", {}, typeid( double )
 		}
 	);
 
@@ -78,14 +78,10 @@ int main( int argc, char * argv[] )
 			app.logger()->info( "Result: {}", value );
 
 			if( app.config().contains( "equal" ) ){
-				try{
-					if( std::stod( app.config().value( "equal") ) == value ){
-						app.logger()->info( "Result is equal" );
-					}else{
-						app.logger()->info( "Result is different" );
-					}
-				}catch( std::exception & e ){
-					app.logger()->error( "Argument {} is not a number: {}", app.config().value( "equal"), e.what() );
+				if( app.config().value<double>( "equal" ) == value ){
+					app.logger()->info( "Result is equal" );
+				}else{
+					app.logger()->info( "Result is different" );
 				}
 			}
 		}

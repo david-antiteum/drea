@@ -68,7 +68,11 @@
 		"xtree": "cpp",
 		"xutility": "cpp",
 		"numeric": "cpp",
-		"iomanip": "cpp"
+		"iomanip": "cpp",
+		"any": "cpp",
+		"typeindex": "cpp",
+		"variant": "cpp",
+		"filesystem": "cpp"
 	},
 	"editor.insertSpaces": false,
 	"editor.detectIndentation": false,

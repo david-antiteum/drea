@@ -54,8 +54,7 @@ void drea::core::App::parse( int argc, char * argv[] )
 	auto others = d->mConfig.configure( argc, argv );
 	d->mCommander.configure( others );
 
-	d->setupLogger( d->mConfig.value( "log-file" ) );
-
+	d->setupLogger( d->mConfig.value<std::string>( "log-file" ) );
 	if( d->mConfig.contains( "verbose" ) ){
 		d->mLogger->set_level( spdlog::level::debug );
 	}
