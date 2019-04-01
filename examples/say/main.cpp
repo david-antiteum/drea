@@ -1,9 +1,4 @@
-# drea
-A C++ framework for CLI apps and services
 
-An example:
-
-```
 #include <core/Core>
 #include <algorithm>
 
@@ -36,26 +31,3 @@ int main( int argc, char * argv[] )
 		}
 	});
 }
-```
-
-## Configuration
-
-Evaluation order:
-- defaults
-- config file
-- env variables
-- command line flags
-
-## Readings
-
-### Libs
-
-- [Viper](https://github.com/spf13/viper): Viper is a complete configuration solution for Go applications including 12-Factor apps
-- [Cobra](https://github.com/spf13/cobra): Cobra is both a library for creating powerful modern CLI applications as well as a program to generate applications and command files.
-
-### Info
-
-- [Terminology](
-https://pythonconquerstheuniverse.wordpress.com/2010/07/25/command-line-syntax-some-basic-concepts/
-): Command-line syntax: some basic concepts
-

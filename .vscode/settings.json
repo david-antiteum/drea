@@ -72,7 +72,8 @@
 		"any": "cpp",
 		"typeindex": "cpp",
 		"variant": "cpp",
-		"filesystem": "cpp"
+		"filesystem": "cpp",
+		"set": "cpp"
 	},
 	"editor.insertSpaces": false,
 	"editor.detectIndentation": false,

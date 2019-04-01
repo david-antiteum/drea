@@ -14,6 +14,7 @@ struct drea::core::Config::Private
 {
 	std::vector<std::string>		mFlags;
 	std::vector<Option>				mOptions;
+	std::string						mEnvPrefix;
 
 	std::optional<Option*> find( const std::string & flag ){
 		std::optional<Option*>	res;
@@ -121,6 +122,11 @@ drea::core::Config & drea::core::Config::add( drea::core::Option option )
 	return *this;
 }
 
+void drea::core::Config::setEnvPrefix( const std::string & value )
+{
+	d->mEnvPrefix = value;
+}
+
 std::optional<drea::core::Option*> drea::core::Config::find( const std::string & flag ) const
 {
 	return d->find( flag );
@@ -128,12 +134,48 @@ std::optional<drea::core::Option*> drea::core::Config::find( const std::string &
 
 std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] )
 {
+	// Order (less to more)
+	// - defaults
+	// - config file
+	// - env variables
+	// - command line flags
+
+	// Add values with defaults
+	for( const Option & option: d->mOptions ){
+		if( !option.mValues.empty() ){
+			d->mFlags.push_back( option.mName );
+		}
+	}
+
+	// Read the config file
 	d->readConfig( argc, argv );
+
+	// Env vars
+	if( !d->mEnvPrefix.empty() ){
+		for( Option & option: d->mOptions ){
+			char	*env_p = nullptr;
+			size_t 	sz = 0;
+			if( _dupenv_s( &env_p, &sz, (d->mEnvPrefix + "_" + option.mName).c_str() ) == 0 && env_p ){
+				d->mFlags.push_back( option.mName );
+				OptionValue	val = option.fromString( env_p );
+
+				option.mValues.clear();
+				if( val.index() > 0 ){
+					option.mValues.push_back( val );
+					std::cout << "OK " << option.mName << "\n";
+				}else{
+					exit( -1 );
+				}
+				free(env_p);
+			}
+		}
+	}
 
 	std::vector<std::string>	others;
 
+	// flags
 	for( int i = 1; i < argc; ){
-		std::string  arg = argv[i++];
+		std::string arg = argv[i++];
 
 		if( arg.find( "--" ) == 0 ){
 			arg = arg.erase( 0, 2 );
@@ -170,18 +212,26 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 			others.push_back( arg );
 		}
 	}
-	// Add values with defaults not in argv
-	for( const Option & option: d->mOptions ){
-		if( !option.mValues.empty() && !contains( option.mName )){
-			d->mFlags.push_back( option.mName );
-		}
-	}
 	return others;
 }
 
 bool drea::core::Config::contains( const std::string & flag ) const
 {
 	return std::find( d->mFlags.begin(), d->mFlags.end(), flag ) != d->mFlags.end();
+}
+
+void drea::core::Config::set( const std::string & flag, const std::string & value )
+{
+	if( auto option = d->find( flag ) ){
+		option.value()->mValues.clear();
+		OptionValue	val = option.value()->fromString( value );
+
+		if( val.index() > 0 ){
+			option.value()->mValues.push_back( val );
+		}else{
+			exit( -1 );
+		}
+	}
 }
 
 void drea::core::Config::showHelp( int offset )

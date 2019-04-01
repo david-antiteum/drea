@@ -1,23 +1,20 @@
 
-#include "core/App.h"
-#include "core/Config.h"
-#include "core/Commander.h"
-
-#include <spdlog/spdlog.h>
-#include <spdlog/fmt/fmt.h>
+#include <core/Core>
 
 #include <numeric>
 #include <exception>
 #include <optional>
+#include <iostream>
 
 int main( int argc, char * argv[] )
 {
-    drea::core::App     app;
+	drea::core::App	 app;
 
 	app.setName( "calculator" );
-    app.setDescription( "A basic calculator as an example for the Drea Framework.\n\nDrea is available at https://github.com/david-antiteum/drea." );
-    app.setVersion( "0.0.1" );
-    
+	app.setDescription( "A basic calculator as an example for the Drea Framework.\n\nDrea is available at https://github.com/david-antiteum/drea." );
+	app.setVersion( "0.0.1" );
+	
+	app.config().setEnvPrefix( "CAL" );
 	app.config().addDefaults().add(
 		{
 			"round", "", "round the result to the nearest integer"
@@ -28,18 +25,21 @@ int main( int argc, char * argv[] )
 		}
 	);
 
-    app.commander().addDefaults().add(
-        {
-            "sum", "sum all the arguments", {}, { "round", "equal" }
+	app.commander().addDefaults().add(
+		{
+			"sum", "sum all the arguments", {}, { "round", "equal" }
 		}
 	).add(
-        {
-            "power", "raise the first argument to the power of the second", {}, { "round", "equal" }
-        }		
-    );
+		{
+			"power", "raise the first argument to the power of the second", {}, { "round", "equal" }
+		}		
+	).add(
+		{
+			"count", "count the characters of a text argument", {}, { "equal" }
+		}		
+	);
 
 	app.parse( argc, argv );
-
 	app.commander().run( [ &app ]( std::string cmd ){
 		app.logger()->debug( "Run called for command {}", cmd );
 
@@ -69,6 +69,13 @@ int main( int argc, char * argv[] )
 			}else{
 				app.logger()->error( "Power needs two arguments" );
 			}
+		}else if( cmd == "count" ){
+			double sum = 0.0;
+
+			for( auto arg: app.commander().arguments() ){
+				sum += arg.size();
+			}
+			valueMaybe = sum;
 		}
 		if( valueMaybe ){
 			double	value = valueMaybe.value();
@@ -78,11 +85,13 @@ int main( int argc, char * argv[] )
 			app.logger()->info( "Result: {}", value );
 
 			if( app.config().contains( "equal" ) ){
-				if( app.config().value<double>( "equal" ) == value ){
+				if( app.config().get<double>( "equal" ) == value ){
 					app.logger()->info( "Result is equal" );
 				}else{
-					app.logger()->info( "Result is different" );
+					app.logger()->info( "Result is different to {}", app.config().get<double>( "equal" ) );
 				}
+			}else{
+				std::cout << "NO equal\n"; 
 			}
 		}
 	});

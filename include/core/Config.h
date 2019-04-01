@@ -14,20 +14,24 @@ namespace drea { namespace core {
 class DREA_CORE_API Config
 {
 public:
-    explicit Config();
+	explicit Config();
 	~Config();
 
 	std::vector<std::string> configure( int argc, char * argv[] );
 
 	Config & addDefaults();
-    Config & add( Option option );
+	Config & add( Option option );
+
+	void setEnvPrefix( const std::string & value );
 
 	std::optional<Option*> find( const std::string & flag ) const;
 
 	bool contains( const std::string & flag ) const;
 
+	void set( const std::string & flag, const std::string & val );
+
 	template<typename T>
-	T value( const std::string & flag ) const
+	T get( const std::string & flag ) const
 	{
 		std::optional<Option*> 	option = find( flag );
 

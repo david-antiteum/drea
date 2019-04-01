@@ -17,7 +17,7 @@ class Commander;
 class DREA_CORE_API App
 {
 public:
-    explicit App();
+	explicit App();
 	~App();
 
 	static App & instance();
@@ -27,13 +27,13 @@ public:
 	const std::string & version() const;
 
 	void setName( const std::string & value );
-    void setDescription( const std::string & value );
-    void setVersion( const std::string & value );
+	void setDescription( const std::string & value );
+	void setVersion( const std::string & value );
 
-    void parse( int argc, char * argv[] );
+	void parse( int argc, char * argv[] );
 
-    Config & config() const;
-    Commander & commander() const;
+	Config & config() const;
+	Commander & commander() const;
 
 	std::shared_ptr<spdlog::logger> logger() const;
 
