@@ -3,7 +3,7 @@ A C++ framework for CLI apps and services
 
 An example:
 
-```
+```c++
 #include <core/Core>
 #include <algorithm>
 
@@ -41,6 +41,7 @@ int main( int argc, char * argv[] )
 ## Configuration
 
 Evaluation order:
+
 - defaults
 - config file
 - env variables
@@ -58,4 +59,3 @@ Evaluation order:
 - [Terminology](
 https://pythonconquerstheuniverse.wordpress.com/2010/07/25/command-line-syntax-some-basic-concepts/
 ): Command-line syntax: some basic concepts
-

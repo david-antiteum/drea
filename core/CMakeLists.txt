@@ -23,10 +23,15 @@ set_target_properties( ${PROJECT_NAME} PROPERTIES
 
 target_link_libraries( ${PROJECT_NAME} ${YAML_CPP_LIBRARIES} )
 
-add_compile_definitions(DREA_CORE_DLL)
-add_compile_definitions(DREA_CORE_EXPORTS)
+add_compile_definitions( DREA_CORE_DLL )
+add_compile_definitions( DREA_CORE_EXPORTS )
 
+include( CheckCXXSymbolExists )
 set_property( TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17 )
+CHECK_CXX_SYMBOL_EXISTS( std::filesystem::path::preferred_separator filesystem cxx17fs )
+if( cxx17fs )
+	add_compile_definitions( CXX17FS )
+endif()
 
 include_directories( ../include/core ../include/thirdparty ${YAML_CPP_INCLUDE_DIR} )
 

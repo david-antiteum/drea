@@ -26,7 +26,9 @@ public:
 
 	std::vector<std::string> arguments();
 
-	void showHelp( const std::string & command );
+	void showHelp( const std::string & command ) const;
+
+	void reportNoCommand( const std::string & command ) const;
 
 private:
 	struct Private;

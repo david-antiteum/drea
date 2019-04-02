@@ -6,9 +6,34 @@
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/fmt.h>
+#include <woorm/levenshtein.h>
 
+#ifdef CXX17FS
 #include <filesystem>
+#endif
 #include <yaml-cpp/yaml.h>
+#include <stdlib.h>
+
+namespace drea { namespace core {
+static std::string getenv( const std::string & prefix, const std::string & name )
+{
+	std::string		res;
+	char			*env_p = nullptr;
+#ifdef WIN32			
+	size_t 	sz = 0;
+	if( _dupenv_s( &env_p, &sz, (prefix + "_" + name).c_str() ) == 0 && env_p ){
+		res = env_p;
+	}
+	free( env_p );
+#else
+	env_p = ::getenv( (prefix + "_" + name).c_str() );
+	if( env_p ){
+		res = env_p;
+	}
+#endif
+	return res;
+}
+}}
 
 struct drea::core::Config::Private
 {
@@ -28,18 +53,47 @@ struct drea::core::Config::Private
 		return res;
 	}
 
+	void set( const std::string & flag, const std::string & value )
+	{
+		if( auto option = find( flag ) ){
+			option.value()->mValues.clear();
+			append( flag, value );
+		}
+	}
+
+	void append( const std::string & flag, const std::string & value )
+	{
+		if( auto option = find( flag ) ){
+			OptionValue	val = option.value()->fromString( value );
+
+			if( val.index() > 0 ){
+				option.value()->mValues.push_back( val );
+			}else{
+				exit( -1 );
+			}
+		}
+	}
+
 	void readConfig( int argc, char * argv[] )
 	{
+#ifdef CXX17FS
 		std::filesystem::path		configFile;
-
+#else
+		std::string					configFile;
+#endif
 		for( int i = 1; i < argc-1; i++ ){
 			if( std::string( argv[i] ) == "--config-file" ){
 				configFile = argv[i+1];
 				break;
 			}
 		}
+#ifdef CXX17FS
 		if( !configFile.empty() && std::filesystem::exists( configFile ) ){
 			YAML::Node config = YAML::LoadFile( configFile.string() );
+#else
+		if( !configFile.empty() ){
+			YAML::Node config = YAML::LoadFile( configFile );
+#endif
 
 			for( auto node: config ){
 				std::string arg = node.first.as<std::string>();
@@ -47,26 +101,13 @@ struct drea::core::Config::Private
 					mFlags.push_back( arg );
 					if( !option.value()->mParamName.empty() ){
 						// discard data: config file and defaults
-						option.value()->mValues.clear();
-
 						if( node.second.Type() == YAML::NodeType::Scalar ){
-							OptionValue	val = option.value()->fromString( node.second.as<std::string>() );
-
-							if( val.index() > 0 ){
-								option.value()->mValues.push_back( val );
-							}else{
-								exit( -1 );
-							}
+							set( option.value()->mName, node.second.as<std::string>() );
 						}else if( node.second.Type() == YAML::NodeType::Sequence ){
+							option.value()->mValues.clear();
 							for( auto seqVal: node.second ){
 								if( seqVal.Type() == YAML::NodeType::Scalar ){
-									OptionValue	val = option.value()->fromString( seqVal.as<std::string>() );
-
-									if( val.index() > 0 ){
-										option.value()->mValues.push_back( val );
-									}else{
-										exit( -1 );
-									}
+									append( option.value()->mName, seqVal.as<std::string>() );
 								}
 							}
 						}
@@ -75,10 +116,25 @@ struct drea::core::Config::Private
 						}
 					}
 				}else{
-					spdlog::warn( "Unknown argument {}", arg );
+					reportUnknownArgument( arg );
 				}
 			}
 		}
+	}
+
+	void reportUnknownArgument( const std::string & arg ) const
+	{
+		size_t			bestDist = 0;
+		std::string		bestArg;
+	
+		for( const Option & opt: mOptions ){
+			size_t	nd = levenshtein( arg, opt.mName );
+			if( bestArg.empty() || nd < bestDist ){
+				bestDist = nd;
+				bestArg = opt.mName;
+			}
+		}
+		spdlog::warn( "Unknown argument \"{}\". Did you mean \"{}\"?", arg, bestArg );
 	}
 };
 
@@ -153,20 +209,12 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 	// Env vars
 	if( !d->mEnvPrefix.empty() ){
 		for( Option & option: d->mOptions ){
-			char	*env_p = nullptr;
-			size_t 	sz = 0;
-			if( _dupenv_s( &env_p, &sz, (d->mEnvPrefix + "_" + option.mName).c_str() ) == 0 && env_p ){
+			std::string		env = drea::core::getenv( d->mEnvPrefix, option.mName );
+			if( !env.empty() ){
 				d->mFlags.push_back( option.mName );
-				OptionValue	val = option.fromString( env_p );
-
-				option.mValues.clear();
-				if( val.index() > 0 ){
-					option.mValues.push_back( val );
-					std::cout << "OK " << option.mName << "\n";
-				}else{
-					exit( -1 );
+				if( !option.mParamName.empty() ){
+					set( option.mName, env );
 				}
-				free(env_p);
 			}
 		}
 	}
@@ -186,19 +234,11 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 					// discard data: config file and defaults
 					option.value()->mValues.clear();
 					while( i < argc ){
-						std::string subArg = argv[i];
-						
+						std::string subArg = argv[i++];
 						if( subArg.find( "-" ) == 0 ){
 							break;
 						}else{
-							OptionValue	val = option.value()->fromString( subArg );
-
-							if( val.index() > 0 ){
-								option.value()->mValues.push_back( val );
-								i++;
-							}else{
-								exit( -1 );
-							}
+							set( option.value()->mName, subArg );
 						}
 					}
 					if( option.value()->mValues.empty() ){
@@ -206,7 +246,7 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 					}
 				}
 			}else{
-				spdlog::warn( "Unknown argument {}", arg );
+				d->reportUnknownArgument( arg );
 			}
 		}else{
 			others.push_back( arg );
@@ -222,16 +262,7 @@ bool drea::core::Config::contains( const std::string & flag ) const
 
 void drea::core::Config::set( const std::string & flag, const std::string & value )
 {
-	if( auto option = d->find( flag ) ){
-		option.value()->mValues.clear();
-		OptionValue	val = option.value()->fromString( value );
-
-		if( val.index() > 0 ){
-			option.value()->mValues.push_back( val );
-		}else{
-			exit( -1 );
-		}
-	}
+	d->set( flag, value );
 }
 
 void drea::core::Config::showHelp( int offset )

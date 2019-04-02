@@ -22,12 +22,16 @@ int main( int argc, char * argv[] )
 	);
 	app.parse( argc, argv );
 	app.commander().run( [ &app ]( std::string cmd ){
-		if( cmd == "say" && app.commander().arguments().size() == 1 ){
-			std::string say = app.commander().arguments().front();
-			if( app.config().contains( "reverse" ) ){
-				std::reverse( say.begin(), say.end() );
+		if( cmd == "say" ){
+			if( app.commander().arguments().size() == 1 ){
+				std::string say = app.commander().arguments().front();
+				if( app.config().contains( "reverse" ) ){
+					std::reverse( say.begin(), say.end() );
+				}
+				app.logger()->info( "{}", say );
 			}
-			app.logger()->info( "{}", say );
+		}else{
+			app.commander().reportNoCommand( cmd );
 		}
 	});
 }

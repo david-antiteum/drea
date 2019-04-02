@@ -76,6 +76,8 @@ int main( int argc, char * argv[] )
 				sum += arg.size();
 			}
 			valueMaybe = sum;
+		}else{
+			app.commander().reportNoCommand( cmd );
 		}
 		if( valueMaybe ){
 			double	value = valueMaybe.value();
@@ -90,8 +92,6 @@ int main( int argc, char * argv[] )
 				}else{
 					app.logger()->info( "Result is different to {}", app.config().get<double>( "equal" ) );
 				}
-			}else{
-				std::cout << "NO equal\n"; 
 			}
 		}
 	});

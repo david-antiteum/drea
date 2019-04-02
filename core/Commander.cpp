@@ -6,7 +6,9 @@
 #include <algorithm>
 #include <optional>
 
+#include <spdlog/spdlog.h>
 #include <spdlog/fmt/fmt.h>
+#include <woorm/levenshtein.h>
 
 struct drea::core::Commander::Private
 {
@@ -70,7 +72,7 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 		}else{
 			showHelp( d->mCommand );
 		}
-	}else if( !d->mCommand.empty() ){
+	}else{
 		f( d->mCommand );
 	}
 }
@@ -80,7 +82,7 @@ std::vector<std::string> drea::core::Commander::arguments()
 	return d->mArguments;
 }
 
-void drea::core::Commander::showHelp( const std::string & command )
+void drea::core::Commander::showHelp( const std::string & command ) const
 {
 	if( d->mCommands.empty() ){
 		fmt::print( "This app has no commands\n" );
@@ -127,6 +129,29 @@ void drea::core::Commander::showHelp( const std::string & command )
 					}
 				}				
 			}
+		}
+	}
+}
+
+void drea::core::Commander::reportNoCommand( const std::string & command ) const
+{
+	if( command.empty() ){
+		App::instance().logger()->info( "A command is required." );
+	}else{
+		size_t			bestDist = 0;
+		std::string		bestCmd;
+
+		for( const Command & cmd: d->mCommands ){
+			size_t	nd = levenshtein( command, cmd.mName );
+			if( bestCmd.empty() || nd < bestDist ){
+				bestDist = nd;
+				bestCmd = cmd.mName;
+			}
+		}
+		if( bestCmd.empty() ){
+			App::instance().logger()->error( "Unknown command \"{}\"", command );
+		}else{
+			App::instance().logger()->error( "Unknown command \"{}\". Did you mean \"{}\"?", command, bestCmd );
 		}
 	}
 }
