@@ -38,6 +38,13 @@ drea::core::Commander::~Commander()
 {
 }
 
+void drea::core::Commander::commands( std::function<void(const drea::core::Command&)> f ) const
+{
+	for( const Command & cmd: d->mCommands ){
+		f( cmd );
+	}
+}
+
 drea::core::Commander & drea::core::Commander::addDefaults()
 {
 	return *this;
@@ -66,6 +73,8 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 {
 	if( App::instance().config().contains( "version" )){
 		App::instance().showVersion();
+	}else if( App::instance().config().contains( "generate-auto-completion" ) ){
+		App::instance().generateAutoCompletion();
 	}else if( App::instance().config().contains( "help" ) ){
 		if( d->mCommand.empty() ){
 			App::instance().showHelp();
@@ -106,7 +115,7 @@ void drea::core::Commander::showHelp( const std::string & command ) const
 				fmt::print( "{}\n\n", cmd->mDescription );
 
 				fmt::print( "Usage:\n");
-				fmt::print( "  {} {}\n", App::instance().name(), cmd->mName );
+				fmt::print( "  {} {} [<args>] [<flags>]\n", App::instance().name(), cmd->mName );
 
 				if( !cmd->mLocalParameters.empty() ){
 					fmt::print( "\nFlags:\n");

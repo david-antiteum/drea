@@ -1,4 +1,7 @@
-cmake_minimum_required( VERSION 3.10 )
+cmake_minimum_required( VERSION 3.12 )
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+	set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+endif()
 
 project( say )
 add_executable( ${PROJECT_NAME} main.cpp )
@@ -25,8 +28,4 @@ install(TARGETS ${PROJECT_NAME}
 
 if(APPLE)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
-endif()
-
-if(WIN32)
-	set(CMAKE_CXX_FLAGS_DEBUG "/MD")
 endif()

@@ -37,9 +37,10 @@ public:
 
 	std::shared_ptr<spdlog::logger> logger() const;
 
-	[[noreturn]] void showVersion();
-	[[noreturn]] void showHelp();
-	
+	[[noreturn]] void showVersion() const;
+	[[noreturn]] void showHelp() const;
+	[[noreturn]] void generateAutoCompletion() const;
+
 private:
 	struct Private;
 	std::unique_ptr<Private>	d;

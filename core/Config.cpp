@@ -14,6 +14,10 @@
 #include <yaml-cpp/yaml.h>
 #include <stdlib.h>
 
+#ifdef CPPRESTSDK_ENABLED
+	#include "integrations/consul/kv_store.h"
+#endif
+
 namespace drea { namespace core {
 static std::string getenv( const std::string & prefix, const std::string & name )
 {
@@ -33,6 +37,14 @@ static std::string getenv( const std::string & prefix, const std::string & name 
 #endif
 	return res;
 }
+
+struct RemoteProvider
+{
+	std::string		mProvider;
+	std::string		mHost;
+	std::string		mKey;
+};
+
 }}
 
 struct drea::core::Config::Private
@@ -40,6 +52,7 @@ struct drea::core::Config::Private
 	std::vector<std::string>		mFlags;
 	std::vector<Option>				mOptions;
 	std::string						mEnvPrefix;
+	std::vector<RemoteProvider>		mRemoteProviders;
 
 	std::optional<Option*> find( const std::string & flag ){
 		std::optional<Option*>	res;
@@ -74,6 +87,41 @@ struct drea::core::Config::Private
 		}
 	}
 
+	void readConfig( const YAML::Node & config )
+	{
+		for( auto node: config ){
+			std::string arg = node.first.as<std::string>();
+			if( auto option = find( arg ) ){
+				mFlags.push_back( arg );
+				if( !option.value()->mParamName.empty() ){
+					// discard data: config file and defaults
+					if( node.second.Type() == YAML::NodeType::Scalar ){
+						set( option.value()->mName, node.second.as<std::string>() );
+					}else if( node.second.Type() == YAML::NodeType::Sequence ){
+						option.value()->mValues.clear();
+						for( auto seqVal: node.second ){
+							if( seqVal.Type() == YAML::NodeType::Scalar ){
+								append( option.value()->mName, seqVal.as<std::string>() );
+							}
+						}
+					}
+					if( option.value()->mValues.empty() ){
+						spdlog::warn( "Missing arguments for flag {}", arg );
+					}
+				}
+			}else{
+				reportUnknownArgument( arg );
+			}
+		}
+	}
+
+	void readConfig( const std::string & val )
+	{
+		if( !val.empty() ){
+			readConfig( YAML::Load( val ) );
+		}
+	}
+
 	void readConfig( int argc, char * argv[] )
 	{
 #ifdef CXX17FS
@@ -94,31 +142,7 @@ struct drea::core::Config::Private
 		if( !configFile.empty() ){
 			YAML::Node config = YAML::LoadFile( configFile );
 #endif
-
-			for( auto node: config ){
-				std::string arg = node.first.as<std::string>();
-				if( auto option = find( arg ) ){
-					mFlags.push_back( arg );
-					if( !option.value()->mParamName.empty() ){
-						// discard data: config file and defaults
-						if( node.second.Type() == YAML::NodeType::Scalar ){
-							set( option.value()->mName, node.second.as<std::string>() );
-						}else if( node.second.Type() == YAML::NodeType::Sequence ){
-							option.value()->mValues.clear();
-							for( auto seqVal: node.second ){
-								if( seqVal.Type() == YAML::NodeType::Scalar ){
-									append( option.value()->mName, seqVal.as<std::string>() );
-								}
-							}
-						}
-						if( option.value()->mValues.empty() ){
-							spdlog::warn( "Missing arguments for flag {}", arg );
-						}
-					}
-				}else{
-					reportUnknownArgument( arg );
-				}
-			}
+			readConfig( config );
 		}
 	}
 
@@ -169,7 +193,24 @@ drea::core::Config & drea::core::Config::addDefaults()
 		{
 			"config-file", "file name", "read configs from file <file name>", {}, typeid( std::string )
 		}
+#ifdef CPPRESTSDK_ENABLED
+	).add(
+		{
+			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
+		}
+#endif
+	).add(
+		{
+			"generate-auto-completion"
+		}
 	);
+}
+
+void drea::core::Config::options( std::function<void(const drea::core::Option&)> f ) const
+{
+	for( const Option & opt: d->mOptions ){
+		f( opt );
+	}
 }
 
 drea::core::Config & drea::core::Config::add( drea::core::Option option )
@@ -183,6 +224,11 @@ void drea::core::Config::setEnvPrefix( const std::string & value )
 	d->mEnvPrefix = value;
 }
 
+void drea::core::Config::addRemoteProvider( const std::string & provider, const std::string & host, const std::string & key )
+{
+	d->mRemoteProviders.push_back( { provider, host, key } );
+}
+
 std::optional<drea::core::Option*> drea::core::Config::find( const std::string & flag ) const
 {
 	return d->find( flag );
@@ -194,6 +240,7 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 	// - defaults
 	// - config file
 	// - env variables
+	// - external systems (as Consul)
 	// - command line flags
 
 	// Add values with defaults
@@ -216,6 +263,12 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 					set( option.mName, env );
 				}
 			}
+		}
+	}
+
+	for( const RemoteProvider & provider: d->mRemoteProviders ){
+		if( provider.mProvider == "consul" ){
+			d->readConfig( integrations::Consul::KVStore( provider.mHost ).get( provider.mKey ) );
 		}
 	}
 

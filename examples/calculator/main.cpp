@@ -15,6 +15,7 @@ int main( int argc, char * argv[] )
 	app.setVersion( "0.0.1" );
 	
 	app.config().setEnvPrefix( "CAL" );
+	app.config().addRemoteProvider( "consul", "http://127.0.0.1:8500", "calculator-key" );
 	app.config().addDefaults().add(
 		{
 			"round", "", "round the result to the nearest integer"

@@ -30,6 +30,8 @@ public:
 
 	void reportNoCommand( const std::string & command ) const;
 
+	void commands( std::function<void(const Command&)> f ) const;
+
 private:
 	struct Private;
 	std::unique_ptr<Private>	d;

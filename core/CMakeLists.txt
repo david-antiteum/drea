@@ -1,8 +1,19 @@
-cmake_minimum_required( VERSION 3.10 )
+cmake_minimum_required( VERSION 3.12 )
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+	set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+endif()
 
 project( DreaCore VERSION 0.0.1 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
 
-find_package( yaml-cpp REQUIRED )
+find_package( yaml-cpp CONFIG REQUIRED )
+
+link_libraries( ${YAML_CPP_LIBRARIES} )
+
+find_package( cpprestsdk )
+if( cpprestsdk_FOUND )
+	add_compile_definitions( CPPRESTSDK_ENABLED )
+	link_libraries( cpprestsdk::cpprest)
+endif()
 
 add_library( ${PROJECT_NAME} SHARED 
 	App.cpp
@@ -21,8 +32,7 @@ set_target_properties( ${PROJECT_NAME} PROPERTIES
 	SOVERSION 0
 )
 
-target_link_libraries( ${PROJECT_NAME} ${YAML_CPP_LIBRARIES} )
-
+add_compile_definitions( YAML_CPP_DLL )
 add_compile_definitions( DREA_CORE_DLL )
 add_compile_definitions( DREA_CORE_EXPORTS )
 
@@ -50,8 +60,4 @@ export(TARGETS ${PROJECT_NAME} FILE ${PROJECT_NAME}Config.cmake)
 
 if(APPLE)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
-endif()
-
-if(WIN32)
-	set(CMAKE_CXX_FLAGS_DEBUG "/MD")
 endif()

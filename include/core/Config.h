@@ -5,6 +5,7 @@
 #include <optional>
 #include <variant>
 #include <memory>
+#include <functional>
 
 #include "Export.h"
 #include "Option.h"
@@ -22,7 +23,10 @@ public:
 	Config & addDefaults();
 	Config & add( Option option );
 
+	void options( std::function<void(const Option&)> f ) const;
+
 	void setEnvPrefix( const std::string & value );
+	void addRemoteProvider( const std::string & provider, const std::string & host, const std::string & key );
 
 	std::optional<Option*> find( const std::string & flag ) const;
 
