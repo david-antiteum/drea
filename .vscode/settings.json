@@ -74,7 +74,16 @@
 		"variant": "cpp",
 		"filesystem": "cpp",
 		"set": "cpp",
-		"core": "cpp"
+		"core": "cpp",
+		"bitset": "cpp",
+		"clocale": "cpp",
+		"complex": "cpp",
+		"csignal": "cpp",
+		"deque": "cpp",
+		"fstream": "cpp",
+		"queue": "cpp",
+		"random": "cpp",
+		"shared_mutex": "cpp"
 	},
 	"editor.insertSpaces": false,
 	"editor.detectIndentation": false,

@@ -54,8 +54,8 @@ struct drea::core::Config::Private
 	std::string						mEnvPrefix;
 	std::vector<RemoteProvider>		mRemoteProviders;
 
-	std::optional<Option*> find( const std::string & flag ){
-		std::optional<Option*>	res;
+	jss::object_ptr<Option> find( const std::string & flag ){
+		jss::object_ptr<Option>	res;
 
 		for( Option & opt: mOptions ){
 			if( opt.mName == flag ){
@@ -69,7 +69,7 @@ struct drea::core::Config::Private
 	void set( const std::string & flag, const std::string & value )
 	{
 		if( auto option = find( flag ) ){
-			option.value()->mValues.clear();
+			option->mValues.clear();
 			append( flag, value );
 		}
 	}
@@ -77,10 +77,10 @@ struct drea::core::Config::Private
 	void append( const std::string & flag, const std::string & value )
 	{
 		if( auto option = find( flag ) ){
-			OptionValue	val = option.value()->fromString( value );
+			OptionValue	val = option->fromString( value );
 
 			if( val.index() > 0 ){
-				option.value()->mValues.push_back( val );
+				option->mValues.push_back( val );
 			}else{
 				exit( -1 );
 			}
@@ -93,19 +93,19 @@ struct drea::core::Config::Private
 			std::string arg = node.first.as<std::string>();
 			if( auto option = find( arg ) ){
 				mFlags.push_back( arg );
-				if( !option.value()->mParamName.empty() ){
+				if( !option->mParamName.empty() ){
 					// discard data: config file and defaults
 					if( node.second.Type() == YAML::NodeType::Scalar ){
-						set( option.value()->mName, node.second.as<std::string>() );
+						set( option->mName, node.second.as<std::string>() );
 					}else if( node.second.Type() == YAML::NodeType::Sequence ){
-						option.value()->mValues.clear();
+						option->mValues.clear();
 						for( auto seqVal: node.second ){
 							if( seqVal.Type() == YAML::NodeType::Scalar ){
-								append( option.value()->mName, seqVal.as<std::string>() );
+								append( option->mName, seqVal.as<std::string>() );
 							}
 						}
 					}
-					if( option.value()->mValues.empty() ){
+					if( option->mValues.empty() ){
 						spdlog::warn( "Missing arguments for flag {}", arg );
 					}
 				}
@@ -171,39 +171,50 @@ drea::core::Config::~Config()
 {
 }
 
-drea::core::Config & drea::core::Config::addDefaults()
+void drea::core::Config::addDefaults()
 {
-	return add(
+	add(
 		{
 			"verbose"
 		}
-	).add(
+	);
+	add(
 		{
 			"help"
 		}
-	).add(
+	);
+	add(
 		{
 			"version"
 		}
-	).add(
+	);
+	add(
 		{
 			"log-file", "file name", "log messages to the file <file name>", {}, typeid( std::string )
 		}
-	).add(
+	);
+	add(
 		{
 			"config-file", "file name", "read configs from file <file name>", {}, typeid( std::string )
 		}
+	);
 #ifdef CPPRESTSDK_ENABLED
-	).add(
+	add(
 		{
 			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
 		}
+	);
 #endif
-	).add(
+	add(
 		{
 			"generate-auto-completion"
 		}
 	);
+}
+
+bool drea::core::Config::empty() const
+{
+	return d->mOptions.empty();
 }
 
 void drea::core::Config::options( std::function<void(const drea::core::Option&)> f ) const
@@ -213,10 +224,9 @@ void drea::core::Config::options( std::function<void(const drea::core::Option&)>
 	}
 }
 
-drea::core::Config & drea::core::Config::add( drea::core::Option option )
+void drea::core::Config::add( drea::core::Option option )
 {
 	d->mOptions.push_back( option );
-	return *this;
 }
 
 void drea::core::Config::setEnvPrefix( const std::string & value )
@@ -229,7 +239,7 @@ void drea::core::Config::addRemoteProvider( const std::string & provider, const 
 	d->mRemoteProviders.push_back( { provider, host, key } );
 }
 
-std::optional<drea::core::Option*> drea::core::Config::find( const std::string & flag ) const
+jss::object_ptr<drea::core::Option> drea::core::Config::find( const std::string & flag ) const
 {
 	return d->find( flag );
 }
@@ -283,18 +293,18 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 			
 			if( auto option = d->find( arg ) ){
 				d->mFlags.push_back( arg );
-				if( !option.value()->mParamName.empty() ){
+				if( !option->mParamName.empty() ){
 					// discard data: config file and defaults
-					option.value()->mValues.clear();
+					option->mValues.clear();
 					while( i < argc ){
 						std::string subArg = argv[i++];
 						if( subArg.find( "-" ) == 0 ){
 							break;
 						}else{
-							set( option.value()->mName, subArg );
+							set( option->mName, subArg );
 						}
 					}
-					if( option.value()->mValues.empty() ){
+					if( option->mValues.empty() ){
 						spdlog::warn( "Missing arguments for flag {}", arg );
 					}
 				}
@@ -316,29 +326,4 @@ bool drea::core::Config::contains( const std::string & flag ) const
 void drea::core::Config::set( const std::string & flag, const std::string & value )
 {
 	d->set( flag, value );
-}
-
-void drea::core::Config::showHelp( int offset )
-{
-	for( const Option & option: d->mOptions ){
-		for( int i = 0; i < offset; i++ ){
-			std::cout << " ";
-		}
-		if( option.mParamName.empty() ){
-			fmt::print( "[--{}]", option.mName );
-		}else{
-			fmt::print( "[--{} <{}>]", option.mName, option.mParamName );
-		}
-		fmt::print( " {}", option.mDescription );
-		if( option.mValues.empty() ){
-			fmt::print( "\n" );
-		}else{
-			fmt::print( ". Default" );
-			for( auto v: option.mValues ){
-				fmt::print( " {}", option.toString( v ));
-			}
-			fmt::print( "\n" );
-		}
-	}
-	fmt::print( "\n" );
 }

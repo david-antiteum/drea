@@ -16,25 +16,30 @@ int main( int argc, char * argv[] )
 	
 	app.config().setEnvPrefix( "CAL" );
 	app.config().addRemoteProvider( "consul", "http://127.0.0.1:8500", "calculator-key" );
-	app.config().addDefaults().add(
+	app.config().addDefaults();
+	app.config().add(
 		{
 			"round", "", "round the result to the nearest integer"
 		}
-	).add(
+	);
+	app.config().add(
 		{
 			"equal", "number", "check if the result is equal to <number>", {}, typeid( double )
 		}
 	);
 
-	app.commander().addDefaults().add(
+	app.commander().addDefaults();
+	app.commander().add(
 		{
 			"sum", "sum all the arguments", {}, { "round", "equal" }
 		}
-	).add(
+	);
+	app.commander().add(
 		{
 			"power", "raise the first argument to the power of the second", {}, { "round", "equal" }
 		}		
-	).add(
+	);
+	app.commander().add(
 		{
 			"count", "count the characters of a text argument", {}, { "equal" }
 		}		
@@ -91,7 +96,7 @@ int main( int argc, char * argv[] )
 				if( app.config().get<double>( "equal" ) == value ){
 					app.logger()->info( "Result is equal" );
 				}else{
-					app.logger()->info( "Result is different to {}", app.config().get<double>( "equal" ) );
+					app.logger()->info( "Result is different than {}", app.config().get<double>( "equal" ) );
 				}
 			}
 		}

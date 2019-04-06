@@ -15,12 +15,14 @@ int main( int argc, char * argv[] )
 	app.setDescription( "An example for the Drea Framework.\n\nDrea is available at https://github.com/david-antiteum/drea." );
 	app.setVersion( "0.0.1" );
 	
-	app.config().addDefaults().add(
+	app.config().addDefaults();
+	app.config().add(
 		{
 			"reverse", "", "reverse string"
 		}
 	);
-	app.commander().addDefaults().add(
+	app.commander().addDefaults();
+	app.commander().add(
 		{
 			"say", "prints the argument", {}, { "reverse" }
 		}

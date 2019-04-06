@@ -6,6 +6,7 @@
 #include <variant>
 #include <memory>
 #include <functional>
+#include <object_ptr/object_ptr.hpp>
 
 #include "Export.h"
 #include "Option.h"
@@ -20,15 +21,15 @@ public:
 
 	std::vector<std::string> configure( int argc, char * argv[] );
 
-	Config & addDefaults();
-	Config & add( Option option );
+	void addDefaults();
+	void add( Option option );
 
 	void options( std::function<void(const Option&)> f ) const;
 
 	void setEnvPrefix( const std::string & value );
 	void addRemoteProvider( const std::string & provider, const std::string & host, const std::string & key );
 
-	std::optional<Option*> find( const std::string & flag ) const;
+	jss::object_ptr<Option> find( const std::string & flag ) const;
 
 	bool contains( const std::string & flag ) const;
 
@@ -37,15 +38,15 @@ public:
 	template<typename T>
 	T get( const std::string & flag ) const
 	{
-		std::optional<Option*> 	option = find( flag );
+		auto option = find( flag );
 
-		if( option && !option.value()->mValues.empty() ){
-			return std::get<T>( option.value()->mValues.front() );
+		if( option && !option->mValues.empty() ){
+			return std::get<T>( option->mValues.front() );
 		}
 		return T{};
 	}
 
-	void showHelp( int offset );
+	bool empty() const;
 
 private:
 	struct Private;

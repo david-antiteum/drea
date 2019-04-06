@@ -10,14 +10,16 @@
 #include <spdlog/fmt/fmt.h>
 #include <woorm/levenshtein.h>
 
+#include "integrations/help/help.h"
+
 struct drea::core::Commander::Private
 {
 	std::string						mCommand;
 	std::vector<std::string>		mArguments;
 	std::vector<Command>			mCommands;
 
-	std::optional<Command*> find( const std::string & cmdName ){
-		std::optional<Command*>	res;
+	jss::object_ptr<Command> find( const std::string & cmdName ){
+		jss::object_ptr<Command>	res;
 
 		for( Command & cmd: mCommands ){
 			if( cmd.mName == cmdName ){
@@ -45,16 +47,13 @@ void drea::core::Commander::commands( std::function<void(const drea::core::Comma
 	}
 }
 
-drea::core::Commander & drea::core::Commander::addDefaults()
+void drea::core::Commander::addDefaults()
 {
-	return *this;
 }
 
-drea::core::Commander & drea::core::Commander::add( drea::core::Command cmd )
+void drea::core::Commander::add( drea::core::Command cmd )
 {
 	d->mCommands.push_back( cmd );
-
-	return *this;
 }
 
 void drea::core::Commander::configure( const std::vector<std::string> & args )
@@ -79,7 +78,7 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 		if( d->mCommand.empty() ){
 			App::instance().showHelp();
 		}else{
-			showHelp( d->mCommand );
+			drea::core::integrations::Help::help( App::instance(), d->mCommand );
 		}
 	}else{
 		f( d->mCommand );
@@ -89,57 +88,6 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 std::vector<std::string> drea::core::Commander::arguments()
 {
 	return d->mArguments;
-}
-
-void drea::core::Commander::showHelp( const std::string & command ) const
-{
-	if( d->mCommands.empty() ){
-		fmt::print( "This app has no commands\n" );
-	}else{
-		if( command.empty() ){
-			fmt::print( "Available Commands:\n" );
-
-			std::string::size_type offset = 1;
-			for( const Command & command: d->mCommands ){
-				offset = std::max<std::string::size_type>( offset, command.mName.size() + 2 );
-			}
-			for( const Command & command: d->mCommands ){
-				fmt::print( "  {:<{}}", command.mName, offset );
-				fmt::print( "{}\n", command.mDescription );
-			}
-		}else{
-			auto cmdMaybe = d->find( command );
-
-			if( cmdMaybe ){
-				auto cmd = cmdMaybe.value();
-				fmt::print( "{}\n\n", cmd->mDescription );
-
-				fmt::print( "Usage:\n");
-				fmt::print( "  {} {} [<args>] [<flags>]\n", App::instance().name(), cmd->mName );
-
-				if( !cmd->mLocalParameters.empty() ){
-					fmt::print( "\nFlags:\n");
-					for( const std::string & arg: cmd->mLocalParameters ){
-						auto configMaybe = App::instance().config().find( arg );
-
-						if( configMaybe ){
-							fmt::print( "  --{} {}\n", configMaybe.value()->mName, configMaybe.value()->mDescription );
-						}
-					}
-				}
-				if( !cmd->mGlobalParameters.empty() ){
-					fmt::print( "\nGlobal Flags:\n");
-					for( const std::string & arg: cmd->mGlobalParameters ){
-						auto configMaybe = App::instance().config().find( arg );
-
-						if( configMaybe ){
-							fmt::print( "  --{} {}\n", configMaybe.value()->mName, configMaybe.value()->mDescription );
-						}
-					}
-				}				
-			}
-		}
-	}
 }
 
 void drea::core::Commander::reportNoCommand( const std::string & command ) const
@@ -163,4 +111,14 @@ void drea::core::Commander::reportNoCommand( const std::string & command ) const
 			App::instance().logger()->error( "Unknown command \"{}\". Did you mean \"{}\"?", command, bestCmd );
 		}
 	}
+}
+
+jss::object_ptr<drea::core::Command> drea::core::Commander::find( const std::string & cmdName ) const
+{
+	return d->find( cmdName );
+}
+
+bool drea::core::Commander::empty() const
+{
+	return d->mCommands.empty();
 }

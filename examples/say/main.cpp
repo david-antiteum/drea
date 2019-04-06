@@ -10,12 +10,14 @@ int main( int argc, char * argv[] )
 	app.setDescription( "An example for the Drea Framework.\n\nDrea is available at https://github.com/david-antiteum/drea." );
 	app.setVersion( "0.0.1" );
 	
-	app.config().addDefaults().add(
+	app.config().addDefaults();
+	app.config().add(
 		{
 			"reverse", "", "reverse string"
 		}
 	);
-	app.commander().addDefaults().add(
+	app.commander().addDefaults();
+	app.commander().add(
 		{
 			"say", "prints the argument", {}, { "reverse" }
 		}
@@ -23,12 +25,14 @@ int main( int argc, char * argv[] )
 	app.parse( argc, argv );
 	app.commander().run( [ &app ]( std::string cmd ){
 		if( cmd == "say" ){
-			if( app.commander().arguments().size() == 1 ){
-				std::string say = app.commander().arguments().front();
-				if( app.config().contains( "reverse" ) ){
-					std::reverse( say.begin(), say.end() );
+			if( !app.commander().arguments().empty() ){
+				bool reverse = app.config().contains( "reverse" );
+				for( auto say: app.commander().arguments() ){
+					if( reverse ){
+						std::reverse( say.begin(), say.end() );
+					}
+					app.logger()->info( "{}", say );
 				}
-				app.logger()->info( "{}", say );
 			}
 		}else{
 			app.commander().reportNoCommand( cmd );

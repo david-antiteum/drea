@@ -4,6 +4,8 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include <optional>
+#include <object_ptr/object_ptr.hpp>
 
 #include "Export.h"
 #include "Command.h"
@@ -18,19 +20,21 @@ public:
 
 	void configure( const std::vector<std::string> & args );
 
-	Commander & addDefaults();
+	void addDefaults();
 
-	Commander & add( Command cmd );
+	void add( Command cmd );
 
 	void run( std::function<void( std::string )> f );
 
 	std::vector<std::string> arguments();
 
-	void showHelp( const std::string & command ) const;
-
 	void reportNoCommand( const std::string & command ) const;
 
 	void commands( std::function<void(const Command&)> f ) const;
+
+	jss::object_ptr<Command> find( const std::string & cmdName ) const;
+
+	bool empty() const;
 
 private:
 	struct Private;
