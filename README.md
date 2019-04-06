@@ -1,10 +1,10 @@
-# drea
+# Drea
 A C++ framework for CLI apps and services
 
 An example:
 
 ```c++
-#include <core/Core>
+#include <drea/core/Core>
 #include <algorithm>
 
 int main( int argc, char * argv[] )
@@ -36,6 +36,22 @@ int main( int argc, char * argv[] )
 		}
 	});
 }
+```
+
+## How to Build
+
+Use Cmake to build and install Drea in Linux, macOS and Windows systems.
+
+## How to Use Drea
+
+```
+cmake_minimum_required(VERSION 3.12)
+project(main)
+
+find_package(DreaCore REQUIRED)
+
+add_executable(main main.cpp)
+target_link_libraries(main PRIVATE DreaCore)
 ```
 
 ## Configuration

@@ -1,5 +1,5 @@
 
-#include <core/Core>
+#include <drea/core/Core>
 #include <algorithm>
 
 int main( int argc, char * argv[] )

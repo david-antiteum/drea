@@ -46,7 +46,7 @@ if( cxx17fs )
 	add_compile_definitions( CXX17FS )
 endif()
 
-include_directories( ../include/core ../include/thirdparty ${YAML_CPP_INCLUDE_DIR} )
+include_directories( ../include/drea/core ../include/thirdparty ${YAML_CPP_INCLUDE_DIR} )
 
 include(GNUInstallDirs)
 
