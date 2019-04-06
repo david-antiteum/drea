@@ -32,7 +32,10 @@ set_target_properties( ${PROJECT_NAME} PROPERTIES
 	SOVERSION 0
 )
 
-add_compile_definitions( YAML_CPP_DLL )
+if( WIN32 )
+	add_compile_definitions( YAML_CPP_DLL )
+endif()
+
 add_compile_definitions( DREA_CORE_DLL )
 add_compile_definitions( DREA_CORE_EXPORTS )
 
