@@ -1,40 +1,14 @@
+#include <spdlog/spdlog.h>
+#include <spdlog/fmt/fmt.h>
+
 #include "App.h"
 #include "Config.h"
 #include "Commander.h"
-
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/rotating_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/sinks/base_sink.h>
-#include <spdlog/fmt/fmt.h>
-
-#ifdef CPPRESTSDK_ENABLED
-	#include "integrations/graylog/graylog_sink.h"
-#endif
-
-#include <iostream>
-#include <fstream>
 
 struct drea::core::App::Private
 {
 	Private()
 	{
-	}
-
-	void setupLogger( const std::string & logFile )
-	{
-		std::vector<spdlog::sink_ptr> 		sinks;
-
-		sinks.push_back( std::make_shared<spdlog::sinks::stdout_color_sink_st>() );
-		if( !logFile.empty() ){
-			sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, 1048576 * 5, 3 ) );
-		}
-#ifdef CPPRESTSDK_ENABLED
-		if( mConfig.used( "graylog-host" ) ){
-			sinks.push_back( std::make_shared< drea::core::integrations::logs::graylog_sink<spdlog::details::null_mutex>>( mAppExeName, mConfig.get<std::string>( "graylog-host" ) ) );
-		}
-#endif
-		mLogger = std::make_shared<spdlog::logger>( mAppExeName, sinks.begin(), sinks.end() );
 	}
 
 	std::string							mAppExeName;
@@ -59,12 +33,9 @@ void drea::core::App::parse( int argc, char * argv[] )
 		d->mAppExeName = argv[0];
 	}
 	auto others = d->mConfig.configure( argc, argv );
-	d->mCommander.configure( others );
+	d->mLogger  = d->mConfig.setupLogger();
 
-	d->setupLogger( d->mConfig.get<std::string>( "log-file" ) );
-	if( d->mConfig.used( "verbose" ) ){
-		d->mLogger->set_level( spdlog::level::debug );
-	}
+	d->mCommander.configure( others );
 }
 
 drea::core::App::~App()

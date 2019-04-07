@@ -1,10 +1,12 @@
-#include "Config.h"
-
 #include <vector>
 #include <optional>
 #include <iostream>
+#include <memory>
 
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/base_sink.h>
 #include <spdlog/fmt/fmt.h>
 #include <woorm/levenshtein.h>
 
@@ -16,7 +18,11 @@
 
 #ifdef CPPRESTSDK_ENABLED
 	#include "integrations/consul/kv_store.h"
+	#include "integrations/graylog/graylog_sink.h"
 #endif
+
+#include "Config.h"
+#include "App.h"
 
 namespace drea { namespace core {
 
@@ -50,17 +56,17 @@ struct RemoteProvider
 
 struct drea::core::Config::Private
 {
-	std::vector<std::string>		mFlags;
-	std::vector<Option>				mOptions;
-	std::string						mEnvPrefix;
-	std::vector<RemoteProvider>		mRemoteProviders;
+	std::vector<std::string>				mFlags;
+	std::vector<std::unique_ptr<Option>>	mOptions;
+	std::string								mEnvPrefix;
+	std::vector<RemoteProvider>				mRemoteProviders;
 
 	jss::object_ptr<Option> find( const std::string & optionName ){
 		jss::object_ptr<Option>	res;
 
-		for( Option & opt: mOptions ){
-			if( opt.mName == optionName ){
-				res = &opt;
+		for( const auto & opt: mOptions ){
+			if( opt->mName == optionName ){
+				res = opt;
 				break;
 			}
 		}
@@ -152,11 +158,11 @@ struct drea::core::Config::Private
 		size_t			bestDist = 0;
 		std::string		bestArg;
 	
-		for( const Option & opt: mOptions ){
-			size_t	nd = levenshtein( optionName, opt.mName );
+		for( const auto & opt: mOptions ){
+			size_t	nd = levenshtein( optionName, opt->mName );
 			if( bestArg.empty() || nd < bestDist ){
 				bestDist = nd;
-				bestArg = opt.mName;
+				bestArg = opt->mName;
 			}
 		}
 		spdlog::warn( "Unknown argument \"{}\". Did you mean \"{}\"?", optionName, bestArg );
@@ -220,14 +226,14 @@ bool drea::core::Config::empty() const
 
 void drea::core::Config::options( std::function<void(const drea::core::Option&)> f ) const
 {
-	for( const Option & opt: d->mOptions ){
-		f( opt );
+	for( const auto & opt: d->mOptions ){
+		f( *opt );
 	}
 }
 
-void drea::core::Config::add( drea::core::Option option )
+void drea::core::Config::add( const drea::core::Option & option )
 {
-	d->mOptions.push_back( option );
+	d->mOptions.push_back( std::make_unique<Option>( option ));
 }
 
 void drea::core::Config::setEnvPrefix( const std::string & value )
@@ -255,9 +261,9 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 	// - command line flags
 
 	// Add values with defaults
-	for( const Option & option: d->mOptions ){
-		if( !option.mValues.empty() ){
-			d->mFlags.push_back( option.mName );
+	for( const auto & option: d->mOptions ){
+		if( !option->mValues.empty() ){
+			d->mFlags.push_back( option->mName );
 		}
 	}
 
@@ -266,12 +272,12 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 
 	// Env vars
 	if( !d->mEnvPrefix.empty() ){
-		for( Option & option: d->mOptions ){
-			std::string		env = drea::core::getenv( d->mEnvPrefix, option.mName );
+		for( const auto & option: d->mOptions ){
+			std::string		env = drea::core::getenv( d->mEnvPrefix, option->mName );
 			if( !env.empty() ){
-				d->mFlags.push_back( option.mName );
-				if( !option.mParamName.empty() ){
-					set( option.mName, env );
+				d->mFlags.push_back( option->mName );
+				if( !option->mParamName.empty() ){
+					set( option->mName, env );
 				}
 			}
 		}
@@ -327,4 +333,26 @@ bool drea::core::Config::used( const std::string & optionName ) const
 void drea::core::Config::set( const std::string & optionName, const std::string & value )
 {
 	d->set( optionName, value );
+}
+
+std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
+{
+	std::shared_ptr<spdlog::logger>		res;
+	std::vector<spdlog::sink_ptr> 		sinks;
+	std::string							logFile = get<std::string>( "log-file" );
+
+	sinks.push_back( std::make_shared<spdlog::sinks::stdout_color_sink_st>() );
+	if( !logFile.empty() ){
+		sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, 1048576 * 5, 3 ) );
+	}
+#ifdef CPPRESTSDK_ENABLED
+	if( used( "graylog-host" ) ){
+		sinks.push_back( std::make_shared< drea::core::integrations::logs::graylog_sink<spdlog::details::null_mutex>>( App::instance().name(), get<std::string>( "graylog-host" ) ) );
+	}
+#endif
+	res = std::make_shared<spdlog::logger>( App::instance().name(), sinks.begin(), sinks.end() );
+	if( used( "verbose" ) ){
+		res->set_level( spdlog::level::debug );
+	}
+	return res;
 }

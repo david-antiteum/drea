@@ -1,34 +1,32 @@
-#include "Commander.h"
-#include "App.h"
-#include "Config.h"
-
 #include <vector>
 #include <algorithm>
 #include <optional>
+#include <memory>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/fmt.h>
 #include <woorm/levenshtein.h>
+
+#include "Commander.h"
+#include "App.h"
+#include "Config.h"
 
 #include "integrations/bash/bash_completion.h"
 #include "integrations/help/help.h"
 
 struct drea::core::Commander::Private
 {
-	std::string						mCommand;
-	std::vector<std::string>		mArguments;
-	std::vector<Command>			mCommands;
+	std::string								mCommand;
+	std::vector<std::string>				mArguments;
+	std::vector<std::unique_ptr<Command>>	mCommands;
 
 	jss::object_ptr<Command> find( const std::string & cmdName ){
-		jss::object_ptr<Command>	res;
-
-		for( Command & cmd: mCommands ){
-			if( cmd.mName == cmdName ){
-				res = &cmd;
-				break;
+		for( const auto & cmd: mCommands ){
+			if( cmd->mName == cmdName ){
+				return cmd;
 			}
 		}
-		return res;
+		return {};
 	}
 };
 
@@ -42,9 +40,9 @@ drea::core::Commander::~Commander()
 }
 
 void drea::core::Commander::commands( std::function<void(const drea::core::Command&)> f ) const
-{
-	for( const Command & cmd: d->mCommands ){
-		f( cmd );
+{	
+	for( const auto & cmd: d->mCommands ){
+		f( *cmd );
 	}
 }
 
@@ -52,9 +50,9 @@ void drea::core::Commander::addDefaults()
 {
 }
 
-void drea::core::Commander::add( drea::core::Command cmd )
+void drea::core::Commander::add( const drea::core::Command & cmd )
 {
-	d->mCommands.push_back( cmd );
+	d->mCommands.push_back( std::make_unique<Command>( cmd ));
 }
 
 void drea::core::Commander::configure( const std::vector<std::string> & args )
@@ -99,11 +97,11 @@ void drea::core::Commander::reportNoCommand( const std::string & command ) const
 		size_t			bestDist = 0;
 		std::string		bestCmd;
 
-		for( const Command & cmd: d->mCommands ){
-			size_t	nd = levenshtein( command, cmd.mName );
+		for( const auto & cmd: d->mCommands ){
+			size_t	nd = levenshtein( command, cmd->mName );
 			if( bestCmd.empty() || nd < bestDist ){
 				bestDist = nd;
-				bestCmd = cmd.mName;
+				bestCmd = cmd->mName;
 			}
 		}
 		if( bestCmd.empty() ){

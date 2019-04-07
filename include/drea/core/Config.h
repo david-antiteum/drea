@@ -34,7 +34,7 @@ public:
 
 	/*! Adds an option to the app
 	*/
-	void add( Option option );
+	void add( const Option & option );
 
 	/*! Set the prefix for env variables for this app.
 
@@ -92,6 +92,10 @@ public:
 		Don't call this method directly. App::parse will do it.
 	*/
 	std::vector<std::string> configure( int argc, char * argv[] );
+
+	/*! Setup and create a logger based on the config
+	*/
+	std::shared_ptr<spdlog::logger> setupLogger() const;
 
 private:
 	struct Private;
