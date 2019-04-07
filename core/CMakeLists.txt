@@ -7,6 +7,7 @@ project( DreaCore VERSION 0.0.1 DESCRIPTION "Drea Framework Core" LANGUAGES CXX 
 
 find_package( yaml-cpp CONFIG REQUIRED )
 find_package( nlohmann_json REQUIRED )
+find_package( Boost REQUIRED )
 
 link_libraries( ${YAML_CPP_LIBRARIES} nlohmann_json::nlohmann_json )
 
@@ -37,6 +38,11 @@ if( WIN32 )
 	add_compile_definitions( YAML_CPP_DLL )
 endif()
 
+if (MSVC)
+	set_source_files_properties( Config.cpp PROPERTIES COMPILE_FLAGS /bigobj )
+endif()
+
+add_compile_definitions( _SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING )
 add_compile_definitions( DREA_CORE_DLL )
 add_compile_definitions( DREA_CORE_EXPORTS )
 
