@@ -9,6 +9,11 @@
 
 namespace drea { namespace core { namespace integrations { namespace Consul {
 
+/*! Access KV storer using the HTTP API.
+	Todo:
+	- use secure access
+	- read encrypted data
+*/
 class KVStore
 {
 public:
@@ -24,7 +29,7 @@ public:
 		web::http::http_request			req( web::http::methods::GET );
 		std::string						res;
 
-		spdlog::info( "accesing to etcd KV store for {}", address );
+		spdlog::info( "accesing to consul KV store for {}", address );
 
 		req.headers().set_content_type( utility::conversions::to_string_t( "application/json; charset=utf-8" ));
 

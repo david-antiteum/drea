@@ -9,6 +9,11 @@
 
 namespace drea { namespace core { namespace integrations { namespace etcd {
 
+/*! Access KV storer using the old v2 HTTP API.
+	Todo:
+	- move to v3 gRPC API
+	- use secure access
+*/
 class KVStore
 {
 public:
