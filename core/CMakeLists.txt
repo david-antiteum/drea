@@ -6,8 +6,9 @@ endif()
 project( DreaCore VERSION 0.0.1 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
 
 find_package( yaml-cpp CONFIG REQUIRED )
+find_package( nlohmann_json REQUIRED )
 
-link_libraries( ${YAML_CPP_LIBRARIES} )
+link_libraries( ${YAML_CPP_LIBRARIES} nlohmann_json::nlohmann_json )
 
 find_package( cpprestsdk )
 if( cpprestsdk_FOUND )

@@ -65,10 +65,19 @@ public:
 	*/
 	bool used( const std::string & optionName ) const;
 
-	/*! Set the value of an option from a string. The value will be converted to the declated type.
+	/*! 
+	*/
+	void registerUse( const std::string & optionName );
+
+	/*! Set the value of an option from a string. The value will be converted to the declared type.
 		If the value cannot be converted, the method will report an error and exit.
 	*/
 	void set( const std::string & optionName, const std::string & val );
+
+	/*! Append the value of an option from a string. The value will be converted to the declared type.
+		If the value cannot be converted, the method will report an error and exit.
+	*/
+	void append( const std::string & optionName, const std::string & val );
 
 	/*! Read the value of an option using a give type.
 		If the value cannot be converted, the method will throw.
@@ -83,6 +92,8 @@ public:
 		}
 		return T{};
 	}
+
+	void reportUnknownArgument( const std::string & optionName ) const;
 
 	// Methods called by App
 
