@@ -5,6 +5,12 @@ endif()
 
 option( BUILD_EXAMPLES "Build examples" ON )
 
+#if( CMAKE_BUILD_TYPE MATCHES DEBUG )
+	link_directories( "$ENV{VCPKG_ROOT}/installed/x64-windows/debug/lib" )
+#else()
+#	link_directories( "$ENV{VCPKG_ROOT}/installed/x64-windows/release/lib" )
+#endif()
+
 project( Drea )
 add_subdirectory( core )
 

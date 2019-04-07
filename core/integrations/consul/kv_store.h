@@ -4,8 +4,9 @@
 #include <spdlog/fmt/fmt.h>
 #include <chrono>
 
-#include <cpprest/http_client.h>
-#include <cpprest/http_listener.h>
+#undef U
+#include "utilities/httpclient.h"
+#include <boost/beast/core/detail/base64.hpp>
 
 namespace drea { namespace core { namespace integrations { namespace Consul {
 
@@ -24,45 +25,23 @@ public:
 
 	std::string get( const std::string & key ) const
 	{
-		std::string						address = mConsulService + "/" + key;
-		web::http::client::http_client 	client( utility::conversions::to_string_t( address ) );
-		web::http::http_request			req( web::http::methods::GET );
-		std::string						res;
+		std::string		address = mConsulService + "/" + key;
+		std::string		res;
 
 		spdlog::info( "accesing to consul KV store for {}", address );
 
-		req.headers().set_content_type( utility::conversions::to_string_t( "application/json; charset=utf-8" ));
-
-		client.request( req ).then([this, address](web::http::http_response response){
-			if( response.status_code() == web::http::status_codes::OK ){
-				return response.extract_json();
-			}else{
-				spdlog::error( "Error accessing consul {} for {}", response.status_code(), address );
-				return pplx::task_from_result(web::json::value());
-			}
-		}).then([ &res, this ](pplx::task<web::json::value> previousTask){
+		auto jsonMaybe = utilities::httpclient::get( address );
+		if( jsonMaybe ){
+			auto jsonValue = jsonMaybe.value();
 			try{
-				const auto jsonRes = previousTask.get().as_array();
-
-				if( jsonRes.size() > 0 ){
-					auto obj = jsonRes.at(0).as_object();
-				
-					auto encodedRes = obj.at( utility::conversions::to_string_t( "Value" )).as_string();
-
-					if( !encodedRes.empty() ){
-						auto f64 = utility::conversions::from_base64( encodedRes );
-						std::string str(f64.begin(), f64.end());
-
-						res = str;
-					}
-				}
-			}catch( const web::http::http_exception & e ){
-				spdlog::error( "Error accessing consul {}", e.what() );
-			}catch(...){
-				spdlog::error( "Error accessing consul" );
+				res = jsonValue[0].at( "Value" ).get<std::string>();
+			}catch( const std::exception & e ){
+				spdlog::error( "{}. Json was: {}", e.what(), jsonValue );
 			}
-		}).wait();
-
+			if( !res.empty() ){
+				res = boost::beast::detail::base64_decode( res );
+			}
+		}
 		return res;
 	}
 

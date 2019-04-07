@@ -9,13 +9,7 @@ find_package( yaml-cpp CONFIG REQUIRED )
 find_package( nlohmann_json REQUIRED )
 find_package( Boost REQUIRED )
 
-link_libraries( ${YAML_CPP_LIBRARIES} nlohmann_json::nlohmann_json )
-
-find_package( cpprestsdk )
-if( cpprestsdk_FOUND )
-	add_compile_definitions( CPPRESTSDK_ENABLED )
-	link_libraries( cpprestsdk::cpprest)
-endif()
+link_libraries( ${YAML_CPP_LIBRARIES} nlohmann_json::nlohmann_json uriparser )
 
 add_library( ${PROJECT_NAME} SHARED 
 	App.cpp

@@ -9,7 +9,7 @@
 			"type": "cppvsdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/build/bin/calculator.exe",
-			"args": [ "help" ],
+			"args": [ "sum", "10", "10", "--verbose", "--graylog-host", "http://localhost:12201" ],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],

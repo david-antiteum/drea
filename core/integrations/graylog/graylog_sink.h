@@ -5,8 +5,8 @@
 #include <spdlog/fmt/fmt.h>
 #include <chrono>
 
-#include <cpprest/http_client.h>
-#include <cpprest/http_listener.h>
+#undef U
+#include "utilities/httpclient.h"
 
 namespace drea { namespace core { namespace integrations { namespace logs {
 
@@ -27,24 +27,15 @@ protected:
 	void sink_it_(const spdlog::details::log_msg& msg) override
 	{
 		if( msg.level != spdlog::level::level_enum::off ){
-			web::json::value 	logJSON;
+			nlohmann::json		logJSON;
 
-			logJSON[U("version")] = web::json::value::string( utility::conversions::to_string_t( "1.1" ));
-			logJSON[U("host")] = web::json::value::string( utility::conversions::to_string_t( mHostName ));
-			logJSON[U("short_message")] = web::json::value::string( utility::conversions::to_string_t( fmt::format( msg.payload )));
-			logJSON[U("timestamp")] = web::json::value::number( std::chrono::duration_cast<std::chrono::milliseconds>( msg.time.time_since_epoch() ).count() / 1000.0 );
-			logJSON[U("level")] = web::json::value::number( toLevel( msg.level ) );
+			logJSON["version"] = "1.1";
+			logJSON["host"] = mHostName;
+			logJSON["short_message"] = fmt::format( msg.payload );
+			logJSON["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>( msg.time.time_since_epoch() ).count() / 1000.0;
+			logJSON["level"] = toLevel( msg.level );
 
-			web::http::client::http_client 	client( utility::conversions::to_string_t( mGraylogService ));
-			web::http::http_request			req( web::http::methods::POST );
-
-			req.headers().set_content_type( utility::conversions::to_string_t( "application/json; charset=utf-8" ));
-			req.set_body( logJSON );
-
-			auto response = client.request( req ).get();
-			if( response.status_code() != web::http::status_codes::OK && response.status_code() != web::http::status_codes::Accepted ){
-				spdlog::error("Error writting to graylog. Service: {}, error: {}", mGraylogService, response.status_code() );
-			}
+			utilities::httpclient::post( mGraylogService, logJSON );
 		}
 	}
 

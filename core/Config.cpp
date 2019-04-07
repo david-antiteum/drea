@@ -1,3 +1,4 @@
+
 #include <vector>
 #include <optional>
 #include <iostream>
@@ -14,17 +15,15 @@
 #include <iostream>
 #include <fstream>
 
-#ifdef CPPRESTSDK_ENABLED
-	#include "integrations/consul/kv_store.h"
-	#include "integrations/etcd/kv_store.h"
-	#include "integrations/graylog/graylog_sink.h"
-#endif
-
 #include "integrations/yaml/yaml_reader.h"
 #include "integrations/json/json_reader.h"
 
 #include "Config.h"
 #include "App.h"
+
+#include "integrations/graylog/graylog_sink.h"
+#include "integrations/consul/kv_store.h"
+#include "integrations/etcd/kv_store.h"
 
 namespace drea { namespace core {
 
@@ -184,13 +183,11 @@ void drea::core::Config::addDefaults()
 			"config-file", "file name", "read configs from file <file name>", {}, typeid( std::string )
 		}
 	);
-#ifdef CPPRESTSDK_ENABLED
 	add(
 		{
 			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
 		}
 	);
-#endif
 	add(
 		{
 			"generate-auto-completion"
@@ -338,11 +335,9 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 	if( !logFile.empty() ){
 		sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, 1048576 * 5, 3 ) );
 	}
-#ifdef CPPRESTSDK_ENABLED
 	if( used( "graylog-host" ) ){
 		sinks.push_back( std::make_shared< drea::core::integrations::logs::graylog_sink<spdlog::details::null_mutex>>( App::instance().name(), get<std::string>( "graylog-host" ) ) );
 	}
-#endif
 	res = std::make_shared<spdlog::logger>( App::instance().name(), sinks.begin(), sinks.end() );
 	if( used( "verbose" ) ){
 		res->set_level( spdlog::level::debug );
