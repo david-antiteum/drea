@@ -16,6 +16,7 @@ int main( int argc, char * argv[] )
 	
 	app.config().setEnvPrefix( "CAL" );
 	app.config().addRemoteProvider( "consul", "http://127.0.0.1:8500", "calculator-key" );
+	app.config().addRemoteProvider( "etcd", "http://127.0.0.1:2379", "calculator-key" );
 	app.config().addDefaults();
 	app.config().add(
 		{

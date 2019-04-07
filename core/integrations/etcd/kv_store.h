@@ -7,19 +7,19 @@
 #include <cpprest/http_client.h>
 #include <cpprest/http_listener.h>
 
-namespace drea { namespace core { namespace integrations { namespace Consul {
+namespace drea { namespace core { namespace integrations { namespace etcd {
 
 class KVStore
 {
 public:
-	KVStore( const std::string & consulHost )
+	KVStore( const std::string & etcdHost )
 	{
-		mConsulService = fmt::format( "{}/v1/kv", consulHost );
+		mEtcdService = fmt::format( "{}/v2/keys", etcdHost );
 	}
 
 	std::string get( const std::string & key ) const
 	{
-		std::string						address = mConsulService + "/" + key;
+		std::string						address = mEtcdService + "/" + key;
 		web::http::client::http_client 	client( utility::conversions::to_string_t( address ) );
 		web::http::http_request			req( web::http::methods::GET );
 		std::string						res;
@@ -32,29 +32,21 @@ public:
 			if( response.status_code() == web::http::status_codes::OK ){
 				return response.extract_json();
 			}else{
-				spdlog::error( "Error accessing consul {} for {}", response.status_code(), address );
+				spdlog::error( "Error accessing etcd {} for {}", response.status_code(), address );
 				return pplx::task_from_result(web::json::value());
 			}
-		}).then([ &res, this ](pplx::task<web::json::value> previousTask){
+		}).then([ &res, this, address ](pplx::task<web::json::value> previousTask){
 			try{
-				const auto jsonRes = previousTask.get().as_array();
+				auto obj = previousTask.get().as_object().at( utility::conversions::to_string_t( "node" )).as_object();
+				auto encodedRes = obj.at( utility::conversions::to_string_t( "value" )).as_string();
 
-				if( jsonRes.size() > 0 ){
-					auto obj = jsonRes.at(0).as_object();
-				
-					auto encodedRes = obj.at( utility::conversions::to_string_t( "Value" )).as_string();
-
-					if( !encodedRes.empty() ){
-						auto f64 = utility::conversions::from_base64( encodedRes );
-						std::string str(f64.begin(), f64.end());
-
-						res = str;
-					}
+				if( !encodedRes.empty() ){
+					res = utility::conversions::to_utf8string( encodedRes );
 				}
 			}catch( const web::http::http_exception & e ){
-				spdlog::error( "Error accessing consul {}", e.what() );
+				spdlog::error( "Error accessing etcd {} at {}", e.what(), address );
 			}catch(...){
-				spdlog::error( "Error accessing consul" );
+				spdlog::error( "Error accessing etcd at {}", address );
 			}
 		}).wait();
 
@@ -62,7 +54,7 @@ public:
 	}
 
 private:
-	std::string			mConsulService;
+	std::string			mEtcdService;
 };
 
 }}}}

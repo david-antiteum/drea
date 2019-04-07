@@ -16,6 +16,7 @@
 
 #ifdef CPPRESTSDK_ENABLED
 	#include "integrations/consul/kv_store.h"
+	#include "integrations/etcd/kv_store.h"
 	#include "integrations/graylog/graylog_sink.h"
 #endif
 
@@ -264,6 +265,8 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 	for( const RemoteProvider & provider: d->mRemoteProviders ){
 		if( provider.mProvider == "consul" ){
 			d->readConfig( integrations::Consul::KVStore( provider.mHost ).get( provider.mKey ) );
+		}else if( provider.mProvider == "etcd" ){
+			d->readConfig( integrations::etcd::KVStore( provider.mHost ).get( provider.mKey ) );
 		}
 	}
 
