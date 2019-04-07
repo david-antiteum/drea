@@ -26,7 +26,7 @@ int main( int argc, char * argv[] )
 	app.commander().run( [ &app ]( std::string cmd ){
 		if( cmd == "say" ){
 			if( !app.commander().arguments().empty() ){
-				bool reverse = app.config().contains( "reverse" );
+				bool reverse = app.config().used( "reverse" );
 				for( auto say: app.commander().arguments() ){
 					if( reverse ){
 						std::reverse( say.begin(), say.end() );

@@ -14,12 +14,19 @@ namespace drea { namespace core {
 class Config;
 class Commander;
 
+/*! Our application (or service). It has support for:
+	- a command system: App::commander
+	- a configuration system: App::config
+	- a logging system: App::logger
+*/
 class DREA_CORE_API App
 {
 public:
 	explicit App();
 	~App();
 
+	/*! Access to the single instance of the app
+	*/
 	static App & instance();
 
 	const std::string & name() const;
@@ -30,16 +37,22 @@ public:
 	void setDescription( const std::string & value );
 	void setVersion( const std::string & value );
 
-	void parse( int argc, char * argv[] );
-
+	/*! Access the config to configure it.
+	*/
 	Config & config() const;
+
+	/*! Access the commander to configure it.
+	*/
 	Commander & commander() const;
 
+	/*! Logger
+	*/
 	std::shared_ptr<spdlog::logger> logger() const;
 
-	[[noreturn]] void showVersion() const;
-	[[noreturn]] void showHelp() const;
-	[[noreturn]] void generateAutoCompletion() const;
+	/*! After configuring the app, call this method to parse options for all
+		the selected sources.
+	*/
+	void parse( int argc, char * argv[] );
 
 private:
 	struct Private;

@@ -11,8 +11,6 @@
 #ifdef CPPRESTSDK_ENABLED
 	#include "integrations/graylog/graylog_sink.h"
 #endif
-#include "integrations/bash/bash_completion.h"
-#include "integrations/help/help.h"
 
 #include <iostream>
 #include <fstream>
@@ -32,7 +30,7 @@ struct drea::core::App::Private
 			sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, 1048576 * 5, 3 ) );
 		}
 #ifdef CPPRESTSDK_ENABLED
-		if( mConfig.contains( "graylog-host" ) ){
+		if( mConfig.used( "graylog-host" ) ){
 			sinks.push_back( std::make_shared< drea::core::integrations::logs::graylog_sink<spdlog::details::null_mutex>>( mAppExeName, mConfig.get<std::string>( "graylog-host" ) ) );
 		}
 #endif
@@ -64,7 +62,7 @@ void drea::core::App::parse( int argc, char * argv[] )
 	d->mCommander.configure( others );
 
 	d->setupLogger( d->mConfig.get<std::string>( "log-file" ) );
-	if( d->mConfig.contains( "verbose" ) ){
+	if( d->mConfig.used( "verbose" ) ){
 		d->mLogger->set_level( spdlog::level::debug );
 	}
 }
@@ -122,22 +120,4 @@ drea::core::Commander & drea::core::App::commander() const
 std::shared_ptr<spdlog::logger> drea::core::App::logger() const
 {
 	return d->mLogger;
-}
-
-void drea::core::App::showVersion() const
-{
-	drea::core::integrations::Help::version( *this );
-	std::exit( 0 );
-}
-
-void drea::core::App::showHelp() const
-{
-	drea::core::integrations::Help::help( *this );
-	std::exit( 0 );
-}
-
-void drea::core::App::generateAutoCompletion() const
-{
-	drea::core::integrations::Bash::generateAutoCompletion( *this );
-	std::exit( 0 );
 }

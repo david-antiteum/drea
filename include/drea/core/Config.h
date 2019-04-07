@@ -12,33 +12,71 @@
 #include "Option.h"
 
 namespace drea { namespace core {
+/*! Configuration options of the application.
 
+	Reads data from (in this order):
+	- defaults
+	- config file (if --config-file is used)
+	- env variables (if the prefix is set, \see Config::setEnvPrefix)
+	- external systems (if a remote provider is set, \see Config::addRemoteProvider)
+	- command line flags
+	- set values by the app (\see Config::set)
+*/
 class DREA_CORE_API Config
 {
 public:
 	explicit Config();
 	~Config();
 
-	std::vector<std::string> configure( int argc, char * argv[] );
-
+	/*! Adds defaults options to the app
+	*/
 	void addDefaults();
+
+	/*! Adds an option to the app
+	*/
 	void add( Option option );
 
-	void options( std::function<void(const Option&)> f ) const;
+	/*! Set the prefix for env variables for this app.
 
+		For example, if there is a config option called verbose and an app sets the prefix to CAL, then 
+		we will look for the variable CAL_verbose
+	*/
 	void setEnvPrefix( const std::string & value );
+
+	/*! Add a remote provider (only consul for now) in a endpoint to read config settings (in YAML or JSON)
+		stored in a key.
+	*/
 	void addRemoteProvider( const std::string & provider, const std::string & host, const std::string & key );
 
-	jss::object_ptr<Option> find( const std::string & flag ) const;
+	/*! Any option?
+	*/
+	bool empty() const;
 
-	bool contains( const std::string & flag ) const;
+	/*! Access the options
+	*/
+	void options( std::function<void(const Option&)> f ) const;
 
-	void set( const std::string & flag, const std::string & val );
+	/*! Find an option by name. Return nullptr if not found
+	*/
+	jss::object_ptr<Option> find( const std::string & optionName ) const;
 
+	/*! Returns true if the option has been set, either via flags, config files, sets... or because
+		it has a default value.
+	*/
+	bool used( const std::string & optionName ) const;
+
+	/*! Set the value of an option from a string. The value will be converted to the declated type.
+		If the value cannot be converted, the method will report an error and exit.
+	*/
+	void set( const std::string & optionName, const std::string & val );
+
+	/*! Read the value of an option using a give type.
+		If the value cannot be converted, the method will throw.
+	*/
 	template<typename T>
-	T get( const std::string & flag ) const
+	T get( const std::string & optionName ) const
 	{
-		auto option = find( flag );
+		auto option = find( optionName );
 
 		if( option && !option->mValues.empty() ){
 			return std::get<T>( option->mValues.front() );
@@ -46,7 +84,14 @@ public:
 		return T{};
 	}
 
-	bool empty() const;
+	// Methods called by App
+
+	/*! Init the system with arguments and apply values in order.
+		Returns all the arguments that aren't options (and thus command and arguments for the command).
+
+		Don't call this method directly. App::parse will do it.
+	*/
+	std::vector<std::string> configure( int argc, char * argv[] );
 
 private:
 	struct Private;

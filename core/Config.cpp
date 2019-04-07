@@ -19,6 +19,7 @@
 #endif
 
 namespace drea { namespace core {
+
 static std::string getenv( const std::string & prefix, const std::string & name )
 {
 	std::string		res;
@@ -54,11 +55,11 @@ struct drea::core::Config::Private
 	std::string						mEnvPrefix;
 	std::vector<RemoteProvider>		mRemoteProviders;
 
-	jss::object_ptr<Option> find( const std::string & flag ){
+	jss::object_ptr<Option> find( const std::string & optionName ){
 		jss::object_ptr<Option>	res;
 
 		for( Option & opt: mOptions ){
-			if( opt.mName == flag ){
+			if( opt.mName == optionName ){
 				res = &opt;
 				break;
 			}
@@ -66,17 +67,17 @@ struct drea::core::Config::Private
 		return res;
 	}
 
-	void set( const std::string & flag, const std::string & value )
+	void set( const std::string & optionName, const std::string & value )
 	{
-		if( auto option = find( flag ) ){
+		if( auto option = find( optionName ) ){
 			option->mValues.clear();
-			append( flag, value );
+			append( optionName, value );
 		}
 	}
 
-	void append( const std::string & flag, const std::string & value )
+	void append( const std::string & optionName, const std::string & value )
 	{
-		if( auto option = find( flag ) ){
+		if( auto option = find( optionName ) ){
 			OptionValue	val = option->fromString( value );
 
 			if( val.index() > 0 ){
@@ -146,19 +147,19 @@ struct drea::core::Config::Private
 		}
 	}
 
-	void reportUnknownArgument( const std::string & arg ) const
+	void reportUnknownArgument( const std::string & optionName ) const
 	{
 		size_t			bestDist = 0;
 		std::string		bestArg;
 	
 		for( const Option & opt: mOptions ){
-			size_t	nd = levenshtein( arg, opt.mName );
+			size_t	nd = levenshtein( optionName, opt.mName );
 			if( bestArg.empty() || nd < bestDist ){
 				bestDist = nd;
 				bestArg = opt.mName;
 			}
 		}
-		spdlog::warn( "Unknown argument \"{}\". Did you mean \"{}\"?", arg, bestArg );
+		spdlog::warn( "Unknown argument \"{}\". Did you mean \"{}\"?", optionName, bestArg );
 	}
 };
 
@@ -239,9 +240,9 @@ void drea::core::Config::addRemoteProvider( const std::string & provider, const 
 	d->mRemoteProviders.push_back( { provider, host, key } );
 }
 
-jss::object_ptr<drea::core::Option> drea::core::Config::find( const std::string & flag ) const
+jss::object_ptr<drea::core::Option> drea::core::Config::find( const std::string & optionName ) const
 {
-	return d->find( flag );
+	return d->find( optionName );
 }
 
 std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] )
@@ -318,12 +319,12 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 	return others;
 }
 
-bool drea::core::Config::contains( const std::string & flag ) const
+bool drea::core::Config::used( const std::string & optionName ) const
 {
-	return std::find( d->mFlags.begin(), d->mFlags.end(), flag ) != d->mFlags.end();
+	return std::find( d->mFlags.begin(), d->mFlags.end(), optionName ) != d->mFlags.end();
 }
 
-void drea::core::Config::set( const std::string & flag, const std::string & value )
+void drea::core::Config::set( const std::string & optionName, const std::string & value )
 {
-	d->set( flag, value );
+	d->set( optionName, value );
 }

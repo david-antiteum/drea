@@ -10,6 +10,7 @@
 #include <spdlog/fmt/fmt.h>
 #include <woorm/levenshtein.h>
 
+#include "integrations/bash/bash_completion.h"
 #include "integrations/help/help.h"
 
 struct drea::core::Commander::Private
@@ -70,13 +71,13 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 
 void drea::core::Commander::run( std::function<void( std::string )> f )
 {
-	if( App::instance().config().contains( "version" )){
-		App::instance().showVersion();
-	}else if( App::instance().config().contains( "generate-auto-completion" ) ){
-		App::instance().generateAutoCompletion();
-	}else if( App::instance().config().contains( "help" ) ){
+	if( App::instance().config().used( "version" )){
+		drea::core::integrations::Help::version( App::instance() );
+	}else if( App::instance().config().used( "generate-auto-completion" ) ){
+		drea::core::integrations::Bash::generateAutoCompletion( App::instance() );
+	}else if( App::instance().config().used( "help" ) ){
 		if( d->mCommand.empty() ){
-			App::instance().showHelp();
+			drea::core::integrations::Help::help( App::instance() );
 		}else{
 			drea::core::integrations::Help::help( App::instance(), d->mCommand );
 		}
@@ -85,7 +86,7 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 	}
 }
 
-std::vector<std::string> drea::core::Commander::arguments()
+std::vector<std::string> drea::core::Commander::arguments() const
 {
 	return d->mArguments;
 }

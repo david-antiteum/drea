@@ -87,12 +87,12 @@ int main( int argc, char * argv[] )
 		}
 		if( valueMaybe ){
 			double	value = valueMaybe.value();
-			if( app.config().contains( "round" ) ){
+			if( app.config().used( "round" ) ){
 				value = std::round( value );
 			}
 			app.logger()->info( "Result: {}", value );
 
-			if( app.config().contains( "equal" ) ){
+			if( app.config().used( "equal" ) ){
 				if( app.config().get<double>( "equal" ) == value ){
 					app.logger()->info( "Result is equal" );
 				}else{
