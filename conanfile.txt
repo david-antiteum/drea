@@ -1,0 +1,7 @@
+[requires]
+boost/1.69.0@conan/stable
+yaml-cpp/0.6.2@bincrafters/stable
+jsonformoderncpp/3.6.1@vthiery/stable
+
+[generators]
+cmake
