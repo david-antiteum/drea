@@ -35,7 +35,7 @@ protected:
 			logJSON["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>( msg.time.time_since_epoch() ).count() / 1000.0;
 			logJSON["level"] = toLevel( msg.level );
 
-			utilities::httpclient::post( mGraylogService, logJSON );
+			utilities::HttpClient::post( mGraylogService, logJSON );
 		}
 	}
 

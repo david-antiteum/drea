@@ -84,7 +84,11 @@
 		"queue": "cpp",
 		"random": "cpp",
 		"shared_mutex": "cpp",
-		"*.ipp": "cpp"
+		"*.ipp": "cpp",
+		"cwctype": "cpp",
+		"forward_list": "cpp",
+		"future": "cpp",
+		"valarray": "cpp"
 	},
 	"editor.insertSpaces": false,
 	"editor.detectIndentation": false,
