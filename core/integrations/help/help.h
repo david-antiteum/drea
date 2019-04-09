@@ -45,7 +45,7 @@ static void help( const drea::core::App & app, const std::string & command )
 				auto commands = utilities::string::split( command, "." );
 
 				fmt::print( "\nUsage:");
-				fmt::print( "  {} {} ", App::instance().name(), utilities::string::join( commands, " "  ));
+				fmt::print( "  {} {} ", App::instance().name(), utilities::string::join( commands, " " ));
 				if( !cmd->mSubcommand.empty() ){
 					fmt::print( "[command] " );
 				}
@@ -60,7 +60,7 @@ static void help( const drea::core::App & app, const std::string & command )
 				if( !cmd->mSubcommand.empty() ){
 					fmt::print( "\nCommands:\n");
 					for( const std::string & subCmdName: cmd->mSubcommand ){
-						if( auto subCmd = App::instance().commander().find( cmd->mName + "." + subCmdName ) ){
+						if( auto subCmd = App::instance().commander().find( command + "." + subCmdName ) ){
 							fmt::print( "  {} {}\n", subCmd->mName, subCmd->mDescription );
 						}
 					}
@@ -83,7 +83,7 @@ static void help( const drea::core::App & app, const std::string & command )
 					}
 				}
 				if( !cmd->mSubcommand.empty() ){
-					fmt::print( "\nUse \"{} {} [command] --help\" for more information about a command.\n", app.name(), cmd->mName );
+					fmt::print( "\nUse \"{} {} [command] --help\" for more information about a command.\n", app.name(), utilities::string::join( commands, " " ));
 				}						
 			}
 		}

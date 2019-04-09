@@ -13,6 +13,7 @@
 
 #include "integrations/bash/bash_completion.h"
 #include "integrations/help/help.h"
+#include "utilities/string.h"
 
 struct drea::core::Commander::Private
 {
@@ -78,21 +79,24 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 {
 	if( !args.empty() ){
 		if( auto cmd = find( args.at( 0 ) ) ){
-			int	otherPos = 1;
+			int	pos = 1;
 
 			d->mCommand = cmd->mName;
-			if( !cmd->mSubcommand.empty() ){
-				if( args.size() > 1 ){
-					if( auto subCmd = find( d->mCommand + "." + args.at( 1 ))){
-						d->mCommand += "." + subCmd->mName;
-						otherPos++;
+			while( args.size() > pos ){
+				auto it = std::find( cmd->mSubcommand.begin(), cmd->mSubcommand.end(), args.at( pos ) );
+				if( it != cmd->mSubcommand.end() ){
+					if( cmd = find( d->mCommand + "." + args.at( pos ))){
+						d->mCommand += "." + cmd->mName;
+						pos++;
+					}else{
+						break;
 					}
+				}else{
+					break;
 				}
 			}
-			for( int i = otherPos; i < args.size(); i++ ){
-				if( args[i][0] != '-' ){
-					d->mArguments.push_back( args[i] );
-				}
+			for( int i = pos; i < args.size(); i++ ){
+				d->mArguments.push_back( args[i] );
 			}
 		}else{
 			reportNoCommand( args.at( 0 ) );
@@ -125,7 +129,7 @@ std::vector<std::string> drea::core::Commander::arguments() const
 void drea::core::Commander::reportNoSubCommand( const std::string & command ) const
 {
 	if( auto cmd = find( command ) ){
-		App::instance().logger()->error( "The command \"{}\" requires a sub command. Try: {} {} --help", command, App::instance().args().at( 0 ), command );
+		App::instance().logger()->error( "The command \"{}\" requires a sub command. Try: {} {} --help", utilities::string::replace( command, ".", " " ), App::instance().args().at( 0 ), utilities::string::replace( command, ".", " " ) );
 	}else{
 		reportNoCommand( command );
 	}

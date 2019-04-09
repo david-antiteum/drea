@@ -9,7 +9,7 @@ An example:
 
 int main( int argc, char * argv[] )
 {
-	drea::core::App	 app;
+	drea::core::App	 app( argc, argv );
 
 	app.setName( "say" );
 	app.setDescription( "An example for the Drea Framework.\n\nDrea is available at https://github.com/david-antiteum/drea." );
@@ -27,7 +27,7 @@ int main( int argc, char * argv[] )
 			"say", "prints the argument", {}, { "reverse" }
 		}
 	);
-	app.parse( argc, argv );
+	app.parse();
 	app.commander().run( [ &app ]( std::string cmd ){
 		if( cmd == "say" && app.commander().arguments().size() == 1 ){
 			std::string say = app.commander().arguments().front();

@@ -29,11 +29,22 @@ int main( int argc, char * argv[] )
 	);
 	auto parrot = app.commander().add(
 		{
-			"parrot", "print parrot", {}, { "reverse" }, "repeat"
+			"parrot", "print parrot", {}, { "reverse" }, "repeat", { "blue", "red" }
+		}
+	);
+	auto blue = app.commander().add(
+		{
+			"blue", "print a blue parrot", {}, { "reverse" }, "parrot"
+		}
+	);
+	auto red = app.commander().add(
+		{
+			"red", "print a red parrot", {}, { "reverse" }, "parrot"
 		}
 	);
 	app.parse();
 	app.commander().run( [ &app ]( std::string cmd ){
+		app.logger()->debug( "command to run {}", cmd );
 		if( cmd == "say" ){
 			if( !app.commander().arguments().empty() ){
 				bool reverse = app.config().used( "reverse" );
@@ -47,10 +58,18 @@ int main( int argc, char * argv[] )
 		}else if( cmd == "repeat" ){
 			app.commander().reportNoSubCommand( cmd );
 		}else if( cmd == "repeat.parrot" ){
+			app.commander().reportNoSubCommand( cmd );
+		}else if( cmd == "repeat.parrot.blue" ){
 			if( app.config().used( "reverse" ) ){
-				app.logger()->info( "{}", "torrap" );
+				app.logger()->info( "{}", "eulb torrap" );
 			}else{
-				app.logger()->info( "{}", "parrot" );
+				app.logger()->info( "{}", "parrot blue" );
+			}
+		}else if( cmd == "repeat.parrot.red" ){
+			if( app.config().used( "reverse" ) ){
+				app.logger()->info( "{}", "der torrap" );
+			}else{
+				app.logger()->info( "{}", "parrot red" );
 			}
 		}else{
 			app.commander().reportNoCommand( cmd );
