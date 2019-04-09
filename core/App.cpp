@@ -35,16 +35,16 @@ drea::core::App::App( int argc, char * argv[] )
 	}
 }
 
+drea::core::App::~App()
+{
+	mInstanceApp = nullptr;
+}
+
 void drea::core::App::parse()
 {
 	auto others = d->mConfig.configure( d->mArgs );
 	d->mLogger  = d->mConfig.setupLogger();
 	d->mCommander.configure( others );
-}
-
-drea::core::App::~App()
-{
-	mInstanceApp = nullptr;
 }
 
 drea::core::App & drea::core::App::instance()
@@ -92,9 +92,13 @@ drea::core::Commander & drea::core::App::commander() const
 	return d->mCommander;
 }
 
-std::shared_ptr<spdlog::logger> drea::core::App::logger() const
+spdlog::logger & drea::core::App::logger() const
 {
-	return d->mLogger;
+	if( d->mLogger ){
+		return *d->mLogger;
+	}else{
+		return *spdlog::default_logger();
+	}
 }
 
 std::vector<std::string> drea::core::App::args() const

@@ -129,7 +129,7 @@ std::vector<std::string> drea::core::Commander::arguments() const
 void drea::core::Commander::reportNoSubCommand( const std::string & command ) const
 {
 	if( auto cmd = find( command ) ){
-		App::instance().logger()->error( "The command \"{}\" requires a sub command. Try: {} {} --help", utilities::string::replace( command, ".", " " ), App::instance().args().at( 0 ), utilities::string::replace( command, ".", " " ) );
+		App::instance().logger().error( "The command \"{}\" requires a sub command. Try: {} {} --help", utilities::string::replace( command, ".", " " ), App::instance().args().at( 0 ), utilities::string::replace( command, ".", " " ) );
 	}else{
 		reportNoCommand( command );
 	}
@@ -138,7 +138,7 @@ void drea::core::Commander::reportNoSubCommand( const std::string & command ) co
 void drea::core::Commander::reportNoCommand( const std::string & command ) const
 {
 	if( command.empty() ){
-		App::instance().logger()->info( "A command is required." );
+		App::instance().logger().info( "A command is required." );
 	}else{
 		size_t			bestDist = 0;
 		std::string		bestCmd;
@@ -151,9 +151,9 @@ void drea::core::Commander::reportNoCommand( const std::string & command ) const
 			}
 		}
 		if( bestCmd.empty() ){
-			App::instance().logger()->error( "Unknown command \"{}\"", command );
+			App::instance().logger().error( "Unknown command \"{}\"", command );
 		}else{
-			App::instance().logger()->error( "Unknown command \"{}\". Did you mean \"{}\"?", command, bestCmd );
+			App::instance().logger().error( "Unknown command \"{}\". Did you mean \"{}\"?", command, bestCmd );
 		}
 	}
 }

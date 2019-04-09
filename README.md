@@ -34,7 +34,7 @@ int main( int argc, char * argv[] )
 			if( app.config().used( "reverse" ) ){
 				std::reverse( say.begin(), say.end() );
 			}
-			app.logger()->info( "{}", say );
+			app.logger().info( "{}", say );
 		}
 	});
 }

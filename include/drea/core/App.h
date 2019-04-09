@@ -48,7 +48,7 @@ public:
 
 	/*! Logger
 	*/
-	std::shared_ptr<spdlog::logger> logger() const;
+	spdlog::logger & logger() const;
 
 	/*! After configuring the app, call this method to parse options for all
 		the selected sources.

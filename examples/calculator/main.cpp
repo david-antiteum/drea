@@ -48,7 +48,7 @@ int main( int argc, char * argv[] )
 
 	app.parse();
 	app.commander().run( [ &app ]( std::string cmd ){
-		app.logger()->debug( "Run called for command {}", cmd );
+		app.logger().debug( "Run called for command {}", cmd );
 
 		std::optional<double>		valueMaybe;
 
@@ -59,7 +59,7 @@ int main( int argc, char * argv[] )
 				try{
 					sum += std::stod( arg );
 				}catch( std::exception & e ){
-					app.logger()->error( "Argument {} is not a number: {}", arg, e.what() );
+					app.logger().error( "Argument {} is not a number: {}", arg, e.what() );
 				}
 			}
 			valueMaybe = sum;
@@ -71,10 +71,10 @@ int main( int argc, char * argv[] )
 
 					valueMaybe = std::pow( base, exponent );
 				}catch( std::exception & e ){
-					app.logger()->error( "Argument is not a number: {}", e.what() );
+					app.logger().error( "Argument is not a number: {}", e.what() );
 				}
 			}else{
-				app.logger()->error( "Power needs two arguments" );
+				app.logger().error( "Power needs two arguments" );
 			}
 		}else if( cmd == "count" ){
 			double sum = 0.0;
@@ -91,13 +91,13 @@ int main( int argc, char * argv[] )
 			if( app.config().used( "round" ) ){
 				value = std::round( value );
 			}
-			app.logger()->info( "Result: {}", value );
+			app.logger().info( "Result: {}", value );
 
 			if( app.config().used( "equal" ) ){
 				if( app.config().get<double>( "equal" ) == value ){
-					app.logger()->info( "Result is equal" );
+					app.logger().info( "Result is equal" );
 				}else{
-					app.logger()->info( "Result is different than {}", app.config().get<double>( "equal" ) );
+					app.logger().info( "Result is different than {}", app.config().get<double>( "equal" ) );
 				}
 			}
 		}

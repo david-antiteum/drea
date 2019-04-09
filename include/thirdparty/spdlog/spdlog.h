@@ -136,7 +136,7 @@ inline void set_automatic_registration(bool automatic_registation)
 //
 // The default logger object can be accessed using the spdlog::default_logger():
 // For example, to add another sink to it:
-// spdlog::default_logger()->sinks()->push_back(some_sink);
+// spdlog::default_logger().sinks()->push_back(some_sink);
 //
 // The default logger can replaced using spdlog::set_default_logger(new_logger).
 // For example, to replace it with a file logger.
