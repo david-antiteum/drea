@@ -102,7 +102,7 @@ public:
 
 		Don't call this method directly. App::parse will do it.
 	*/
-	std::vector<std::string> configure( int argc, char * argv[] );
+	std::vector<std::string> configure( const std::vector<std::string> & args );
 
 	/*! Setup and create a logger based on the config
 	*/

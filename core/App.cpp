@@ -17,24 +17,28 @@ struct drea::core::App::Private
 	Config								mConfig;
 	Commander							mCommander;
 	std::shared_ptr<spdlog::logger>		mLogger;
+	std::vector<std::string>			mArgs;
 };
 
 static drea::core::App * mInstanceApp = nullptr;
 
-drea::core::App::App()
+drea::core::App::App( int argc, char * argv[] )
 {
 	d = std::make_unique<Private>();
 	mInstanceApp = this;
-}
 
-void drea::core::App::parse( int argc, char * argv[] )
-{
-	if( d->mAppExeName.empty() ){
+	if( argc > 0 ){
+		for( int i = 0; i < argc; i++ ){
+			d->mArgs.push_back( argv[i] );
+		}
 		d->mAppExeName = argv[0];
 	}
-	auto others = d->mConfig.configure( argc, argv );
-	d->mLogger  = d->mConfig.setupLogger();
+}
 
+void drea::core::App::parse()
+{
+	auto others = d->mConfig.configure( d->mArgs );
+	d->mLogger  = d->mConfig.setupLogger();
 	d->mCommander.configure( others );
 }
 
@@ -91,4 +95,9 @@ drea::core::Commander & drea::core::App::commander() const
 std::shared_ptr<spdlog::logger> drea::core::App::logger() const
 {
 	return d->mLogger;
+}
+
+std::vector<std::string> drea::core::App::args() const
+{
+	return d->mArgs;
 }

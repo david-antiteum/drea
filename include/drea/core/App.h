@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 
 #include "Export.h"
 
@@ -22,7 +23,7 @@ class Commander;
 class DREA_CORE_API App
 {
 public:
-	explicit App();
+	explicit App( int argc, char * argv[] );
 	~App();
 
 	/*! Access to the single instance of the app
@@ -52,7 +53,11 @@ public:
 	/*! After configuring the app, call this method to parse options for all
 		the selected sources.
 	*/
-	void parse( int argc, char * argv[] );
+	void parse();
+
+	/*! The argumenst as passed in the App constructor
+	*/
+	std::vector<std::string> args() const;
 
 private:
 	struct Private;

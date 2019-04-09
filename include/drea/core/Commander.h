@@ -25,7 +25,7 @@ public:
 
 	/*! Adds a command to the app
 	*/
-	void add( const drea::core::Command & cmd );
+	jss::object_ptr<Command> add( const drea::core::Command & cmd );
 
 	/*! Use this method to be called with the command to execute.
 		Do it after configuring the app and parsing the options (\see App::parse)
@@ -51,6 +51,10 @@ public:
 	/*! Report to the user that this is not a valid command. This method show a similar command if possible (Did you mean?).
 	*/
 	void reportNoCommand( const std::string & command ) const;
+
+	/*! Report to the user that this is not a valid command because a required subcommand is missing.
+	*/
+	void reportNoSubCommand( const std::string & command ) const;
 
 	// Methods called by App
 

@@ -8,7 +8,7 @@
 
 int main( int argc, char * argv[] )
 {
-	drea::core::App	 app;
+	drea::core::App	 app( argc, argv );
 
 	app.setName( "calculator" );
 	app.setDescription( "A basic calculator as an example for the Drea Framework.\n\nDrea is available at https://github.com/david-antiteum/drea." );
@@ -46,7 +46,7 @@ int main( int argc, char * argv[] )
 		}		
 	);
 
-	app.parse( argc, argv );
+	app.parse();
 	app.commander().run( [ &app ]( std::string cmd ){
 		app.logger()->debug( "Run called for command {}", cmd );
 

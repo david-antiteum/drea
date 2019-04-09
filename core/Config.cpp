@@ -129,16 +129,16 @@ struct drea::core::Config::Private
 		return res;
 	}
 
-	void readConfig( int argc, char * argv[] )
+	void readConfig( const std::vector<std::string> & args )
 	{
 		std::string					configFileName;
 
-		for( int i = 1; i < argc-1; i++ ){
-			if( std::string( argv[i] ) == "--config-file" ){
-				auto fileData = readFile( argv[i+1] );
+		for( int i = 1; i < args.size()-1; i++ ){
+			if( std::string( args.at( i ) ) == "--config-file" ){
+				auto fileData = readFile( args.at( i+1 ) );
 				if( !fileData.empty() ){
 					if( readConfig( fileData ) == false ){
-						spdlog::error( "Cannot determine the format of the config file {}", argv[i+1] );
+						spdlog::error( "Cannot determine the format of the config file {}", args.at( i+1 ) );
 					}
 				}
 				break;
@@ -227,7 +227,7 @@ jss::object_ptr<drea::core::Option> drea::core::Config::find( const std::string 
 	return d->find( optionName );
 }
 
-std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] )
+std::vector<std::string> drea::core::Config::configure( const std::vector<std::string> & args )
 {
 	// Order (less to more)
 	// - defaults
@@ -244,7 +244,7 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 	}
 
 	// Read the config file
-	d->readConfig( argc, argv );
+	d->readConfig( args );
 
 	// Env vars
 	if( !d->mEnvPrefix.empty() ){
@@ -270,8 +270,8 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 	std::vector<std::string>	others;
 
 	// flags
-	for( int i = 1; i < argc; ){
-		std::string arg = argv[i++];
+	for( int i = 1; i < args.size(); ){
+		std::string arg = args.at( i++ );
 
 		if( arg.find( "--" ) == 0 ){
 			arg = arg.erase( 0, 2 );
@@ -281,8 +281,8 @@ std::vector<std::string> drea::core::Config::configure( int argc, char * argv[] 
 				if( !option->mParamName.empty() ){
 					// discard data: config file and defaults
 					option->mValues.clear();
-					while( i < argc ){
-						std::string subArg = argv[i++];
+					while( i < args.size() ){
+						std::string subArg = args.at( i++ );
 						if( subArg.find( "-" ) == 0 ){
 							break;
 						}else{

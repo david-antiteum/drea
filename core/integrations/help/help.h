@@ -7,6 +7,7 @@
 #include "App.h"
 #include "Commander.h"
 #include "Config.h"
+#include "utilities/string.h"
 
 namespace drea { namespace core { namespace integrations { namespace Help {
 
@@ -21,25 +22,48 @@ static void help( const drea::core::App & app, const std::string & command )
 		fmt::print( "This app has no commands\n" );
 	}else{
 		if( command.empty() ){
-			fmt::print( "Available Commands:\n" );
+			fmt::print( "Commands:\n" );
 
 			std::string::size_type offset = 1;
 			app.commander().commands( [ &offset ](const Command & command ){
 				offset = std::max<std::string::size_type>( offset, command.mName.size() + 2 );
 			});
+
 			app.commander().commands( [ offset ](const Command & command ){
-				fmt::print( "  {:<{}}", command.mName, offset );
-				fmt::print( "{}\n", command.mDescription );
+				if( command.mParentCommand.empty() ){
+					fmt::print( "  {:<{}}", command.mName, offset );
+					if( !command.mSubcommand.empty() ){
+						fmt::print( "[command] " );
+					}
+					fmt::print( "{}\n", command.mDescription );
+				}
 			});
+
+			fmt::print( "\nUse \"{} [command] --help\" for more information about a command.\n", app.name() );
 		}else{
 			if( auto cmd = app.commander().find( command ) ){
-				fmt::print( "{}\n\n", cmd->mDescription );
+				auto commands = utilities::string::split( command, "." );
 
-				fmt::print( "Usage:\n");
+				fmt::print( "\nUsage:");
+				fmt::print( "  {} {} ", App::instance().name(), utilities::string::join( commands, " "  ));
+				if( !cmd->mSubcommand.empty() ){
+					fmt::print( "[command] " );
+				}
+				fmt::print( "[<args>] " );
 				if( !cmd->mLocalParameters.empty() || !cmd->mGlobalParameters.empty() ){
-					fmt::print( "  {} {} [<args>] [<flags>]\n", App::instance().name(), cmd->mName );
-				}else{
-					fmt::print( "  {} {} [<args>]\n", App::instance().name(), cmd->mName );
+					fmt::print( "[<flags>]" );
+				}
+				fmt::print( "\n\n" );
+
+				fmt::print( "{}\n", cmd->mDescription );
+
+				if( !cmd->mSubcommand.empty() ){
+					fmt::print( "\nCommands:\n");
+					for( const std::string & subCmdName: cmd->mSubcommand ){
+						if( auto subCmd = App::instance().commander().find( cmd->mName + "." + subCmdName ) ){
+							fmt::print( "  {} {}\n", subCmd->mName, subCmd->mDescription );
+						}
+					}
 				}
 
 				if( !cmd->mLocalParameters.empty() ){
@@ -57,7 +81,10 @@ static void help( const drea::core::App & app, const std::string & command )
 							fmt::print( "  --{} {}\n", config->mName, config->mDescription );
 						}
 					}
-				}				
+				}
+				if( !cmd->mSubcommand.empty() ){
+					fmt::print( "\nUse \"{} {} [command] --help\" for more information about a command.\n", app.name(), cmd->mName );
+				}						
 			}
 		}
 	}
@@ -67,8 +94,8 @@ static void help( const drea::core::App & app )
 {
 	const std::string::size_type offset = std::string( "usage: " + app.name() + " " ).size();
 
-	fmt::print( "{}\n\n", app.description() );
-	fmt::print("usage: {} <commans> [<args>]\n", app.name() );
+	fmt::print( "\n{}\n\n", app.description() );
+	fmt::print("usage: {} [command] [<args>]\n", app.name() );
 
 	// Config
 	app.config().options( [ offset ](const Option & option){
@@ -95,8 +122,6 @@ static void help( const drea::core::App & app )
 
 	// Commander
 	help( app, {} );
-
-	fmt::print( "\nUse \"{} [command] --help\" for more information about a command.\n", app.name() );
 }
 
 }}}}

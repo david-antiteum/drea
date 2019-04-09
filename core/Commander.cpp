@@ -20,13 +20,30 @@ struct drea::core::Commander::Private
 	std::vector<std::string>				mArguments;
 	std::vector<std::unique_ptr<Command>>	mCommands;
 
-	jss::object_ptr<Command> find( const std::string & cmdName ){
+	jss::object_ptr<Command> find( const std::string & parent, const std::string & cmdName ){
 		for( const auto & cmd: mCommands ){
-			if( cmd->mName == cmdName ){
+			if( parent == cmd->mParentCommand && cmd->mName == cmdName ){
 				return cmd;
 			}
 		}
 		return {};
+	}
+
+	jss::object_ptr<Command> find( const std::string & cmdName ){
+		auto 						commands = utilities::string::split( cmdName, "." );
+		std::string 				parent;
+		jss::object_ptr<Command>	res;
+
+		for( const std::string & cmdName: commands ){
+			auto cmd = find( parent, cmdName );
+			if( cmd ){
+				parent = cmd->mName;
+				res = cmd;
+			}else{
+				return {};
+			}
+		}
+		return res;
 	}
 };
 
@@ -50,19 +67,35 @@ void drea::core::Commander::addDefaults()
 {
 }
 
-void drea::core::Commander::add( const drea::core::Command & cmd )
+jss::object_ptr<drea::core::Command> drea::core::Commander::add( const drea::core::Command & cmd )
 {
 	d->mCommands.push_back( std::make_unique<Command>( cmd ));
+
+	return d->mCommands.back();
 }
 
 void drea::core::Commander::configure( const std::vector<std::string> & args )
 {
 	if( !args.empty() ){
-		d->mCommand = args[0];
-		for( int i = 1; i < args.size(); i++ ){
-			if( args[i][0] != '-' ){
-				d->mArguments.push_back( args[i] );
+		if( auto cmd = find( args.at( 0 ) ) ){
+			int	otherPos = 1;
+
+			d->mCommand = cmd->mName;
+			if( !cmd->mSubcommand.empty() ){
+				if( args.size() > 1 ){
+					if( auto subCmd = find( d->mCommand + "." + args.at( 1 ))){
+						d->mCommand += "." + subCmd->mName;
+						otherPos++;
+					}
+				}
 			}
+			for( int i = otherPos; i < args.size(); i++ ){
+				if( args[i][0] != '-' ){
+					d->mArguments.push_back( args[i] );
+				}
+			}
+		}else{
+			reportNoCommand( args.at( 0 ) );
 		}
 	}
 }
@@ -87,6 +120,15 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 std::vector<std::string> drea::core::Commander::arguments() const
 {
 	return d->mArguments;
+}
+
+void drea::core::Commander::reportNoSubCommand( const std::string & command ) const
+{
+	if( auto cmd = find( command ) ){
+		App::instance().logger()->error( "The command \"{}\" requires a sub command. Try: {} {} --help", command, App::instance().args().at( 0 ), command );
+	}else{
+		reportNoCommand( command );
+	}
 }
 
 void drea::core::Commander::reportNoCommand( const std::string & command ) const
