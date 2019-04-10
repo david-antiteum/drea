@@ -36,7 +36,7 @@ public:
 			try{
 				res = jsonValue.at( "node" ).at( "value" ).get<std::string>();
 			}catch( const std::exception & e ){
-				spdlog::error( "{}. Json was: {}", e.what(), jsonValue );
+				spdlog::error( "{}. Json was: {}", e.what(), jsonValue.dump() );
 			}
 		}
 		return res;

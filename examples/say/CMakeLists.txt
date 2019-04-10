@@ -20,6 +20,13 @@ target_link_libraries( ${PROJECT_NAME}
 	DreaCore
 )
 
+if( UNIX )
+	find_package( Threads REQUIRED )
+	target_link_libraries( ${PROJECT_NAME} 
+		Threads::Threads
+	)
+endif()
+
 include(GNUInstallDirs)
 
 install(TARGETS ${PROJECT_NAME}

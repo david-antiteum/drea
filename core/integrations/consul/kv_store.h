@@ -36,7 +36,7 @@ public:
 			try{
 				res = jsonValue[0].at( "Value" ).get<std::string>();
 			}catch( const std::exception & e ){
-				spdlog::error( "{}. Json was: {}", e.what(), jsonValue );
+				spdlog::error( "{}. Json was: {}", e.what(), jsonValue.dump() );
 			}
 			if( !res.empty() ){
 				res = boost::beast::detail::base64_decode( res );

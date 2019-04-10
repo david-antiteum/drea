@@ -19,9 +19,9 @@ set( CMAKE_CXX_STANDARD 17 )
 option( BUILD_EXAMPLES "Build examples" ON )
 
 if( CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE STREQUAL "Release" )
-	link_directories( "$ENV{VCPKG_ROOT}/installed/x64-windows/lib" )
+	link_directories( "$ENV{VCPKG_ROOT}/installed/$ENV{VCPKG_DEFAULT_TRIPLET}/lib" )
 else()
-	link_directories( "$ENV{VCPKG_ROOT}/installed/x64-windows/debug/lib" )
+	link_directories( "$ENV{VCPKG_ROOT}/installed/$ENV{VCPKG_DEFAULT_TRIPLET}/debug/lib" )
 endif()
 
 add_subdirectory( core )
