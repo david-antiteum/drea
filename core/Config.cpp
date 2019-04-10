@@ -156,43 +156,32 @@ drea::core::Config::~Config()
 {
 }
 
-void drea::core::Config::addDefaults()
+drea::core::Config & drea::core::Config::addDefaults()
 {
-	add(
+	add({
 		{
 			"verbose"
-		}
-	);
-	add(
+		},
 		{
 			"help"
-		}
-	);
-	add(
+		},
 		{
 			"version"
-		}
-	);
-	add(
+		},
 		{
 			"log-file", "file name", "log messages to the file <file name>", {}, typeid( std::string )
-		}
-	);
-	add(
+		},
 		{
 			"config-file", "file name", "read configs from file <file name>", {}, typeid( std::string )
-		}
-	);
-	add(
+		},
 		{
 			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
-		}
-	);
-	add(
+		},
 		{
 			"generate-auto-completion"
 		}
-	);
+	});
+	return *this;
 }
 
 bool drea::core::Config::empty() const
@@ -210,6 +199,13 @@ void drea::core::Config::options( std::function<void(const drea::core::Option&)>
 void drea::core::Config::add( const drea::core::Option & option )
 {
 	d->mOptions.push_back( std::make_unique<Option>( option ));
+}
+
+void drea::core::Config::add( const std::vector<drea::core::Option> & options )
+{
+	for( const auto & option: options ){
+		add( option );
+	}
 }
 
 void drea::core::Config::setEnvPrefix( const std::string & value )

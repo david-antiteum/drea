@@ -17,34 +17,26 @@ int main( int argc, char * argv[] )
 	app.config().setEnvPrefix( "CAL" );
 	app.config().addRemoteProvider( "consul", "http://127.0.0.1:8500", "calculator-key" );
 	app.config().addRemoteProvider( "etcd", "http://127.0.0.1:2379", "calculator-key" );
-	app.config().addDefaults();
-	app.config().add(
+	app.config().addDefaults().add({
 		{
 			"round", "", "round the result to the nearest integer"
-		}
-	);
-	app.config().add(
+		},
 		{
 			"equal", "number", "check if the result is equal to <number>", {}, typeid( double )
 		}
-	);
+	});
 
-	app.commander().addDefaults();
-	app.commander().add(
+	app.commander().addDefaults().add({
 		{
 			"sum", "sum all the arguments", {}, { "round", "equal" }
-		}
-	);
-	app.commander().add(
+		},
 		{
 			"power", "raise the first argument to the power of the second", {}, { "round", "equal" }
-		}		
-	);
-	app.commander().add(
+		},	
 		{
 			"count", "count the characters of a text argument", {}, { "equal" }
 		}		
-	);
+	});
 
 	app.parse();
 	app.commander().run( [ &app ]( std::string cmd ){

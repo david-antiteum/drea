@@ -14,6 +14,8 @@ struct DREA_CORE_API Command
 	std::vector<std::string>		mLocalParameters;
 	std::vector<std::string>		mGlobalParameters;
 	std::string						mParentCommand;
+
+	//! Set automatically using parent information
 	std::vector<std::string>		mSubcommand;
 };
 

@@ -38,7 +38,11 @@ struct drea::core::Commander::Private
 		for( const std::string & cmdName: commands ){
 			auto cmd = find( parent, cmdName );
 			if( cmd ){
-				parent = cmd->mName;
+				if( parent.empty() ){
+					parent = cmd->mName;
+				}else{
+					parent += "." + cmd->mName;
+				}
 				res = cmd;
 			}else{
 				return {};
@@ -64,8 +68,9 @@ void drea::core::Commander::commands( std::function<void(const drea::core::Comma
 	}
 }
 
-void drea::core::Commander::addDefaults()
+drea::core::Commander & drea::core::Commander::addDefaults()
 {
+	return *this;
 }
 
 jss::object_ptr<drea::core::Command> drea::core::Commander::add( const drea::core::Command & cmd )
@@ -75,8 +80,29 @@ jss::object_ptr<drea::core::Command> drea::core::Commander::add( const drea::cor
 	return d->mCommands.back();
 }
 
+std::vector<jss::object_ptr<drea::core::Command>> drea::core::Commander::add( const std::vector<drea::core::Command> & cmds )
+{
+	std::vector<jss::object_ptr<drea::core::Command>>		res;
+
+	for( const auto & cmd: cmds ){
+		res.push_back( add( cmd ) );
+	}
+	return res;
+}
+
 void drea::core::Commander::configure( const std::vector<std::string> & args )
 {
+	// Create command hierarchy
+	for( const auto & cmd: d->mCommands ){
+		if( !cmd->mParentCommand.empty() ){
+			if( auto parent = find( cmd->mParentCommand ) ){
+				std::cout << cmd->mName << " parent " << parent->mName << "\n";
+				parent->mSubcommand.push_back( cmd->mName );
+			}else{
+				App::instance().logger().error( "The command \"{}\" refers to the parent \"{}\" but it does not exists.", cmd->mName, cmd->mParentCommand );
+			}
+		}
+	}
 	if( !args.empty() ){
 		if( auto cmd = find( args.at( 0 ) ) ){
 			int	pos = 1;

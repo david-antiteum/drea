@@ -30,11 +30,15 @@ public:
 
 	/*! Adds defaults options to the app
 	*/
-	void addDefaults();
+	Config & addDefaults();
 
 	/*! Adds an option to the app
 	*/
 	void add( const Option & option );
+
+	/*! Adds an options to the app
+	*/
+	void add( const std::vector<Option> & options );
 
 	/*! Set the prefix for env variables for this app.
 

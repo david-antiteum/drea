@@ -21,11 +21,15 @@ public:
 
 	/*! Adds defaults commands to the app
 	*/
-	void addDefaults();
+	Commander & addDefaults();
 
 	/*! Adds a command to the app
 	*/
 	jss::object_ptr<Command> add( const drea::core::Command & cmd );
+
+	/*! Adds commands to the app
+	*/
+	std::vector<jss::object_ptr<Command>> add( const std::vector<drea::core::Command> & cmds );
 
 	/*! Use this method to be called with the command to execute.
 		Do it after configuring the app and parsing the options (\see App::parse)
