@@ -102,13 +102,12 @@ public:
 	// Methods called by App
 
 	/*! Init the system with arguments and apply values in order.
-		Returns all the arguments that aren't options (and thus command and arguments for the command).
-
 		Don't call this method directly. App::parse will do it.
 	*/
-	std::vector<std::string> configure( const std::vector<std::string> & args );
+	void configure( const std::vector<std::string> & args );
 
 	/*! Setup and create a logger based on the config
+		Don't call this method directly. App::parse will do it.
 	*/
 	std::shared_ptr<spdlog::logger> setupLogger() const;
 

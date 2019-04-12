@@ -65,10 +65,12 @@ struct drea::core::Config::Private
 	jss::object_ptr<Option> find( const std::string & optionName ){
 		jss::object_ptr<Option>	res;
 
-		for( const auto & opt: mOptions ){
-			if( opt->mName == optionName ){
-				res = opt;
-				break;
+		if( !optionName.empty() ){
+			for( const auto & opt: mOptions ){
+				if( opt->mName == optionName || opt->mShortVersion == optionName ){
+					res = opt;
+					break;
+				}
 			}
 		}
 		return res;
@@ -133,7 +135,7 @@ struct drea::core::Config::Private
 	{
 		std::string					configFileName;
 
-		for( int i = 1; i < args.size()-1; i++ ){
+		for( int i = 0; i < int(args.size())-1; i++ ){
 			if( std::string( args.at( i ) ) == "--config-file" ){
 				auto fileData = readFile( args.at( i+1 ) );
 				if( !fileData.empty() ){
@@ -181,6 +183,8 @@ drea::core::Config & drea::core::Config::addDefaults()
 			"generate-auto-completion"
 		}
 	});
+	find( "verbose" )->mShortVersion = "v";
+
 	return *this;
 }
 
@@ -223,7 +227,7 @@ jss::object_ptr<drea::core::Option> drea::core::Config::find( const std::string 
 	return d->find( optionName );
 }
 
-std::vector<std::string> drea::core::Config::configure( const std::vector<std::string> & args )
+void drea::core::Config::configure( const std::vector<std::string> & args )
 {
 	// Order (less to more)
 	// - defaults
@@ -262,11 +266,8 @@ std::vector<std::string> drea::core::Config::configure( const std::vector<std::s
 			d->readConfig( integrations::etcd::KVStore( provider.mHost ).get( provider.mKey ) );
 		}
 	}
-
-	std::vector<std::string>	others;
-
 	// flags
-	for( int i = 1; i < args.size(); ){
+	for( int i = 0; i < args.size(); ){
 		std::string arg = args.at( i++ );
 
 		if( arg.find( "--" ) == 0 ){
@@ -274,29 +275,24 @@ std::vector<std::string> drea::core::Config::configure( const std::vector<std::s
 			
 			if( auto option = d->find( arg ) ){
 				registerUse( arg );
-				if( !option->mParamName.empty() ){
-					// discard data: config file and defaults
-					option->mValues.clear();
-					while( i < args.size() ){
-						std::string subArg = args.at( i++ );
-						if( subArg.find( "-" ) == 0 ){
-							break;
-						}else{
-							set( option->mName, subArg );
-						}
+				option->mValues.clear();
+				for( int np = 0; np < option->numberOfParams() && i < args.size(); np++ ){
+					std::string subArg = args.at( i );
+					if( subArg.find( "-" ) == 0 ){
+						break;
+					}else{
+						append( option->mName, subArg );
+						i++;
 					}
-					if( option->mValues.empty() ){
-						spdlog::warn( "Missing arguments for flag {}", arg );
-					}
+				}
+				if( option->numberOfParams() > 0 &&  option->mValues.empty() ){
+					spdlog::warn( "Missing arguments for flag {}", arg );
 				}
 			}else{
 				reportUnknownArgument( arg );
 			}
-		}else{
-			others.push_back( arg );
 		}
 	}
-	return others;
 }
 
 bool drea::core::Config::used( const std::string & optionName ) const

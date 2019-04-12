@@ -25,6 +25,7 @@ int main( int argc, char * argv[] )
 			"equal", "number", "check if the result is equal to <number>", {}, typeid( double )
 		}
 	});
+	app.config().find( "equal" )->mShortVersion = "e";
 
 	app.commander().addDefaults().add({
 		{

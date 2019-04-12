@@ -96,7 +96,6 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 	for( const auto & cmd: d->mCommands ){
 		if( !cmd->mParentCommand.empty() ){
 			if( auto parent = find( cmd->mParentCommand ) ){
-				std::cout << cmd->mName << " parent " << parent->mName << "\n";
 				parent->mSubcommand.push_back( cmd->mName );
 			}else{
 				App::instance().logger().error( "The command \"{}\" refers to the parent \"{}\" but it does not exists.", cmd->mName, cmd->mParentCommand );

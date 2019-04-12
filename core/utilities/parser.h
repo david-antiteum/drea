@@ -1,0 +1,84 @@
+#pragma once
+
+#include <string>
+#include <vector>
+#include <spdlog/fmt/fmt.h>
+#include <iostream>
+
+#include "App.h"
+
+#include "utilities/string.h"
+
+namespace drea { namespace core { namespace utilities { 
+	
+class Parser 
+{
+public:
+	explicit Parser( App & app, const std::vector<std::string> & args ) : mApp( app ), mArgs( args ){}
+
+	std::vector<std::string> expand() const
+	{
+		std::vector<std::string>	res;
+
+		// TODO expand args (for example -v to --verbose or -zvf <filename> to --compress --verbose --file <filename)
+		for( int i = 1; i < mArgs.size(); i++ ){
+			std::string arg = mArgs.at(i);
+			if( arg.find( "--" ) == 0 ){
+				res.push_back( arg );
+			}else if( arg.find( "-" ) == 0 ){
+				// Expand
+				for( int j = 1; j < arg.size(); j++ ){
+					std::string mini;
+					mini.push_back( arg.at( j ) );
+					if( auto option = mApp.config().find( mini )){
+						res.push_back( fmt::format( "--{}", option->mName ) );
+					}else{
+						mApp.logger().warn( "Unknown short option -{}", arg.at( j ) );
+					}
+				}
+			}else{
+				res.push_back( arg );
+			}
+		}
+		return res;
+	}
+
+	std::pair<std::vector<std::string>,std::vector<std::string>> parse() const
+	{
+		std::vector<std::string>	args;
+		std::vector<std::string>	cmds;
+	
+		auto expandedArgs = expand();
+		for( int i = 0; i < expandedArgs.size(); ){
+			std::string arg = expandedArgs.at( i++ );
+
+			if( arg.find( "--" ) == 0 ){
+				args.push_back( arg );
+				arg.erase( 0, 2 );
+				if( auto option = mApp.config().find( arg ) ){
+					for( int np = 0; np < option->numberOfParams() && i < expandedArgs.size(); np++ ){
+						std::string subArg = expandedArgs.at( i );
+						if( subArg.find( "-" ) == 0 ){
+							break;
+						}else{
+							args.push_back( subArg );
+							i++;
+						}
+					}
+				}
+			}else{
+				cmds.push_back( arg );
+			}
+		}
+//		std::cout << "ARGS " << string::join( args, " " ) << "\n";
+//		std::cout << "CMDS " << string::join( cmds, " " ) << "\n";
+
+		return { args, cmds };
+	}
+
+private:
+	App								& mApp;
+	const std::vector<std::string> 	& mArgs;
+};
+
+}}}

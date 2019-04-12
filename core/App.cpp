@@ -5,6 +5,8 @@
 #include "Config.h"
 #include "Commander.h"
 
+#include "utilities/parser.h"
+
 struct drea::core::App::Private
 {
 	Private()
@@ -42,9 +44,11 @@ drea::core::App::~App()
 
 void drea::core::App::parse()
 {
-	auto others = d->mConfig.configure( d->mArgs );
-	d->mLogger  = d->mConfig.setupLogger();
-	d->mCommander.configure( others );
+	auto args = utilities::Parser( *this, d->mArgs ).parse();
+
+	config().configure( args.first );
+	d->mLogger = config().setupLogger();
+	commander().configure( args.second );
 }
 
 drea::core::App & drea::core::App::instance()

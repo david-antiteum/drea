@@ -102,6 +102,9 @@ static void help( const drea::core::App & app )
 		for( int i = 0; i < offset; i++ ){
 			std::cout << " ";
 		}
+		if( !option.mShortVersion.empty() ){
+			fmt::print( "[-{}] ", option.mShortVersion );
+		}
 		if( option.mParamName.empty() ){
 			fmt::print( "[--{}]", option.mName );
 		}else{

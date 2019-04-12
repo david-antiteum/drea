@@ -6,7 +6,7 @@
 
 namespace drea { namespace core { namespace utilities { namespace string {
 
-std::vector<std::string> split( const std::string & s, const std::string & delimiter )
+static std::vector<std::string> split( const std::string & s, const std::string & delimiter )
 {
 	std::vector<std::string>	res;
 	size_t 						last = 0; 
@@ -21,7 +21,7 @@ std::vector<std::string> split( const std::string & s, const std::string & delim
 	return res;
 }
 
-std::string join( const std::vector<std::string> & value, const std::string & delimiter )
+static std::string join( const std::vector<std::string> & value, const std::string & delimiter )
 {
 	std::string		res;
 
@@ -35,7 +35,7 @@ std::string join( const std::vector<std::string> & value, const std::string & de
 	return res;
 }
 
-std::string replace( const std::string & s, const std::string & from, const std::string & to )
+static std::string replace( const std::string & s, const std::string & from, const std::string & to )
 {
 	return boost::replace_all_copy( s, from, to );
 }
