@@ -7,7 +7,7 @@ int main( int argc, char * argv[] )
 	drea::core::App	 app( argc, argv );
 
 	app.setName( "say" );
-	app.setDescription( "An example for the Drea Framework.\n\nDrea is available at https://github.com/david-antiteum/drea." );
+	app.setDescription( "An example for the Drea Framework.\nDrea is available at https://github.com/david-antiteum/drea." );
 	app.setVersion( "0.0.1" );
 	
 	app.config().addDefaults().add(
@@ -17,25 +17,25 @@ int main( int argc, char * argv[] )
 	);
 	app.commander().addDefaults().add({
 		{
-			"say", "prints the argument", {}, { "reverse" }
+			"this", "string", "prints the argument", {}, { "reverse" }
 		},
 		{
-			"repeat", "repeat something", {}, { "reverse" },
+			"repeat", "", "repeat something", {}, { "reverse" },
 		},
 		{
-			"parrot", "print parrot", {}, { "reverse" }, "repeat"
+			"parrot", "", "print parrot", {}, { "reverse" }, "repeat"
 		},
 		{
-			"blue", "print a blue parrot", {}, { "reverse" }, "repeat.parrot"
+			"blue", "", "print a blue parrot", {}, { "reverse" }, "repeat.parrot"
 		},
 		{
-			"red", "print a red parrot", {}, { "reverse" }, "repeat.parrot"
+			"red", "", "print a red parrot", {}, { "reverse" }, "repeat.parrot"
 		}
 	});
 	app.parse();
 	app.commander().run( [ &app ]( std::string cmd ){
 		app.logger().debug( "command to run {}", cmd );
-		if( cmd == "say" ){
+		if( cmd == "this" ){
 			if( !app.commander().arguments().empty() ){
 				bool reverse = app.config().used( "reverse" );
 				for( auto say: app.commander().arguments() ){

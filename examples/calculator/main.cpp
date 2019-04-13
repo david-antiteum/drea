@@ -11,7 +11,7 @@ int main( int argc, char * argv[] )
 	drea::core::App	 app( argc, argv );
 
 	app.setName( "calculator" );
-	app.setDescription( "A basic calculator as an example for the Drea Framework.\n\nDrea is available at https://github.com/david-antiteum/drea." );
+	app.setDescription( "A basic calculator as an example for the Drea Framework.\nDrea is available at https://github.com/david-antiteum/drea." );
 	app.setVersion( "0.0.1" );
 	
 	app.config().setEnvPrefix( "CAL" );
@@ -29,13 +29,13 @@ int main( int argc, char * argv[] )
 
 	app.commander().addDefaults().add({
 		{
-			"sum", "sum all the arguments", {}, { "round", "equal" }
+			"sum", "number...", "sum all the arguments", {}, { "round", "equal" }
 		},
 		{
-			"power", "raise the first argument to the power of the second", {}, { "round", "equal" }
+			"power", "base exponent", "raise the first argument to the power of the second", {}, { "round", "equal" }
 		},	
 		{
-			"count", "count the characters of a text argument", {}, { "equal" }
+			"count", "string...", "count the characters of a text argument", {}, { "equal" }
 		}		
 	});
 

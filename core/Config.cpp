@@ -162,28 +162,29 @@ drea::core::Config & drea::core::Config::addDefaults()
 {
 	add({
 		{
-			"verbose"
+			"verbose", "", "increase the logging level to debug"
 		},
 		{
-			"help"
+			"help", "", "show help and quit"
 		},
 		{
-			"version"
+			"version", "", "print version information and quit"
 		},
 		{
-			"log-file", "file name", "log messages to the file <file name>", {}, typeid( std::string )
+			"log-file", "file", "log messages to the file <file>", {}, typeid( std::string )
 		},
 		{
-			"config-file", "file name", "read configs from file <file name>", {}, typeid( std::string )
+			"config-file", "file", "read configs from file <file>", {}, typeid( std::string )
 		},
 		{
 			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
 		},
 		{
-			"generate-auto-completion"
+			"generate-auto-completion", "", "generate files to enable autocompletion in the shell"
 		}
 	});
 	find( "verbose" )->mShortVersion = "v";
+	find( "help" )->mShortVersion = "h";
 
 	return *this;
 }
@@ -235,6 +236,9 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 	// - env variables
 	// - external systems (as Consul)
 	// - command line flags
+
+	// order options alphabetically
+	std::sort( d->mOptions.begin(), d->mOptions.end(), []( const auto & a, const auto & b ){ return a->mName < b->mName; });
 
 	// Add values with defaults
 	for( const auto & option: d->mOptions ){

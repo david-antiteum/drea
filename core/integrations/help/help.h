@@ -24,22 +24,32 @@ static void help( const drea::core::App & app, const std::string & command )
 		if( command.empty() ){
 			fmt::print( "Commands:\n" );
 
-			std::string::size_type offset = 1;
-			app.commander().commands( [ &offset ](const Command & command ){
-				offset = std::max<std::string::size_type>( offset, command.mName.size() + 2 );
-			});
+			std::string::size_type offset = 0;
+			bool anySubCmd = false;
 
+			app.commander().commands( [ &offset, &anySubCmd ](const Command & command ){
+				offset = std::max<std::string::size_type>( offset, command.mName.size() + 2 );
+				if( !command.mSubcommand.empty() ){
+					anySubCmd = true;
+				}
+			});
+			if( anySubCmd ){
+				offset += 8;
+			}
 			app.commander().commands( [ offset ](const Command & command ){
 				if( command.mParentCommand.empty() ){
-					fmt::print( "  {:<{}}", command.mName, offset );
+					std::string::size_type cmdSize = 2 + command.mName.size();
+					fmt::print( "  {}", command.mName );
 					if( !command.mSubcommand.empty() ){
-						fmt::print( "[command] " );
+						fmt::print( " COMMAND" );
+						cmdSize += 8;
 					}
+					fmt::print("{:>{}}", "", 2 + offset - cmdSize );
 					fmt::print( "{}\n", command.mDescription );
 				}
 			});
 
-			fmt::print( "\nUse \"{} [command] --help\" for more information about a command.\n", app.name() );
+			fmt::print( "\nUse \"{} COMMAND --help\" for more information about a command.\n", app.name() );
 		}else{
 			if( auto cmd = app.commander().find( command ) ){
 				auto commands = utilities::string::split( command, "." );
@@ -47,27 +57,51 @@ static void help( const drea::core::App & app, const std::string & command )
 				fmt::print( "\nUsage:");
 				fmt::print( "  {} {} ", App::instance().name(), utilities::string::join( commands, " " ));
 				if( !cmd->mSubcommand.empty() ){
-					fmt::print( "[command] " );
+					fmt::print( "COMMAND " );
 				}
-				fmt::print( "[<args>] " );
+				if( cmd->numberOfParams() > 0 ){
+					fmt::print( "[ARGS] " );
+				}
 				if( !cmd->mLocalParameters.empty() || !cmd->mGlobalParameters.empty() ){
-					fmt::print( "[<flags>]" );
+					fmt::print( "[OPTIONS]" );
 				}
 				fmt::print( "\n\n" );
 
 				fmt::print( "{}\n", cmd->mDescription );
 
 				if( !cmd->mSubcommand.empty() ){
+					std::string::size_type offset = 0;
+					bool anySubCmd = false;
+				
+					for( const std::string & subCmdName: cmd->mSubcommand ){
+						if( auto subCmd = App::instance().commander().find( command + "." + subCmdName ) ){
+							offset = std::max<std::string::size_type>( offset, subCmd->mName.size() + 2 );
+							if( !subCmd->mSubcommand.empty() ){
+								anySubCmd = true;
+							}
+						}
+					}
+					if( anySubCmd ){
+						offset += 8;
+					}
 					fmt::print( "\nCommands:\n");
 					for( const std::string & subCmdName: cmd->mSubcommand ){
 						if( auto subCmd = App::instance().commander().find( command + "." + subCmdName ) ){
-							fmt::print( "  {} {}\n", subCmd->mName, subCmd->mDescription );
+							std::string::size_type cmdSize = 2 + subCmd->mName.size();
+					
+							fmt::print( "  {}", subCmd->mName );
+							if( !subCmd->mSubcommand.empty() ){
+								fmt::print( " COMMAND" );
+								cmdSize += 8;
+							}
+							fmt::print("{:>{}}", "", 2 + offset - cmdSize );
+							fmt::print( "{}\n", subCmd->mDescription );
 						}
 					}
 				}
 
 				if( !cmd->mLocalParameters.empty() ){
-					fmt::print( "\nFlags:\n");
+					fmt::print( "\nOptions:\n");
 					for( const std::string & arg: cmd->mLocalParameters ){
 						if( auto config = App::instance().config().find( arg ) ){
 							fmt::print( "  --{} {}\n", config->mName, config->mDescription );
@@ -75,7 +109,7 @@ static void help( const drea::core::App & app, const std::string & command )
 					}
 				}
 				if( !cmd->mGlobalParameters.empty() ){
-					fmt::print( "\nGlobal Flags:\n");
+					fmt::print( "\nGlobal options:\n");
 					for( const std::string & arg: cmd->mGlobalParameters ){
 						if( auto config = App::instance().config().find( arg ) ){
 							fmt::print( "  --{} {}\n", config->mName, config->mDescription );
@@ -83,7 +117,7 @@ static void help( const drea::core::App & app, const std::string & command )
 					}
 				}
 				if( !cmd->mSubcommand.empty() ){
-					fmt::print( "\nUse \"{} {} [command] --help\" for more information about a command.\n", app.name(), utilities::string::join( commands, " " ));
+					fmt::print( "\nUse \"{} {} COMMAND --help\" for more information about a command.\n", app.name(), utilities::string::join( commands, " " ));
 				}						
 			}
 		}
@@ -92,25 +126,46 @@ static void help( const drea::core::App & app, const std::string & command )
 
 static void help( const drea::core::App & app )
 {
-	const std::string::size_type offset = std::string( "usage: " + app.name() + " " ).size();
+	std::string::size_type 	offset = 0;
+	bool					anyShort = false;
 
 	fmt::print( "\n{}\n\n", app.description() );
-	fmt::print("usage: {} [command] [<args>]\n", app.name() );
+	fmt::print("usage: {} COMMAND [OPTIONS]\n\n", app.name() );
 
-	// Config
-	app.config().options( [ offset ](const Option & option){
-		for( int i = 0; i < offset; i++ ){
-			std::cout << " ";
-		}
+	app.config().options( [ &offset, &anyShort ](const Option & option){
+		std::string::size_type optionOffset = 2 + 2 + option.mName.size();
 		if( !option.mShortVersion.empty() ){
-			fmt::print( "[-{}] ", option.mShortVersion );
+			anyShort = true;
 		}
-		if( option.mParamName.empty() ){
-			fmt::print( "[--{}]", option.mName );
-		}else{
-			fmt::print( "[--{} <{}>]", option.mName, option.mParamName );
+		if( !option.mParamName.empty() ){
+			optionOffset += 1 + option.mParamName.size();
 		}
-		fmt::print( " {}", option.mDescription );
+		offset = std::max<std::string::size_type>( offset, optionOffset );
+	});
+	if( anyShort ){
+		offset += 4;
+	}
+	// Config
+	fmt::print( "Options:\n" );
+	app.config().options( [ offset, anyShort ](const Option & option){
+		std::string::size_type paramsSize = 2 + 2 + option.mName.size();
+
+		fmt::print( "  " );
+		if( !option.mShortVersion.empty() ){
+			fmt::print( "-{}, ", option.mShortVersion );
+		}else if( anyShort ){
+			fmt::print( "    " );
+		}
+		if( anyShort ){
+			paramsSize += 4;
+		}
+		fmt::print( "--{}", option.mName );
+		if( !option.mParamName.empty() ){
+			fmt::print( " {}", option.mParamName );
+			paramsSize += 1 + option.mParamName.size();
+		}
+		fmt::print("{:>{}}", "", 2 + offset - paramsSize );
+		fmt::print( "{}", option.mDescription );
 		if( option.mValues.empty() ){
 			fmt::print( "\n" );
 		}else{

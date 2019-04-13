@@ -18,7 +18,7 @@ struct DREA_CORE_API Option
 	std::string					mDescription;
 	std::vector<OptionValue>	mValues;
 	std::type_index				mType = typeid( std::string );
-	int							mNbItems = 1;
+	int							mNbParams = 1;
 	std::string					mShortVersion; 					
 	static const int			mUnlimitedParams = 0xfffffffa;
 
@@ -27,7 +27,7 @@ struct DREA_CORE_API Option
 		if( mParamName.empty() ){
 			return 0;
 		}else{
-			return mNbItems;
+			return mNbParams;
 		}
 	}
 
