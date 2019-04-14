@@ -9,7 +9,7 @@
 			"type": "cppvsdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/build/bin/calculator.exe",
-			"args": [ "sum", "10", "10", "--equal", "20" ],
+			"args": [ "sum", "10", "10", "--config-file", "${workspaceFolder}/examples/calculator/config.json" ],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],

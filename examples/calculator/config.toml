@@ -1,0 +1,15 @@
+equal = 47
+
+[one]
+value = 1
+
+[two]
+value = 2
+
+[[three]]
+
+[three.one]
+value = 31
+
+[three.two]
+value = 32

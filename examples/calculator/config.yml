@@ -1,1 +1,13 @@
 equal: 45
+
+one:
+  value: 1
+
+two:
+  value: 2
+
+three:
+  one:
+    value: 31
+  two:
+    value: 32

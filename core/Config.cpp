@@ -17,6 +17,7 @@
 
 #include "integrations/yaml/yaml_reader.h"
 #include "integrations/json/json_reader.h"
+#include "integrations/toml/toml_reader.h"
 
 #include "Config.h"
 #include "App.h"
@@ -101,12 +102,16 @@ struct drea::core::Config::Private
 	{
 		bool		res = true;
 
-		if( drea::core::integration::yaml::valid( val ) ){
-			drea::core::integration::yaml::readConfig( App::instance(), val );
-		}else if( drea::core::integration::json::valid( val ) ){
-			drea::core::integration::json::readConfig( App::instance(), val );
-		}else{
-			res = false;
+		if( !val.empty() ){
+			if( drea::core::integration::toml::valid( val ) ){
+				drea::core::integration::toml::readConfig( App::instance(), val );
+			}else if( drea::core::integration::json::valid( val ) ){
+				drea::core::integration::json::readConfig( App::instance(), val );
+			}else if( drea::core::integration::yaml::valid( val ) ){
+				drea::core::integration::yaml::readConfig( App::instance(), val );
+			}else{
+				res = false;
+			}			
 		}
 		return res;
 	}

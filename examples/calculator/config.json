@@ -1,3 +1,17 @@
 {
-	"equal": [45, 55]
+	"equal": 46,
+	"one" : {
+		"value": 1
+	},
+	"two" : {
+		"value": 2
+	},
+	"three" : {
+		"one" : {
+			"value" : 31
+		},
+		"two" : {
+			"value" : 32
+		}
+	}
 }

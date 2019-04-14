@@ -23,38 +23,64 @@ static bool valid( const std::string & val )
 	return res;
 }
 
-static void readConfig( const App & app, const nlohmann::json & config )
+static std::string asString( const nlohmann::json & value )
+{
+	std::string		res;
+
+	if( value.is_number_float() ){
+		res = fmt::format( "{}", value.get<float>() );
+	}else if( value.is_string() ){
+		res = value.get<std::string>();
+	}else if( value.is_boolean() ){
+		if( value.get<bool>() ){
+			res = "true";
+		}else{
+			res = "false";
+		}
+	}else if( value.is_number() ){
+		res = fmt::format( "{}", value.get<int>() );
+	}
+	return res;
+}
+
+static std::string addPrefix( const std::string & prefix, const std::string & name )
+{
+	if( prefix.empty() ){
+		return name;
+	}else{
+		return prefix + "." + name;
+	}
+}
+
+static void readConfig( const App & app, const nlohmann::json & config, const std::string & prefix )
 {
 	if( config.is_object() ){
 		for( auto & [key, value]: config.items() ){
-			if( auto option = app.config().find( key ) ){
-				app.config().registerUse( key );
-				if( !option->mParamName.empty() ){
-					// discard data: config file and defaults
-					if( value.is_number_float() ){
-						app.config().set( option->mName, fmt::format( "{}", value.get<float>() ) );
-					}else if( value.is_string() ){
-						app.config().set( option->mName, value.get<std::string>() );
-					}else if( value.is_boolean() ){
-						if( value.get<bool>() ){
-							app.config().set( option->mName, "true" );
-						}else{
-							app.config().set( option->mName, "false" );
-						}
-					}else if( value.is_array() ){
-						option->mValues.clear();
-						for( auto seqVal: value ){
-							if( seqVal.is_number_float() ){
-								app.config().append( option->mName, fmt::format( "{}", seqVal.get<float>() ) );
-							}
-						}
-					}
-					if( option->mValues.empty() ){
-						spdlog::warn( "Missing arguments for flag {}", key );
-					}
-				}
+			auto realKey = addPrefix( prefix, key );
+
+			if( value.is_object() ){
+				readConfig( app, value, realKey );
 			}else{
-				app.config().reportUnknownArgument( key );
+				if( auto option = app.config().find( realKey ) ){
+					app.config().registerUse( realKey );
+					if( !option->mParamName.empty() ){
+						if( value.is_array() ){
+							option->mValues.clear();
+							for( auto seqVal: value ){
+								if( seqVal.is_primitive() ){
+									app.config().append( option->mName, asString( seqVal ) );
+								}
+							}
+						}else if( value.is_primitive() ){
+							app.config().set( option->mName, asString( value ) );
+						}
+						if( option->mValues.empty() ){
+							spdlog::warn( "Missing arguments for flag {}", realKey );
+						}
+					}
+				}else{
+					app.config().reportUnknownArgument( realKey );
+				}
 			}
 		}
 	}
@@ -64,7 +90,7 @@ static void readConfig( const App & app, const std::string & val )
 {
 	if( !val.empty() ){
 		try{
-			readConfig( app, nlohmann::json::parse( val ) );
+			readConfig( app, nlohmann::json::parse( val ), {} );
 		}catch( const std::runtime_error & e ){
 			spdlog::error( "Error parsing a configuration in YAML. Error: {}", e.what() );
 		}

@@ -9,34 +9,34 @@ An example:
 
 int main( int argc, char * argv[] )
 {
-	drea::core::App	 app( argc, argv );
+    drea::core::App     app( argc, argv );
 
-	app.setName( "say" );
-	app.setDescription( "An example for the Drea Framework.\n\nDrea is available at https://github.com/david-antiteum/drea." );
-	app.setVersion( "0.0.1" );
-	
-	app.config().addDefaults();
-	app.config().add(
-		{
-			"reverse", "", "reverse string"
-		}
-	);
-	app.commander().addDefaults();
-	app.commander().add(
-		{
-			"say", "prints the argument", {}, { "reverse" }
-		}
-	);
-	app.parse();
-	app.commander().run( [ &app ]( std::string cmd ){
-		if( cmd == "say" && app.commander().arguments().size() == 1 ){
-			std::string say = app.commander().arguments().front();
-			if( app.config().used( "reverse" ) ){
-				std::reverse( say.begin(), say.end() );
-			}
-			app.logger().info( "{}", say );
-		}
-	});
+    app.setName( "say" );
+    app.setDescription( "An example for the Drea Framework.\n\nDrea is available at https://github.com/david-antiteum/drea." );
+    app.setVersion( "0.0.1" );
+
+    app.config().addDefaults();
+    app.config().add(
+        {
+            "reverse", "", "reverse string"
+        }
+    );
+    app.commander().addDefaults();
+    app.commander().add(
+        {
+            "this", "prints the argument", {}, { "reverse" }
+        }
+    );
+    app.parse();
+    app.commander().run( [ &app ]( std::string cmd ){
+        if( cmd == "this" && app.commander().arguments().size() == 1 ){
+            std::string say = app.commander().arguments().front();
+            if( app.config().used( "reverse" ) ){
+                std::reverse( say.begin(), say.end() );
+            }
+            app.logger().info( "{}", say );
+        }
+    });
 }
 ```
 
@@ -65,7 +65,16 @@ Evaluation order:
 - env variables
 - command line flags
 
+## Meta configs
+
+- [JSonnet](https://jsonnet.org/)
+- [Dhall](https://dhall-lang.org/)
+
+HN [discussion]( https://news.ycombinator.com/item?id=19656821 )
+
 ## Readings
+
+- [On formats](https://news.ycombinator.com/item?id=19653834)
 
 ### Libs
 
@@ -74,6 +83,4 @@ Evaluation order:
 
 ### Info
 
-- [Terminology](
-https://pythonconquerstheuniverse.wordpress.com/2010/07/25/command-line-syntax-some-basic-concepts/
-): Command-line syntax: some basic concepts
+- [Terminology](https://pythonconquerstheuniverse.wordpress.com/2010/07/25/command-line-syntax-some-basic-concepts/): Command-line syntax: some basic concepts
