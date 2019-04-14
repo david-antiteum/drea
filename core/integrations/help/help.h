@@ -130,7 +130,11 @@ static void help( const drea::core::App & app )
 	bool					anyShort = false;
 
 	fmt::print( "\n{}\n\n", app.description() );
-	fmt::print("usage: {} COMMAND [OPTIONS]\n\n", app.name() );
+	fmt::print("usage: {}", app.name() );
+	if( !app.commander().empty() ){
+		fmt::print(" COMMAND", app.name() );
+	}
+	fmt::print(" [OPTIONS]\n\n", app.name() );
 
 	app.config().options( [ &offset, &anyShort ](const Option & option){
 		std::string::size_type optionOffset = 2 + 2 + option.mName.size();
