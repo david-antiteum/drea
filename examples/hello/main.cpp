@@ -13,9 +13,6 @@ int main( int argc, char * argv[] )
 	app.commander().addDefaults();
 	app.parse();
 	app.commander().run( [ &app ]( std::string cmd ){
-		app.logger().debug( "command to run {}", cmd );
-		if( cmd == "" ){
-			app.logger().info( "World!" );
-		}
+		app.logger().info( "World!" );
 	});
 }
