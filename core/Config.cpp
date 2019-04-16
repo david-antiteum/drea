@@ -237,10 +237,11 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 {
 	// Order (less to more)
 	// - defaults
+	// - KV Store (as Consul or etcd)
 	// - config file
 	// - env variables
-	// - external systems (as Consul)
 	// - command line flags
+	// - explicit call to set
 
 	// order options alphabetically
 	std::sort( d->mOptions.begin(), d->mOptions.end(), []( const auto & a, const auto & b ){ return a->mName < b->mName; });
@@ -249,6 +250,14 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 	for( const auto & option: d->mOptions ){
 		if( !option->mValues.empty() ){
 			registerUse( option->mName );
+		}
+	}
+	// KV Store
+	for( const RemoteProvider & provider: d->mRemoteProviders ){
+		if( provider.mProvider == "consul" ){
+			d->readConfig( integrations::Consul::KVStore( provider.mHost ).get( provider.mKey ) );
+		}else if( provider.mProvider == "etcd" ){
+			d->readConfig( integrations::etcd::KVStore( provider.mHost ).get( provider.mKey ) );
 		}
 	}
 
@@ -268,13 +277,6 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 		}
 	}
 
-	for( const RemoteProvider & provider: d->mRemoteProviders ){
-		if( provider.mProvider == "consul" ){
-			d->readConfig( integrations::Consul::KVStore( provider.mHost ).get( provider.mKey ) );
-		}else if( provider.mProvider == "etcd" ){
-			d->readConfig( integrations::etcd::KVStore( provider.mHost ).get( provider.mKey ) );
-		}
-	}
 	// flags
 	for( int i = 0; i < args.size(); ){
 		std::string arg = args.at( i++ );

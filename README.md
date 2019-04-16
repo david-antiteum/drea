@@ -1,7 +1,23 @@
 # Drea
-A C++ framework for CLI apps and services
 
-An example:
+A C++ framework for CLI apps and services that includes support for:
+
+- Commands (and subcommands)
+- Options
+- Logging
+
+Drea tries to extract as much functionality with the minimum required developer intervention while preventing repeating information already present. For example, the developer declares commands and flags and, using that definition, Drea generates:
+
+- Help
+- Shell integration: Man pages and autocompletion
+- Support for configuration options:
+  - using files. Supported formats: TOML, YAML, JSON
+  - shell variables
+  - command flags
+  - KV storers: consul and etcd
+- User's input validation, including configuration files
+
+## An example
 
 ```c++
 #include <drea/core/Core>
@@ -40,23 +56,14 @@ int main( int argc, char * argv[] )
 
 This example has a single command ```this``` and one option ```reverse```. An example of use:
 
-```
+```bash
 λ ./say_this this hello
 [2019-04-16 09:44:44.649] [say] [info] hello
 ```
 
-Based on options and commands, Drea automatically adds some functionalities for us:
-
-- Help
-- Shell integration: Man pages and autocompletion
-- Log: verbose level, log to file, log to remote server
-- Support for configuration options using files, shell variables, command flags and KV storer
-
-## Help
-
 Execute the example as ```./say_this --help``` to get help:
 
-```
+```text
 Prints the argument of the command "this" and quits.
 
 usage: say COMMAND [OPTIONS]
@@ -77,45 +84,101 @@ Commands:
 Use "say COMMAND --help" for more information about a command.
 ```
 
-We can also get additional help from a particular command. Try this: ```./say_this this --help```
+We can also get additional help from a particular command, try this: ```./say_this this --help```.
 
-# How to Build
+## How to Build
 
 Use CMake to build and install Drea in Linux, macOS and Windows systems.
 
-# How to Use Drea
+## How to Use Drea
 
-```
+```CMake
 find_package(DreaCore REQUIRED)
 
 target_link_libraries(main PRIVATE DreaCore)
 ```
 
-# Configuration
+## Commands
 
-Evaluation order:
+Commands are the actions that your application can execute. A command can have subcommands, creating a hierarchy. When Drea requests the execution of a command, it will present the complete path, making it possible to have two subcommands with the same name.
+
+### The anatomy of a command
+
+1. A command can have arguments and options. Example:
+
+```bash
+./say this hello --reverse
+```
+
+The command is ```this```, has the argument ```hello``` and the option ```reverse```.
+
+2. Any number of arguments
+
+3. A command can have subcommands. Example:
+
+```bash
+./myapp container ls
+```
+
+The command is ```container``` and the subcommand ```ls```. Drea will ask for the execution of the command ```container.ls```. Can be defined as:
+
+```c++
+app.commander().addDefaults().add({
+    {
+        "container", "", "Manage containers"
+    },
+    {
+        "config", "", "Manage configs"
+    },
+    {
+        "ls", "", "List containers", {}, {}, "container"
+    },
+    {
+        "ls", "", "List configs", {}, {}, "config"
+    }
+});
+```
+
+### Defining a command
+
+A command has the following information:
+
+- name: must be unique in a command path
+- arguments: name of the arguments, if any
+- description: the command description used by the help system
+- local options: list of options that applies to this command
+- global options: list of global options that applies to this and command
+- parent command: the name of the parent command
+- number of parameters: 0, 1,... unlimited
+
+## Configuration
+
+Use configuration options to modify the behaviour of commands and to set values for required parameters.
+
+### Evaluation order
+
+The order of evaluation, from lower to higher priority:
 
 - defaults
+- KV Store (as Consul or etcd)
 - config file
 - env variables
 - command line flags
+- explicit call to set
 
-# Readings
+## Readings
 
 - [On formats](https://news.ycombinator.com/item?id=19653834)
+- [Terminology](https://pythonconquerstheuniverse.wordpress.com/2010/07/25/command-line-syntax-some-basic-concepts/): Command-line syntax: some basic concepts
 
-## Meta configs
+### Meta configs
 
 - [JSonnet](https://jsonnet.org/)
 - [Dhall](https://dhall-lang.org/)
 
 HN [discussion]( https://news.ycombinator.com/item?id=19656821 )
 
-## Libs
+### Libs
 
 - [Viper](https://github.com/spf13/viper): Viper is a complete configuration solution for Go applications including 12-Factor apps
 - [Cobra](https://github.com/spf13/cobra): Cobra is both a library for creating powerful modern CLI applications as well as a program to generate applications and command files.
-
-## Info
-
-- [Terminology](https://pythonconquerstheuniverse.wordpress.com/2010/07/25/command-line-syntax-some-basic-concepts/): Command-line syntax: some basic concepts
