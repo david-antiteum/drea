@@ -17,7 +17,7 @@ struct DREA_CORE_API Command
 	std::string						mParentCommand;
 	int								mNbParams = 1;
 	static const int				mUnlimitedParams = 0xfffffffa;
-
+		
 	int numberOfParams() const
 	{
 		if( mParamName.empty() ){

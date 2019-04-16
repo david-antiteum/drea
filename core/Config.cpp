@@ -185,7 +185,7 @@ drea::core::Config & drea::core::Config::addDefaults()
 			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
 		},
 		{
-			"generate-auto-completion", "", "generate files to enable autocompletion in the shell"
+			"system-integration", "", "generate man pages and scripts to enable autocompletion in the shell"
 		}
 	});
 	find( "verbose" )->mShortVersion = "v";

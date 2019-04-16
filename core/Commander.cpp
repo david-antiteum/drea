@@ -133,7 +133,7 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 {
 	if( App::instance().config().used( "version" )){
 		drea::core::integrations::Help::version( App::instance() );
-	}else if( App::instance().config().used( "generate-auto-completion" ) ){
+	}else if( App::instance().config().used( "system-integration" ) ){
 		drea::core::integrations::Bash::generateAutoCompletion( App::instance() );
 	}else if( App::instance().config().used( "help" ) ){
 		if( d->mCommand.empty() ){
