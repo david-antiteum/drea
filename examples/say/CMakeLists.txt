@@ -14,7 +14,7 @@ add_compile_definitions(DREA_CORE_DLL)
 
 set_property( TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17 )
 
-include_directories( ../../include ../../include/thirdparty )
+include_directories( ../../include ../../include/thirdparty ${CMAKE_CURRENT_BINARY_DIR} )
 
 target_link_libraries( ${PROJECT_NAME} 
 	DreaCore
@@ -36,3 +36,5 @@ install(TARGETS ${PROJECT_NAME}
 if(APPLE)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
 endif()
+
+generate_cpp_resource_file( "${PROJECT_NAME}_CMD_H" ${PROJECT_SOURCE_DIR} commands.yml ${CMAKE_CURRENT_BINARY_DIR}/commands.yml.h )

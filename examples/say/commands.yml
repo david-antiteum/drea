@@ -1,0 +1,32 @@
+app: say
+version: 0.0.2
+description: |
+  An example for the Drea Framework.
+  Drea is available at https://github.com/david-antiteum/drea.
+options:
+  - option: reverse
+    description: reverse string
+commands:
+  - command: this
+    params-names: string
+    description: prints the argument
+    local-options:
+      - reverse
+  - command: repeat
+    description: repeat something
+    local-options:
+      - reverse
+    commands:
+      - command: parrot
+        description: print parrot
+        local-options:
+          - reverse
+        commands:
+          - command: blue
+            description: print a blue parrot
+            local-options:
+              - reverse
+          - command: red
+            description: print a red parrot
+            local-options:
+              - reverse

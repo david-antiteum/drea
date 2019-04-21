@@ -53,7 +53,7 @@ public:
 	/*! After configuring the app, call this method to parse options for all
 		the selected sources.
 	*/
-	void parse();
+	void parse( const std::string & definitions );
 
 	/*! The argumenst as passed in the App constructor
 	*/

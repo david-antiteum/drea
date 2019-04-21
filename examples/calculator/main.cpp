@@ -39,7 +39,7 @@ int main( int argc, char * argv[] )
 		}		
 	});
 
-	app.parse();
+	app.parse("");
 	app.commander().run( [ &app ]( std::string cmd ){
 		app.logger().debug( "Run called for command {}", cmd );
 

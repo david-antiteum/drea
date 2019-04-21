@@ -1,25 +1,15 @@
 #include <drea/core/Core>
 #include <algorithm>
 
+#include "commands.yml.h"
+
 int main( int argc, char * argv[] )
 {
     drea::core::App     app( argc, argv );
 
-    app.setName( "say" );
-    app.setDescription( "Prints the argument of the command \"this\" and quits." );
-    app.setVersion( "0.0.1" );
-
-    app.config().addDefaults().add(
-        {
-            "reverse", "", "reverse string"
-        }
-    );
-    app.commander().addDefaults().add(
-        {
-            "this", "string", "prints the argument", { "reverse" }
-        }
-    );
-    app.parse();
+	app.config().addDefaults();
+	app.commander().addDefaults();
+	app.parse( std::string( commands_yml, commands_yml + commands_yml_len ) );
     app.commander().run( [ &app ]( std::string cmd ){
         if( cmd == "this" && app.commander().arguments().size() == 1 ){
             std::string say = app.commander().arguments().front();

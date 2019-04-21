@@ -6,6 +6,7 @@
 #include "Commander.h"
 
 #include "utilities/parser.h"
+#include <yaml-cpp/yaml.h>
 
 struct drea::core::App::Private
 {
@@ -42,10 +43,122 @@ drea::core::App::~App()
 	mInstanceApp = nullptr;
 }
 
-void drea::core::App::parse()
+void _parseCmd( drea::core::App & app, const YAML::Node & cmdsNode, const std::string & parentId )
 {
-	auto args = utilities::Parser( *this, d->mArgs ).parse();
+	if( cmdsNode.IsMap() ){
+		drea::core::Command	command;
 
+		command.mParentCommand = parentId;
+		for( auto cmdNode: cmdsNode ){
+			const std::string key = cmdNode.first.as<std::string>();
+			if( cmdNode.second.IsScalar() ){
+				if( key == "command" ){
+					command.mName = cmdNode.second.as<std::string>();
+				}else if( key == "description" ){
+					command.mDescription = cmdNode.second.as<std::string>();
+				}else if( key == "params-names" ){
+					command.mParamName = cmdNode.second.as<std::string>();
+				}else if( key == "params" ){
+					if( cmdNode.second.as<std::string>() == "unlimited" ){
+						command.mNbParams = drea::core::Command::mUnlimitedParams;
+					}else{
+						command.mNbParams = cmdNode.second.as<int>();
+					}
+				}
+			}else if( cmdNode.second.IsSequence() ){
+				if( key == "global-options" || key == "local-options" ){
+					for( auto optionNode: cmdNode.second ){
+						if( optionNode.IsScalar() ){
+							if( key == "global-options" ){
+								command.mGlobalParameters.push_back( optionNode.as<std::string>() );
+							}else{
+								command.mLocalParameters.push_back( optionNode.as<std::string>() );
+							}
+						}
+					}
+				}else if( key == "commands" ){
+					for( auto subCmdsNode: cmdNode.second ){
+						_parseCmd( app, subCmdsNode, parentId.empty() ? command.mName : parentId + "."  + command.mName );
+					}
+				}
+			}
+		}
+		app.commander().add( command );
+	}
+}
+
+void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
+{
+	if( optionsNode.IsMap()  ){
+		drea::core::Option	option;
+		for( auto optionNode: optionsNode ){
+			const std::string key = optionNode.first.as<std::string>();
+			if( optionNode.second.IsScalar() ){
+				if( key == "option" ){
+					option.mName = optionNode.second.as<std::string>();
+				}else if( key == "description" ){
+					option.mDescription = optionNode.second.as<std::string>();
+				}else if( key == "params-names" ){
+					option.mParamName = optionNode.second.as<std::string>();
+				}else if( key == "params" ){
+					if( optionNode.second.as<std::string>() == "unlimited" ){
+						option.mNbParams = drea::core::Option::mUnlimitedParams;
+					}else{
+						option.mNbParams = optionNode.second.as<int>();
+					}
+				}else if( key == "short" ){
+					option.mShortVersion = optionNode.second.as<int>();
+				}else if( key == "type" ){
+					const std::string & type = optionNode.second.as<std::string>();
+					if( type == "bool" ){
+						option.mType = typeid( bool );
+					}else if( type == "int" ){
+						option.mType = typeid( int );
+					}else if( type == "double" ){
+						option.mType = typeid( double );
+					}else if( type == "string" ){
+						option.mType = typeid( std::string );
+					}
+				}else if( key == "value" ){
+					option.mValues.push_back( optionNode.second.as<std::string>() );
+				}
+			}else if( optionNode.second.IsSequence() ){
+				if( key == "values" ){
+					for( auto valueNode: optionNode.second ){
+						if( valueNode.IsScalar() ){
+							option.mValues.push_back( valueNode.as<std::string>() );
+						}
+					}
+				}
+			}
+		}
+		app.config().add( option );
+	}
+}
+
+void drea::core::App::parse( const std::string & definitions )
+{
+	if( !definitions.empty() ){
+		for( auto node: YAML::Load( definitions ) ){
+			const std::string key = node.first.as<std::string>();
+			if( key == "app" && node.second.IsScalar() ){
+				setName( node.second.as<std::string>() );
+			}else if( key == "version" && node.second.IsScalar() ){
+				setVersion( node.second.as<std::string>() );
+			}else if( key == "description" && node.second.IsScalar() ){
+				setDescription( node.second.as<std::string>() );
+			}else if( key == "options" && node.second.IsSequence() ){
+				for( auto optionsNode: node.second ){
+					_parseOption( *this, optionsNode );
+				}
+			}else if( key == "commands" ){
+				for( auto cmdsNode: node.second ){
+					_parseCmd( *this, cmdsNode, "" );
+				}
+			}
+		}
+	}
+	auto args = utilities::Parser( *this, d->mArgs ).parse();
 	config().configure( args.first );
 	d->mLogger = config().setupLogger();
 	commander().configure( args.second );

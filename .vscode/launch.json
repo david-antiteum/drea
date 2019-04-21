@@ -8,10 +8,10 @@
 			"name": "(Windows) Launch",
 			"type": "cppvsdbg",
 			"request": "launch",
-			"program": "${workspaceFolder}/build/bin/calculator.exe",
+			"program": "${workspaceFolder}/build/bin/say.exe",
 			"args": [ "sum", "10", "10", "--config-file", "${workspaceFolder}/examples/calculator/config.json" ],
 			"stopAtEntry": false,
-			"cwd": "${workspaceFolder}",
+			"cwd": "${workspaceFolder}/build",
 			"environment": [],
 			"externalConsole": false
 		}

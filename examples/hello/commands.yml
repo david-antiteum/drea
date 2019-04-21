@@ -1,0 +1,5 @@
+app: hello
+version: 0.0.1
+description: |
+  An example for the Drea Framework.
+  Drea is available at https://github.com/david-antiteum/drea.

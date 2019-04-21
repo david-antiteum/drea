@@ -2,37 +2,15 @@
 #include <drea/core/Core>
 #include <algorithm>
 
+#include "commands.yml.h"
+
 int main( int argc, char * argv[] )
 {
 	drea::core::App	 app( argc, argv );
-
-	app.setName( "say" );
-	app.setDescription( "An example for the Drea Framework.\nDrea is available at https://github.com/david-antiteum/drea." );
-	app.setVersion( "0.0.1" );
 	
-	app.config().addDefaults().add(
-		{
-			"reverse", "", "reverse string"
-		}
-	);
-	app.commander().addDefaults().add({
-		{
-			"this", "string", "prints the argument", {}, { "reverse" }
-		},
-		{
-			"repeat", "", "repeat something", {}, { "reverse" },
-		},
-		{
-			"parrot", "", "print parrot", {}, { "reverse" }, "repeat"
-		},
-		{
-			"blue", "", "print a blue parrot", {}, { "reverse" }, "repeat.parrot"
-		},
-		{
-			"red", "", "print a red parrot", {}, { "reverse" }, "repeat.parrot"
-		}
-	});
-	app.parse();
+	app.config().addDefaults();
+	app.commander().addDefaults();
+	app.parse( std::string( commands_yml, commands_yml + commands_yml_len ) );
 	app.commander().run( [ &app ]( std::string cmd ){
 		app.logger().debug( "command to run {}", cmd );
 		if( cmd == "this" ){

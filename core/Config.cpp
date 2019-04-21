@@ -3,6 +3,8 @@
 #include <optional>
 #include <iostream>
 #include <memory>
+#include <stdlib.h>
+#include <fstream>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
@@ -10,10 +12,6 @@
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/fmt/fmt.h>
 #include <woorm/levenshtein.h>
-
-#include <stdlib.h>
-#include <iostream>
-#include <fstream>
 
 #include "integrations/yaml/yaml_reader.h"
 #include "integrations/json/json_reader.h"

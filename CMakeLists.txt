@@ -24,6 +24,11 @@ else()
 	link_directories( "$ENV{VCPKG_ROOT}/installed/$ENV{VCPKG_DEFAULT_TRIPLET}/debug/lib" )
 endif()
 
+function( generate_cpp_resource_file TARGET_NAME INPUT_DIR INPUT_FILE CPP_FILE )
+	add_custom_command(OUTPUT ${CPP_FILE} COMMAND cd ${INPUT_DIR} && xxd -i ${INPUT_FILE} ${CPP_FILE} DEPENDS ${INPUT_DIR}/${INPUT_FILE})
+	add_custom_target(${TARGET_NAME} ALL DEPENDS ${CPP_FILE})
+endfunction()
+
 add_subdirectory( core )
 
 if( BUILD_EXAMPLES )

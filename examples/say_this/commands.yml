@@ -1,0 +1,13 @@
+app: say
+version: 0.0.2
+description: |
+  Prints the argument of the command \"this\" and quits.
+options:
+  - option: reverse
+    description: reverse string
+commands:
+  - command: this
+    params-names: string
+    description: prints the argument
+    local-options:
+      - reverse
