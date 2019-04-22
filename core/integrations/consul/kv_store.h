@@ -4,7 +4,6 @@
 #include <spdlog/fmt/fmt.h>
 #include <chrono>
 
-#undef U
 #include "utilities/httpclient.h"
 #include <boost/beast/core/detail/base64.hpp>
 

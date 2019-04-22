@@ -2,7 +2,6 @@
 
 #include <string>
 #include <vector>
-#include <boost/algorithm/string/replace.hpp>
 
 namespace drea { namespace core { namespace utilities { namespace string {
 
@@ -35,9 +34,15 @@ static std::string join( const std::vector<std::string> & value, const std::stri
 	return res;
 }
 
-static std::string replace( const std::string & s, const std::string & from, const std::string & to )
+static std::string replace( const std::string & str, const std::string & from, const std::string & to )
 {
-	return boost::replace_all_copy( s, from, to );
+	std::string	res = str;
+	size_t start_pos = 0;
+	while((start_pos = res.find(from, start_pos)) != std::string::npos) {
+		res.replace(start_pos, from.length(), to);
+		start_pos += to.length(); // Handles case where 'to' is a substring of 'from'
+	}
+	return res;
 }
 
 }}}}

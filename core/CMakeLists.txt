@@ -5,11 +5,38 @@ endif()
 
 project( DreaCore VERSION 0.0.1 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
 
-find_package( yaml-cpp CONFIG REQUIRED )
-find_package( nlohmann_json REQUIRED )
-find_package( Boost REQUIRED )
+option( BUILD_REST_USE "Build support to accessREST services" ON )
 
-link_libraries( ${YAML_CPP_LIBRARIES} nlohmann_json::nlohmann_json uriparser )
+find_package( yaml-cpp CONFIG REQUIRED )
+link_libraries( yaml-cpp )
+
+if( BUILD_REST_USE )
+	find_package( uriparser CONFIG REQUIRED )
+	find_package( nlohmann_json CONFIG REQUIRED )
+	find_package( Boost REQUIRED )
+	add_compile_definitions( ENABLE_REST_USE )
+else()
+	message( "Disabling REST support." )
+	find_package( nlohmann_json CONFIG )
+endif()
+
+if( uriparser_FOUND )
+	link_libraries( uriparser::uriparser )
+endif()
+if( nlohmann_json_FOUND )
+	link_libraries( nlohmann_json::nlohmann_json )
+	add_compile_definitions( ENABLE_JSON )
+else()
+	message( "Could not find nlohmann_json. Disabling JSON support." )
+endif()
+
+find_path( CPPTOML_INCLUDE_DIR cpptoml.h )
+if(CPPTOML_INCLUDE_DIR STREQUAL "CPPTOML_INCLUDE_DIR-NOTFOUND")
+	message( "Could not find cpptoml. Disabling TOML support." )
+else()
+	add_compile_definitions( ENABLE_TOML )
+	include_directories(${CPPTOML_INCLUDE_DIR})
+endif()
 
 add_library( ${PROJECT_NAME} SHARED 
 	App.cpp

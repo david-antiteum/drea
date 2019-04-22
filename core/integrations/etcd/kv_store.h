@@ -5,7 +5,6 @@
 #include <chrono>
 #include <iomanip>
 
-#undef U
 #include "utilities/httpclient.h"
 
 namespace drea { namespace core { namespace integrations { namespace etcd {

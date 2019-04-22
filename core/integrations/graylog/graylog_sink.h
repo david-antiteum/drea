@@ -5,7 +5,6 @@
 #include <spdlog/fmt/fmt.h>
 #include <chrono>
 
-#undef U
 #include "utilities/httpclient.h"
 
 namespace drea { namespace core { namespace integrations { namespace logs {

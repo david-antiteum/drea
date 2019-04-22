@@ -14,15 +14,21 @@
 #include <woorm/levenshtein.h>
 
 #include "integrations/yaml/yaml_reader.h"
-#include "integrations/json/json_reader.h"
-#include "integrations/toml/toml_reader.h"
+#ifdef ENABLE_JSON
+	#include "integrations/json/json_reader.h"
+#endif
+#ifdef ENABLE_TOML
+	#include "integrations/toml/toml_reader.h"
+#endif
+
+#ifdef ENABLE_REST_USE
+	#include "integrations/graylog/graylog_sink.h"
+	#include "integrations/consul/kv_store.h"
+	#include "integrations/etcd/kv_store.h"
+#endif
 
 #include "Config.h"
 #include "App.h"
-
-#include "integrations/graylog/graylog_sink.h"
-#include "integrations/consul/kv_store.h"
-#include "integrations/etcd/kv_store.h"
 
 namespace drea { namespace core {
 
@@ -98,18 +104,27 @@ struct drea::core::Config::Private
 
 	bool readConfig( const std::string & val )
 	{
-		bool		res = true;
+		bool		res = false;
 
 		if( !val.empty() ){
-			if( drea::core::integration::toml::valid( val ) ){
+#ifdef ENABLE_TOML			
+			if( !res && drea::core::integration::toml::valid( val ) ){
 				drea::core::integration::toml::readConfig( App::instance(), val );
-			}else if( drea::core::integration::json::valid( val ) ){
+				res = true;
+			}
+#endif
+#ifdef ENABLE_JSON
+			if( !res && drea::core::integration::json::valid( val ) ){
 				drea::core::integration::json::readConfig( App::instance(), val );
-			}else if( drea::core::integration::yaml::valid( val ) ){
+				res = true;
+			}
+#endif
+			if( !res && drea::core::integration::yaml::valid( val ) ){
 				drea::core::integration::yaml::readConfig( App::instance(), val );
-			}else{
-				res = false;
-			}			
+				res = true;
+			}
+		}else{
+			res = true;
 		}
 		return res;
 	}
@@ -179,9 +194,11 @@ drea::core::Config & drea::core::Config::addDefaults()
 		{
 			"config-file", "file", "read configs from file <file>", {}, typeid( std::string )
 		},
+#ifdef ENABLE_REST_USE
 		{
 			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
 		},
+#endif
 		{
 			"system-integration", "", "generate man pages and scripts to enable autocompletion in the shell"
 		}
@@ -251,6 +268,7 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 		}
 	}
 	// KV Store
+#ifdef ENABLE_REST_USE
 	for( const RemoteProvider & provider: d->mRemoteProviders ){
 		if( provider.mProvider == "consul" ){
 			d->readConfig( integrations::Consul::KVStore( provider.mHost ).get( provider.mKey ) );
@@ -258,7 +276,7 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 			d->readConfig( integrations::etcd::KVStore( provider.mHost ).get( provider.mKey ) );
 		}
 	}
-
+#endif
 	// Read the config file
 	d->readConfig( args );
 
@@ -336,9 +354,11 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 	if( !logFile.empty() ){
 		sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, 1048576 * 5, 3 ) );
 	}
+#ifdef ENABLE_REST_USE	
 	if( used( "graylog-host" ) ){
 		sinks.push_back( std::make_shared< drea::core::integrations::logs::graylog_sink<spdlog::details::null_mutex>>( App::instance().name(), get<std::string>( "graylog-host" ) ) );
 	}
+#endif
 	res = std::make_shared<spdlog::logger>( App::instance().name(), sinks.begin(), sinks.end() );
 	if( used( "verbose" ) ){
 		res->set_level( spdlog::level::debug );
