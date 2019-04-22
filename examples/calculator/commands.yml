@@ -1,0 +1,39 @@
+app: calculator
+version: 0.0.2
+description: |
+  A basic calculator as an example for the Drea Framework.
+  Drea is available at https://github.com/david-antiteum/drea.
+env-prefix: CAL
+options:
+  - option: round
+    description: round the result to the nearest integer
+  - option: equal
+    params-names: number
+    description: check if the result is equal to <number>
+    type: double
+    short: e
+commands:
+  - command: sum
+    params-names: number...
+    description: sum all the arguments
+    local-options:
+      - round
+      - equal
+  - command: power
+    params-names: base exponent
+    description: raise the first argument to the power of the second
+    local-options:
+      - round
+      - equal
+  - command: count
+    params-names: string...
+    description: count the characters of a text arguments
+    local-options:
+      - equal
+remote-config:
+#  - provider: consul
+#    address: http://127.0.0.1:8500
+#    key: calculator-key
+#  - provider: etcd
+#    address: http://127.0.0.1:2379
+#    key: calculator-key

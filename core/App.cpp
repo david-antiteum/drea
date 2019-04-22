@@ -107,7 +107,7 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 						option.mNbParams = optionNode.second.as<int>();
 					}
 				}else if( key == "short" ){
-					option.mShortVersion = optionNode.second.as<int>();
+					option.mShortVersion = optionNode.second.as<std::string>();
 				}else if( key == "type" ){
 					const std::string & type = optionNode.second.as<std::string>();
 					if( type == "bool" ){
@@ -136,6 +136,31 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 	}
 }
 
+void _parseRemote( drea::core::App & app, const YAML::Node & remoteNode )
+{
+	if( remoteNode.IsMap()  ){
+		std::string 	provider;
+		std::string		address;
+		std::string		remoteKey;
+
+		for( auto node: remoteNode ){
+			const std::string key = node.first.as<std::string>();
+			if( node.second.IsScalar() ){
+				if( key == "provider" ){
+					provider = node.second.as<std::string>();
+				}else if( key == "address" ){
+					address = node.second.as<std::string>();
+				}else if( key == "key" ){
+					remoteKey = node.second.as<std::string>();
+				}
+			}
+		}
+		if( !provider.empty() && !address.empty() && !remoteKey.empty() ){
+			app.config().addRemoteProvider( provider, address, remoteKey );
+		}
+	}
+}
+
 void drea::core::App::parse( const std::string & definitions )
 {
 	if( !definitions.empty() ){
@@ -147,6 +172,8 @@ void drea::core::App::parse( const std::string & definitions )
 				setVersion( node.second.as<std::string>() );
 			}else if( key == "description" && node.second.IsScalar() ){
 				setDescription( node.second.as<std::string>() );
+			}else if( key == "env-prefix" && node.second.IsScalar() ){
+				config().setEnvPrefix( node.second.as<std::string>() );
 			}else if( key == "options" && node.second.IsSequence() ){
 				for( auto optionsNode: node.second ){
 					_parseOption( *this, optionsNode );
@@ -154,6 +181,10 @@ void drea::core::App::parse( const std::string & definitions )
 			}else if( key == "commands" ){
 				for( auto cmdsNode: node.second ){
 					_parseCmd( *this, cmdsNode, "" );
+				}
+			}else if( key == "remote-config" ){
+				for( auto remoteNode: node.second ){
+					_parseRemote( *this, remoteNode );
 				}
 			}
 		}

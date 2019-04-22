@@ -52,13 +52,10 @@ public:
 	*/
 	jss::object_ptr<Command> find( const std::string & cmdName ) const;
 
-	/*! Report to the user that this is not a valid command. This method show a similar command if possible (Did you mean?).
+	/*! Report to the user that this is not a valid command because is either unknown or because requires a missing subcommand.
+		This method show a similar command if possible (Did you mean?).
 	*/
-	void reportNoCommand( const std::string & command ) const;
-
-	/*! Report to the user that this is not a valid command because a required subcommand is missing.
-	*/
-	void reportNoSubCommand( const std::string & command ) const;
+	void unknownCommand( const std::string & command ) const;
 
 	// Methods called by App
 

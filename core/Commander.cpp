@@ -124,7 +124,7 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 				d->mArguments.push_back( args[i] );
 			}
 		}else{
-			reportNoCommand( args.at( 0 ) );
+			unknownCommand( args.at( 0 ) );
 		}
 	}
 }
@@ -151,28 +151,23 @@ std::vector<std::string> drea::core::Commander::arguments() const
 	return d->mArguments;
 }
 
-void drea::core::Commander::reportNoSubCommand( const std::string & command ) const
-{
-	if( auto cmd = find( command ) ){
-		App::instance().logger().error( "The command \"{}\" requires a sub command. Try: {} {} --help", utilities::string::replace( command, ".", " " ), App::instance().args().at( 0 ), utilities::string::replace( command, ".", " " ) );
-	}else{
-		reportNoCommand( command );
-	}
-}
-
-void drea::core::Commander::reportNoCommand( const std::string & command ) const
+void drea::core::Commander::unknownCommand( const std::string & command ) const
 {
 	if( command.empty() ){
 		App::instance().logger().info( "A command is required." );
+	}else if( auto cmd = find( command ) ){
+		App::instance().logger().error( "The command \"{}\" requires a sub command. Try: {} {} --help", utilities::string::replace( command, ".", " " ), App::instance().args().at( 0 ), utilities::string::replace( command, ".", " " ) );
 	}else{
 		size_t			bestDist = 0;
 		std::string		bestCmd;
 
 		for( const auto & cmd: d->mCommands ){
-			size_t	nd = levenshtein( command, cmd->mName );
-			if( bestCmd.empty() || nd < bestDist ){
-				bestDist = nd;
-				bestCmd = cmd->mName;
+			if( cmd->mParentCommand.empty() ){
+				size_t	nd = levenshtein( command, cmd->mName );
+				if( bestCmd.empty() || nd < bestDist ){
+					bestDist = nd;
+					bestCmd = cmd->mName;
+				}
 			}
 		}
 		if( bestCmd.empty() ){
