@@ -25,6 +25,8 @@ endfunction()
 
 add_subdirectory( core )
 
+add_subdirectory( tools/unix/shell )
+
 if( BUILD_EXAMPLES )
 	add_subdirectory( examples/hello )
 	add_subdirectory( examples/say_this )

@@ -1,0 +1,10 @@
+app: shell_integrator
+version: 0.0.1
+description: |
+  Generate man files and bash scripts for auto completion to integrate a Drea app in a unix shell
+  Drea is available at https://github.com/david-antiteum/drea.
+commands:
+  - command: man
+    params: 2
+    params-names: yaml-file man-file
+    description: reads a Drea setup <yaml file> and generates a <man file>
