@@ -26,17 +26,13 @@ std::optional<double> power( const drea::core::App & app )
 {
 	std::optional<double>	res;
 
-	if( app.commander().arguments().size() == 2 ){
-		try{
-			double 	base = std::stod( app.commander().arguments().at( 0 ) );
-			double 	exponent = std::stod( app.commander().arguments().at( 1 ) );
+	try{
+		double 	base = std::stod( app.commander().arguments().at( 0 ) );
+		double 	exponent = std::stod( app.commander().arguments().at( 1 ) );
 
-			res = std::pow( base, exponent );
-		}catch( std::exception & e ){
-			app.logger().error( "Argument is not a number: {}", e.what() );
-		}
-	}else{
-		app.logger().error( "Power needs two arguments" );
+		res = std::pow( base, exponent );
+	}catch( std::exception & e ){
+		app.logger().error( "Argument is not a number: {}", e.what() );
 	}
 	return res;
 }
@@ -71,9 +67,6 @@ int main( int argc, char * argv[] )
 {
 	drea::core::App	 app( argc, argv );
 
-	app.config().addDefaults();
-	app.commander().addDefaults();
-
 	app.parse( std::string( commands_yml, commands_yml + commands_yml_len ) );
 	app.commander().run( [ &app ]( std::string cmd ){
 		app.logger().debug( "Run called for command {}", cmd );
@@ -81,11 +74,23 @@ int main( int argc, char * argv[] )
 		std::optional<double>		valueMaybe;
 
 		if( cmd == "sum"){
-			valueMaybe = sum( app );
+			if( !app.commander().arguments().empty() ){
+				valueMaybe = sum( app );
+			}else{
+				app.commander().wrongNumberOfArguments( cmd );
+			}
 		}else if( cmd == "power" ){
-			valueMaybe = power( app );
+			if( app.commander().arguments().size() == 2 ){		
+				valueMaybe = power( app );
+			}else{
+				app.commander().wrongNumberOfArguments( cmd );
+			}
 		}else if( cmd == "count" ){
-			valueMaybe = static_cast<double>( count( app ) );
+			if( !app.commander().arguments().empty() ){
+				valueMaybe = static_cast<double>( count( app ) );
+			}else{
+				app.commander().wrongNumberOfArguments( cmd );
+			}
 		}else{
 			app.commander().unknownCommand( cmd );
 		}

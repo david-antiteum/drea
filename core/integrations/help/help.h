@@ -55,7 +55,7 @@ static void help( const drea::core::App & app, const std::string & command )
 				auto commands = utilities::string::split( command, "." );
 
 				fmt::print( "\nUsage:");
-				fmt::print( "  {} {} ", App::instance().name(), utilities::string::join( commands, " " ));
+				fmt::print( "  {} {} ", app.name(), utilities::string::join( commands, " " ));
 				if( !cmd->mSubcommand.empty() ){
 					fmt::print( "COMMAND " );
 				}
@@ -74,7 +74,7 @@ static void help( const drea::core::App & app, const std::string & command )
 					bool anySubCmd = false;
 				
 					for( const std::string & subCmdName: cmd->mSubcommand ){
-						if( auto subCmd = App::instance().commander().find( command + "." + subCmdName ) ){
+						if( auto subCmd = app.commander().find( command + "." + subCmdName ) ){
 							offset = std::max<std::string::size_type>( offset, subCmd->mName.size() + 2 );
 							if( !subCmd->mSubcommand.empty() ){
 								anySubCmd = true;
@@ -86,7 +86,7 @@ static void help( const drea::core::App & app, const std::string & command )
 					}
 					fmt::print( "\nCommands:\n");
 					for( const std::string & subCmdName: cmd->mSubcommand ){
-						if( auto subCmd = App::instance().commander().find( command + "." + subCmdName ) ){
+						if( auto subCmd = app.commander().find( command + "." + subCmdName ) ){
 							std::string::size_type cmdSize = 2 + subCmd->mName.size();
 					
 							fmt::print( "  {}", subCmd->mName );
@@ -103,7 +103,7 @@ static void help( const drea::core::App & app, const std::string & command )
 				if( !cmd->mLocalParameters.empty() ){
 					fmt::print( "\nOptions:\n");
 					for( const std::string & arg: cmd->mLocalParameters ){
-						if( auto config = App::instance().config().find( arg ) ){
+						if( auto config = app.config().find( arg ) ){
 							fmt::print( "  --{} {}\n", config->mName, config->mDescription );
 						}
 					}
@@ -111,7 +111,7 @@ static void help( const drea::core::App & app, const std::string & command )
 				if( !cmd->mGlobalParameters.empty() ){
 					fmt::print( "\nGlobal options:\n");
 					for( const std::string & arg: cmd->mGlobalParameters ){
-						if( auto config = App::instance().config().find( arg ) ){
+						if( auto config = app.config().find( arg ) ){
 							fmt::print( "  --{} {}\n", config->mName, config->mDescription );
 						}
 					}

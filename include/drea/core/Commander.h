@@ -11,12 +11,15 @@
 #include "Command.h"
 
 namespace drea { namespace core {
+
+class App;
+
 /*! Commands of the application
 */
 class DREA_CORE_API Commander
 {
 public:
-	explicit Commander();
+	explicit Commander( App & app );
 	~Commander();
 
 	/*! Adds defaults commands to the app
@@ -56,6 +59,10 @@ public:
 		This method show a similar command if possible (Did you mean?).
 	*/
 	void unknownCommand( const std::string & command ) const;
+
+	/*! Report to the user that the command needs a different number of arguments
+	*/
+	void wrongNumberOfArguments( const std::string & command ) const;
 
 	// Methods called by App
 

@@ -20,6 +20,11 @@ struct drea::core::Commander::Private
 	std::string								mCommand;
 	std::vector<std::string>				mArguments;
 	std::vector<std::unique_ptr<Command>>	mCommands;
+	App										& mApp;
+
+	Private( App & app ) : mApp( app )
+	{
+	}
 
 	jss::object_ptr<Command> find( const std::string & parent, const std::string & cmdName ){
 		for( const auto & cmd: mCommands ){
@@ -52,9 +57,8 @@ struct drea::core::Commander::Private
 	}
 };
 
-drea::core::Commander::Commander()
+drea::core::Commander::Commander( drea::core::App & app ) : d( std::make_unique<Private>( app ) )
 {
-	d = std::make_unique<Private>();
 }
 
 drea::core::Commander::~Commander()
@@ -98,7 +102,7 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 			if( auto parent = find( cmd->mParentCommand ) ){
 				parent->mSubcommand.push_back( cmd->mName );
 			}else{
-				App::instance().logger().error( "The command \"{}\" refers to the parent \"{}\" but it does not exists.", cmd->mName, cmd->mParentCommand );
+				d->mApp.logger().error( "The command \"{}\" refers to the parent \"{}\" but it does not exists.", cmd->mName, cmd->mParentCommand );
 			}
 		}
 	}
@@ -131,15 +135,15 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 
 void drea::core::Commander::run( std::function<void( std::string )> f )
 {
-	if( App::instance().config().used( "version" )){
-		drea::core::integrations::Help::version( App::instance() );
-	}else if( App::instance().config().used( "system-integration" ) ){
-		drea::core::integrations::Bash::generateAutoCompletion( App::instance() );
-	}else if( App::instance().config().used( "help" ) ){
+	if( d->mApp.config().used( "version" )){
+		drea::core::integrations::Help::version( d->mApp );
+	}else if( d->mApp.config().used( "system-integration" ) ){
+		drea::core::integrations::Bash::generateAutoCompletion( d->mApp );
+	}else if( d->mApp.config().used( "help" ) ){
 		if( d->mCommand.empty() ){
-			drea::core::integrations::Help::help( App::instance() );
+			drea::core::integrations::Help::help( d->mApp );
 		}else{
-			drea::core::integrations::Help::help( App::instance(), d->mCommand );
+			drea::core::integrations::Help::help( d->mApp, d->mCommand );
 		}
 	}else{
 		f( d->mCommand );
@@ -154,9 +158,9 @@ std::vector<std::string> drea::core::Commander::arguments() const
 void drea::core::Commander::unknownCommand( const std::string & command ) const
 {
 	if( command.empty() ){
-		App::instance().logger().info( "A command is required." );
+		d->mApp.logger().info( "A command is required." );
 	}else if( auto cmd = find( command ) ){
-		App::instance().logger().error( "The command \"{}\" requires a sub command. Try: {} {} --help", utilities::string::replace( command, ".", " " ), App::instance().args().at( 0 ), utilities::string::replace( command, ".", " " ) );
+		d->mApp.logger().error( "The command \"{}\" requires a sub command. Try: {} {} --help", utilities::string::replace( command, ".", " " ), d->mApp.args().at( 0 ), utilities::string::replace( command, ".", " " ) );
 	}else{
 		size_t			bestDist = 0;
 		std::string		bestCmd;
@@ -171,10 +175,17 @@ void drea::core::Commander::unknownCommand( const std::string & command ) const
 			}
 		}
 		if( bestCmd.empty() ){
-			App::instance().logger().error( "Unknown command \"{}\"", command );
+			d->mApp.logger().error( "Unknown command \"{}\"", command );
 		}else{
-			App::instance().logger().error( "Unknown command \"{}\". Did you mean \"{}\"?", command, bestCmd );
+			d->mApp.logger().error( "Unknown command \"{}\". Did you mean \"{}\"?", command, bestCmd );
 		}
+	}
+}
+
+void drea::core::Commander::wrongNumberOfArguments( const std::string & command ) const
+{
+	if( auto cmd = find( command ) ){
+		d->mApp.logger().error( "The command \"{}\" requires {} command{}, {} given.", utilities::string::replace( command, ".", " " ), cmd->mNbParams, cmd->mNbParams > 1 ? "s": "", arguments().size() );
 	}
 }
 

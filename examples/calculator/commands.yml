@@ -20,6 +20,7 @@ commands:
       - round
       - equal
   - command: power
+    params: 2
     params-names: base exponent
     description: raise the first argument to the power of the second
     local-options:

@@ -10,7 +10,7 @@
 
 struct drea::core::App::Private
 {
-	Private()
+	Private( App & app ) : mConfig( app ), mCommander( app )
 	{
 	}
 
@@ -25,11 +25,12 @@ struct drea::core::App::Private
 
 static drea::core::App * mInstanceApp = nullptr;
 
-drea::core::App::App( int argc, char * argv[] )
+drea::core::App::App( int argc, char * argv[] ) : d( std::make_unique<Private>( *this ) )
 {
-	d = std::make_unique<Private>();
-	mInstanceApp = this;
-
+	if( mInstanceApp == nullptr ){
+		// allow two Apps for internal uses
+		mInstanceApp = this;
+	}
 	if( argc > 0 ){
 		for( int i = 0; i < argc; i++ ){
 			d->mArgs.push_back( argv[i] );
@@ -40,7 +41,9 @@ drea::core::App::App( int argc, char * argv[] )
 
 drea::core::App::~App()
 {
-	mInstanceApp = nullptr;
+	if( mInstanceApp == this ){
+		mInstanceApp = nullptr;
+	}
 }
 
 void _parseCmd( drea::core::App & app, const YAML::Node & cmdsNode, const std::string & parentId )
@@ -163,6 +166,10 @@ void _parseRemote( drea::core::App & app, const YAML::Node & remoteNode )
 
 void drea::core::App::parse( const std::string & definitions )
 {
+	// TODO.. disable defaults from definitions
+	bool		useConfigDefaults = true;
+	bool		useCommanderDefaults = true;
+
 	if( !definitions.empty() ){
 		for( auto node: YAML::Load( definitions ) ){
 			const std::string key = node.first.as<std::string>();
@@ -188,6 +195,12 @@ void drea::core::App::parse( const std::string & definitions )
 				}
 			}
 		}
+	}
+	if( useConfigDefaults ){
+		config().addDefaults();
+	}
+	if( useCommanderDefaults ){
+		commander().addDefaults();
 	}
 	auto args = utilities::Parser( *this, d->mArgs ).parse();
 	config().configure( args.first );

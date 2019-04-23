@@ -12,6 +12,9 @@
 #include "Option.h"
 
 namespace drea { namespace core {
+
+class App;
+
 /*! Configuration options of the application.
 
 	Reads data from (in this order):
@@ -25,7 +28,7 @@ namespace drea { namespace core {
 class DREA_CORE_API Config
 {
 public:
-	explicit Config();
+	explicit Config( App & app );
 	~Config();
 
 	/*! Adds defaults options to the app

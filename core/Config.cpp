@@ -14,12 +14,8 @@
 #include <woorm/levenshtein.h>
 
 #include "integrations/yaml/yaml_reader.h"
-#ifdef ENABLE_JSON
-	#include "integrations/json/json_reader.h"
-#endif
-#ifdef ENABLE_TOML
-	#include "integrations/toml/toml_reader.h"
-#endif
+#include "integrations/json/json_reader.h"
+#include "integrations/toml/toml_reader.h"
 
 #ifdef ENABLE_REST_USE
 	#include "integrations/graylog/graylog_sink.h"
@@ -66,6 +62,11 @@ struct drea::core::Config::Private
 	std::vector<std::unique_ptr<Option>>	mOptions;
 	std::string								mEnvPrefix;
 	std::vector<RemoteProvider>				mRemoteProviders;
+	App										& mApp;
+
+	Private( App & app ) : mApp( app )
+	{
+	}
 
 	jss::object_ptr<Option> find( const std::string & optionName ){
 		jss::object_ptr<Option>	res;
@@ -107,20 +108,16 @@ struct drea::core::Config::Private
 		bool		res = false;
 
 		if( !val.empty() ){
-#ifdef ENABLE_TOML			
-			if( !res && drea::core::integration::toml::valid( val ) ){
-				drea::core::integration::toml::readConfig( App::instance(), val );
+			if( !res && drea::core::integration::toml::Reader().valid( val ) ){
+				drea::core::integration::toml::Reader().readConfig( mApp, val );
 				res = true;
 			}
-#endif
-#ifdef ENABLE_JSON
-			if( !res && drea::core::integration::json::valid( val ) ){
-				drea::core::integration::json::readConfig( App::instance(), val );
+			if( !res && drea::core::integration::json::Reader().valid( val ) ){
+				drea::core::integration::json::Reader().readConfig( mApp, val );
 				res = true;
 			}
-#endif
-			if( !res && drea::core::integration::yaml::valid( val ) ){
-				drea::core::integration::yaml::readConfig( App::instance(), val );
+			if( !res && drea::core::integration::yaml::Reader().valid( val ) ){
+				drea::core::integration::yaml::Reader().readConfig( mApp, val );
 				res = true;
 			}
 		}else{
@@ -167,9 +164,8 @@ struct drea::core::Config::Private
 	}
 };
 
-drea::core::Config::Config()
+drea::core::Config::Config( drea::core::App & app ) : d( std::make_unique<Private>( app ) )
 {
-	d = std::make_unique<Private>();
 }
 
 drea::core::Config::~Config()
@@ -250,7 +246,7 @@ jss::object_ptr<drea::core::Option> drea::core::Config::find( const std::string 
 
 void drea::core::Config::configure( const std::vector<std::string> & args )
 {
-	// Order (less to more)
+	// Order (lower to higher)
 	// - defaults
 	// - KV Store (as Consul or etcd)
 	// - config file
@@ -356,10 +352,10 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 	}
 #ifdef ENABLE_REST_USE	
 	if( used( "graylog-host" ) ){
-		sinks.push_back( std::make_shared< drea::core::integrations::logs::graylog_sink<spdlog::details::null_mutex>>( App::instance().name(), get<std::string>( "graylog-host" ) ) );
+		sinks.push_back( std::make_shared< drea::core::integrations::logs::graylog_sink<spdlog::details::null_mutex>>( d->mApp.name(), get<std::string>( "graylog-host" ) ) );
 	}
 #endif
-	res = std::make_shared<spdlog::logger>( App::instance().name(), sinks.begin(), sinks.end() );
+	res = std::make_shared<spdlog::logger>( d->mApp.name(), sinks.begin(), sinks.end() );
 	if( used( "verbose" ) ){
 		res->set_level( spdlog::level::debug );
 	}
