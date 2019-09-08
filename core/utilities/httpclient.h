@@ -6,6 +6,7 @@
 #include <boost/asio.hpp>
 
 #include <optional>
+#include <tuple>
 
 #include <cstdlib>
 #include <iostream>
@@ -28,27 +29,27 @@ class HttpClient
 public:
 	static std::optional<nlohmann::json> get( const std::string & address )
 	{
-		const std::string	response = execute( address, {}, http::verb::get );
-
-		if( !response.empty() ){
-			try{
-				return nlohmann::json::parse( response );
-			}catch(...){
-				// TODO report parsing error
-			}
-		}else{
-			// TODO report empty 
-		}
-		return {};
+		return executeJson( address, {}, http::verb::get );
 	}
 
 	static std::optional<nlohmann::json> post( const std::string & address, const nlohmann::json & json )
 	{
-		const std::string	response = execute( address, json.dump(), http::verb::post );
+		return executeJson( address, json, http::verb::post );
+	}
 
-		if( !response.empty() ){
+	static std::optional<nlohmann::json> put( const std::string & address, const nlohmann::json & json )
+	{
+		return executeJson( address, json, http::verb::put );
+	}
+
+private:
+	static std::optional<nlohmann::json> executeJson( const std::string & address, const nlohmann::json & json, http::verb verb )
+	{
+		const auto response = execute( address, json.empty() ? "" : json.dump(), verb );
+
+		if( std::get<1>( response ) == http::status::ok ){
 			try{
-				return nlohmann::json::parse( response );
+				return nlohmann::json::parse( std::get<0>( response ) );
 			}catch(...){
 				// TODO report parsing error
 			}
@@ -58,12 +59,11 @@ public:
 		return {};
 	}
 
-private:
-	static std::string execute( const std::string & address, const std::string & value, http::verb verb )
+	static std::tuple<std::string,http::status> execute( const std::string & address, const std::string & value, http::verb verb )
 	{
-		std::string					res;
-		Uri 						uri( address );
-		boost::beast::error_code 	ec;
+		std::tuple<std::string,http::status>	res{ "", http::status::internal_server_error };
+		Uri 									uri( address );
+		boost::beast::error_code 				ec;
 
 		if( !uri.isValid() ){
 			spdlog::error( "cannot parse uri {}", address );
@@ -93,12 +93,12 @@ private:
 			}else{
 				boost::beast::flat_buffer b;
 
-				http::response<http::string_body> body;
-				http::read(sock, b, body, ec);
+				http::response<http::string_body> response;
+				http::read(sock, b, response, ec);
 				if( ec ){
 					spdlog::error( "Error reading from {}. {}", address, ec.message() );
 				}else{
-					res = body.body();
+					res = { response.body(), response.result() };
 				}
 			}
 			sock.shutdown(tcp::socket::shutdown_both, ec);
