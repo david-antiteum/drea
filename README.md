@@ -188,3 +188,8 @@ HN [discussion]( https://news.ycombinator.com/item?id=19656821 )
 
 - [Viper](https://github.com/spf13/viper): Viper is a complete configuration solution for Go applications including 12-Factor apps
 - [Cobra](https://github.com/spf13/cobra): Cobra is both a library for creating powerful modern CLI applications as well as a program to generate applications and command files.
+
+- [cpp_cli](https://github.com/TheLandfill/cpp_cli): This repository consists of a library designed to make parsing command line arguments for c++ easy and efficient and a few simple programs showing you how it works.
+- [CLI11](https://github.com/CLIUtils/CLI11): CLI11 is a command line parser for C++11 and beyond that provides a rich feature set with a simple and intuitive interface.
+
+- [Consul C++](https://github.com/oliora/ppconsul)

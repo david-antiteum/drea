@@ -19,8 +19,8 @@
 
 #ifdef ENABLE_REST_USE
 	#include "integrations/graylog/graylog_sink.h"
-	#include "integrations/consul/kv_store.h"
 	#include "integrations/etcd/kv_store.h"
+	#include <consulcpp/ConsulCpp>
 #endif
 
 #include "Config.h"
@@ -267,7 +267,12 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 #ifdef ENABLE_REST_USE
 	for( const RemoteProvider & provider: d->mRemoteProviders ){
 		if( provider.mProvider == "consul" ){
-			d->readConfig( integrations::Consul::KVStore( provider.mHost ).get( provider.mKey ) );
+			consulcpp::Consul	consul( provider.mHost );
+			auto				valueMaybe = consul.kv().get( provider.mKey );
+
+			if( valueMaybe ){
+				d->readConfig( valueMaybe.value() );
+			}
 		}else if( provider.mProvider == "etcd" ){
 			d->readConfig( integrations::etcd::KVStore( provider.mHost ).get( provider.mKey ) );
 		}

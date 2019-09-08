@@ -7,6 +7,9 @@ project( DreaCore VERSION 0.0.1 DESCRIPTION "Drea Framework Core" LANGUAGES CXX 
 
 option( BUILD_REST_USE "Build support to accessREST services" ON )
 
+find_package( fmt CONFIG REQUIRED )
+find_package( spdlog CONFIG REQUIRED )
+
 find_package( yaml-cpp CONFIG REQUIRED )
 link_libraries( yaml-cpp )
 
@@ -14,12 +17,16 @@ if( BUILD_REST_USE )
 	find_package( uriparser CONFIG REQUIRED )
 	find_package( nlohmann_json CONFIG REQUIRED )
 	find_package( Boost REQUIRED )
+	find_package( consulcpp CONFIG REQUIRED )
 	add_compile_definitions( ENABLE_REST_USE )
 else()
 	message( "Disabling REST support." )
 	find_package( nlohmann_json CONFIG )
 endif()
 
+if( consulcpp_FOUND )
+	link_libraries( consulcpp )
+endif()
 if( uriparser_FOUND )
 	link_libraries( uriparser::uriparser )
 endif()
