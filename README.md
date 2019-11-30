@@ -63,11 +63,11 @@ int main( int argc, char * argv[] )
 An example of use:
 
 ```bash
-λ ./say_this this hello
+λ ./saythis this hello
 [2019-04-16 09:44:44.649] [say] [info] hello
 ```
 
-Execute the example as ```./say_this --help``` to get help:
+Execute the example as ```./saythis --help``` to get help:
 
 ```text
 Prints the argument of the command "this" and quits.
@@ -90,7 +90,7 @@ Commands:
 Use "say COMMAND --help" for more information about a command.
 ```
 
-We can also get additional help from a particular command, try this: ```./say_this this --help```.
+We can also get additional help from a particular command, try this: ```./saythis this --help```.
 
 ## How to Build
 

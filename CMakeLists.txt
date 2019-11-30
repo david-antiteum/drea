@@ -29,7 +29,7 @@ add_subdirectory( tools/unix/shell )
 
 if( BUILD_EXAMPLES )
 	add_subdirectory( examples/hello )
-	add_subdirectory( examples/say_this )
+	add_subdirectory( examples/saythis )
 	add_subdirectory( examples/say )
 	add_subdirectory( examples/calculator )
 endif()
