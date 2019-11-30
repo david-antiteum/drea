@@ -80,7 +80,6 @@ Options:
   -h, --help                             show help and quit
       --log-file file                    log messages to the file <file>
       --reverse                          reverse string
-      --system-integration               generate man pages and scripts to enable autocompletion in the shell
   -v, --verbose                          increase the logging level to debug
       --version                          print version information and quit
 
@@ -159,7 +158,7 @@ A command has the following information:
 
 ## Configuration
 
-Use configuration options to modify the behaviour of commands and to set values for required parameters.
+Use configuration options to modify the behavior of commands and to set values for required parameters.
 
 ### Evaluation order
 
@@ -171,6 +170,10 @@ The order of evaluation, from lower to higher priority:
 - env variables
 - command line flags
 - explicit call to set
+
+## Utils
+
+The app ```shell_integrator``` generate man pages and scripts to enable autocompletion in the shell for a ```commands.yml``` file.
 
 ## Readings
 

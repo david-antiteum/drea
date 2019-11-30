@@ -193,11 +193,8 @@ drea::core::Config & drea::core::Config::addDefaults()
 #ifdef ENABLE_REST_USE
 		{
 			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
-		},
-#endif
-		{
-			"system-integration", "", "generate man pages and scripts to enable autocompletion in the shell"
 		}
+#endif
 	});
 	find( "verbose" )->mShortVersion = "v";
 	find( "help" )->mShortVersion = "h";

@@ -8,3 +8,7 @@ commands:
     params: 2
     params-names: yaml-file man-file
     description: reads a Drea setup <yaml file> and generates a <man file>
+  - command: autocompletion
+    params: 1
+    params-names: yaml-file
+    description: reads a Drea setup <yaml file> and generates an autocompletion shell file called appname-completion.sh

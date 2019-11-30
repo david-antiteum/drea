@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "commands.yml.h"
+#include "integrations/bash/bash_completion.h"
 
 std::string readFile( const std::string & configFileName )
 {
@@ -28,13 +29,16 @@ std::string readFile( const std::string & configFileName )
 
 void generateMan( const drea::core::App & app, const std::string & yamlFileName, const std::string & manFileName )
 {
-	char * argv[] = { "app" };
-
-	drea::core::App	 _app( 1, argv );
-
+	drea::core::App	 _app( 0, nullptr );
 	_app.parse( readFile( yamlFileName ) );
-
 	// https://liw.fi/manpages/
+}
+
+void generateIntegration( const drea::core::App & app, const std::string & yamlFileName )
+{
+	drea::core::App	 _app( 0, nullptr );
+	_app.parse( readFile( yamlFileName ) );
+	drea::core::integrations::Bash::generateAutoCompletion( _app );
 }
 
 int main( int argc, char * argv[] )
@@ -46,6 +50,12 @@ int main( int argc, char * argv[] )
 		if( cmd == "man" ){
 			if( app.commander().arguments().size() == 2 ){
 				generateMan( app, app.commander().arguments().at( 0 ), app.commander().arguments().at( 1 ) );
+			}else{
+				app.commander().wrongNumberOfArguments( cmd );
+			}
+		}else if( cmd == "autocompletion" ){
+			if( app.commander().arguments().size() == 1 ){
+				generateIntegration( app, app.commander().arguments().at( 0 ) );
 			}else{
 				app.commander().wrongNumberOfArguments( cmd );
 			}

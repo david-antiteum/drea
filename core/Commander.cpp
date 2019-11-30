@@ -11,7 +11,6 @@
 #include "App.h"
 #include "Config.h"
 
-#include "integrations/bash/bash_completion.h"
 #include "integrations/help/help.h"
 #include "utilities/string.h"
 
@@ -107,14 +106,13 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 		}
 	}
 	if( !args.empty() ){
-		if( auto cmd = find( args.at( 0 ) ) ){
+		if( auto cmd = find( args.at( 0 ) ); cmd ){
 			int	pos = 1;
 
 			d->mCommand = cmd->mName;
 			while( args.size() > pos ){
-				auto it = std::find( cmd->mSubcommand.begin(), cmd->mSubcommand.end(), args.at( pos ) );
-				if( it != cmd->mSubcommand.end() ){
-					if( cmd = find( d->mCommand + "." + args.at( pos ))){
+				if( auto it = std::find( cmd->mSubcommand.begin(), cmd->mSubcommand.end(), args.at( pos ) ); it != cmd->mSubcommand.end() ){
+					if( auto cmd = find( d->mCommand + "." + args.at( pos )); cmd ){
 						d->mCommand += "." + cmd->mName;
 						pos++;
 					}else{
@@ -137,8 +135,6 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 {
 	if( d->mApp.config().used( "version" )){
 		drea::core::integrations::Help::version( d->mApp );
-	}else if( d->mApp.config().used( "system-integration" ) ){
-		drea::core::integrations::Bash::generateAutoCompletion( d->mApp );
 	}else if( d->mApp.config().used( "help" ) ){
 		if( d->mCommand.empty() ){
 			drea::core::integrations::Help::help( d->mApp );
