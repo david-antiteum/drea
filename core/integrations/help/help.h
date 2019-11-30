@@ -54,8 +54,8 @@ static void help( const drea::core::App & app, const std::string & command )
 			if( auto cmd = app.commander().find( command ) ){
 				auto commands = utilities::string::split( command, "." );
 
-				fmt::print( "\nUsage:");
-				fmt::print( "  {} {} ", app.name(), utilities::string::join( commands, " " ));
+				fmt::print( "\nusage:");
+				fmt::print( " {} {} ", app.name(), utilities::string::join( commands, " " ));
 				if( !cmd->mSubcommand.empty() ){
 					fmt::print( "COMMAND " );
 				}
@@ -129,7 +129,7 @@ static void help( const drea::core::App & app )
 	std::string::size_type 	offset = 0;
 	bool					anyShort = false;
 
-	fmt::print( "\n{}\n\n", app.description() );
+	fmt::print( "\n{}\n", app.description() );
 	fmt::print("usage: {}", app.name() );
 	if( !app.commander().empty() ){
 		fmt::print(" COMMAND", app.name() );

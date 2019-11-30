@@ -203,9 +203,13 @@ void drea::core::App::parse( const std::string & definitions )
 		commander().addDefaults();
 	}
 	auto args = utilities::Parser( *this, d->mArgs ).parse();
-	config().configure( args.first );
-	d->mLogger = config().setupLogger();
-	commander().configure( args.second );
+	if( !args.second.empty() && args.second.at(0) == "autocomplete" ){
+		commander().configureForAutocompletion( d->mArgs );
+	}else{
+		config().configure( args.first );
+		d->mLogger = config().setupLogger();
+		commander().configure( args.second );
+	}
 }
 
 drea::core::App & drea::core::App::instance()

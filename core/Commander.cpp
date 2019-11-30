@@ -12,6 +12,7 @@
 #include "Config.h"
 
 #include "integrations/help/help.h"
+#include "integrations/bash/bash_completion.h"
 #include "utilities/string.h"
 
 struct drea::core::Commander::Private
@@ -54,6 +55,19 @@ struct drea::core::Commander::Private
 		}
 		return res;
 	}
+
+	void createHierarchy()
+	{
+		for( const auto & cmd: mCommands ){
+			if( !cmd->mParentCommand.empty() ){
+				if( auto parent = find( cmd->mParentCommand ) ){
+					parent->mSubcommand.push_back( cmd->mName );
+				}else{
+					mApp.logger().error( "The command \"{}\" refers to the parent \"{}\" but it does not exists.", cmd->mName, cmd->mParentCommand );
+				}
+			}
+		}
+	}
 };
 
 drea::core::Commander::Commander( drea::core::App & app ) : d( std::make_unique<Private>( app ) )
@@ -93,18 +107,20 @@ std::vector<jss::object_ptr<drea::core::Command>> drea::core::Commander::add( co
 	return res;
 }
 
-void drea::core::Commander::configure( const std::vector<std::string> & args )
+void drea::core::Commander::configureForAutocompletion( const std::vector<std::string> & args )
 {
-	// Create command hierarchy
-	for( const auto & cmd: d->mCommands ){
-		if( !cmd->mParentCommand.empty() ){
-			if( auto parent = find( cmd->mParentCommand ) ){
-				parent->mSubcommand.push_back( cmd->mName );
-			}else{
-				d->mApp.logger().error( "The command \"{}\" refers to the parent \"{}\" but it does not exists.", cmd->mName, cmd->mParentCommand );
-			}
+	d->createHierarchy();
+	if( args.size() > 1 ){
+		d->mCommand = "autocomplete";
+		for( int i = 2; i < args.size(); i++ ){
+			d->mArguments.push_back( args[i] );
 		}
 	}
+}
+
+void drea::core::Commander::configure( const std::vector<std::string> & args )
+{
+	d->createHierarchy();
 	if( !args.empty() ){
 		if( auto cmd = find( args.at( 0 ) ); cmd ){
 			int	pos = 1;
@@ -112,7 +128,8 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 			d->mCommand = cmd->mName;
 			while( args.size() > pos ){
 				if( auto it = std::find( cmd->mSubcommand.begin(), cmd->mSubcommand.end(), args.at( pos ) ); it != cmd->mSubcommand.end() ){
-					if( auto cmd = find( d->mCommand + "." + args.at( pos )); cmd ){
+					cmd = find( d->mCommand + "." + args.at( pos ));
+					if( cmd ){
 						d->mCommand += "." + cmd->mName;
 						pos++;
 					}else{
@@ -140,6 +157,10 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 			drea::core::integrations::Help::help( d->mApp );
 		}else{
 			drea::core::integrations::Help::help( d->mApp, d->mCommand );
+		}
+	}else if( d->mCommand == "autocomplete" ){
+		for( auto var: drea::core::integrations::Bash::calculateAutoCompletion( d->mApp )){
+			fmt::print( "{}\n", var );
 		}
 	}else{
 		f( d->mCommand );

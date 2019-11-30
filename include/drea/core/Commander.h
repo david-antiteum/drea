@@ -72,6 +72,12 @@ public:
 	*/
 	void configure( const std::vector<std::string> & args );
 
+	/*! Run the app in autocomplete mode
+
+		Don't call this method directly. App::parse will do it.
+	*/
+	void configureForAutocompletion( const std::vector<std::string> & args );
+
 private:
 	struct Private;
 	std::unique_ptr<Private>	d;
