@@ -8,12 +8,29 @@
 			"name": "(Windows) Launch",
 			"type": "cppvsdbg",
 			"request": "launch",
-			"program": "${workspaceFolder}/build/bin/say.exe",
+			"program": "${workspaceFolder}/build/bin/calculator.exe",
 			"args": [ "sum", "10", "10", "--config-file", "${workspaceFolder}/examples/calculator/config.json" ],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}/build",
 			"environment": [],
 			"externalConsole": false
-		}
+		},
+		{
+			"name": "(lldb) Launch",
+			"type": "cppdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/build/bin/calculator",
+			"args": [ "sum", "10", "10", "--config-file", "${workspaceFolder}/examples/calculator/config.json" ],
+			"stopAtEntry": true,
+			"cwd": "${workspaceFolder}",
+			"environment": [],
+			"externalConsole": true,
+			"MIMode": "lldb",
+			"logging": {
+				"trace": true,
+				"traceResponse": true,
+				"engineLogging": true
+			}
+		}	  
 	]
 }
