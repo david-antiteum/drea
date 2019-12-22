@@ -40,7 +40,7 @@ static std::string getenv( const std::string & prefix, const std::string & name 
 	free( env_p );
 #else
 	env_p = ::getenv( (prefix + "_" + name).c_str() );
-	if( env_p ){
+	if( env_p != nullptr ){
 		res = env_p;
 	}
 #endif
@@ -154,7 +154,7 @@ struct drea::core::Config::Private
 			if( std::string( args.at( i ) ) == "--config-file" ){
 				auto fileData = readFile( args.at( i+1 ) );
 				if( !fileData.empty() ){
-					if( readConfig( fileData ) == false ){
+					if( !readConfig( fileData ) ){
 						spdlog::error( "Cannot determine the format of the config file {}", args.at( i+1 ) );
 					}
 				}
@@ -305,10 +305,9 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 					std::string subArg = args.at( i );
 					if( subArg.find( "-" ) == 0 ){
 						break;
-					}else{
-						append( option->mName, subArg );
-						i++;
 					}
+					append( option->mName, subArg );
+					i++;
 				}
 				if( option->numberOfParams() > 0 &&  option->mValues.empty() ){
 					spdlog::warn( "Missing arguments for flag {}", arg );

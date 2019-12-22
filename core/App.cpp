@@ -261,9 +261,8 @@ spdlog::logger & drea::core::App::logger() const
 {
 	if( d->mLogger ){
 		return *d->mLogger;
-	}else{
-		return *spdlog::default_logger();
 	}
+	return *spdlog::default_logger();
 }
 
 std::vector<std::string> drea::core::App::args() const

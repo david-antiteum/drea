@@ -79,12 +79,12 @@ public:
 	/*! Set the value of an option from a string. The value will be converted to the declared type.
 		If the value cannot be converted, the method will report an error and exit.
 	*/
-	void set( const std::string & optionName, const std::string & val );
+	void set( const std::string & optionName, const std::string & value );
 
 	/*! Append the value of an option from a string. The value will be converted to the declared type.
 		If the value cannot be converted, the method will report an error and exit.
 	*/
-	void append( const std::string & optionName, const std::string & val );
+	void append( const std::string & optionName, const std::string & value );
 
 	/*! Read the value of an option using a give type.
 		If the value cannot be converted, the method will throw.
