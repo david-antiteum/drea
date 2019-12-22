@@ -4,7 +4,7 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 endif()
 
 project( saythis )
-add_executable( ${PROJECT_NAME} main.cpp )
+add_executable( ${PROJECT_NAME} main.cpp ${CMAKE_CURRENT_BINARY_DIR}/commands.yml.h )
 set_target_properties( ${PROJECT_NAME}
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" 

@@ -19,9 +19,20 @@ set( CMAKE_CXX_STANDARD 17 )
 option( BUILD_EXAMPLES "Build examples" ON )
 
 function( generate_cpp_resource_file TARGET_NAME INPUT_DIR INPUT_FILE CPP_FILE )
-	add_custom_command(OUTPUT ${CPP_FILE} COMMAND cd ${INPUT_DIR} && xxd -i ${INPUT_FILE} ${CPP_FILE} DEPENDS ${INPUT_DIR}/${INPUT_FILE})
-	add_custom_target(${TARGET_NAME} ALL DEPENDS ${CPP_FILE})
+	add_custom_command( 
+		OUTPUT ${CPP_FILE}
+		COMMAND cd ${INPUT_DIR} && xxd -i ${INPUT_FILE} ${CPP_FILE} 
+		DEPENDS ${INPUT_DIR}/${INPUT_FILE}
+		COMMENT "Generating header file ${CPP_FILE}"
+		VERBATIM
+	)
+	set_source_files_properties( ${CPP_FILE} PROPERTIES GENERATED TRUE )
 endfunction()
+
+find_program( CLANG_TIDY NAMES "clang-tidy" )
+if( CLANG_TIDY )
+	set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY}" -checks=readability-*,cppcoreguidelines-*)
+endif()
 
 add_subdirectory( core )
 
