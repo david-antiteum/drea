@@ -11,7 +11,7 @@ find_package( fmt CONFIG REQUIRED )
 find_package( spdlog CONFIG REQUIRED )
 
 find_package( yaml-cpp CONFIG REQUIRED )
-link_libraries( yaml-cpp )
+link_libraries( yaml-cpp fmt::fmt spdlog::spdlog )
 
 if( BUILD_REST_USE )
 	find_package( uriparser CONFIG REQUIRED )
