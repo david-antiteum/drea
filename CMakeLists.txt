@@ -17,6 +17,7 @@ endif()
 set( CMAKE_CXX_STANDARD 17 )
 
 option( BUILD_EXAMPLES "Build examples" ON )
+option( BUILD_TOOLS "Build tools" ON )
 
 function( generate_cpp_resource_file TARGET_NAME INPUT_DIR INPUT_FILE CPP_FILE )
 	add_custom_command( 
@@ -36,7 +37,9 @@ endif()
 
 add_subdirectory( core )
 
-add_subdirectory( tools/unix/shell )
+if( BUILD_TOOLS )
+	add_subdirectory( tools/unix/shell )
+endif()
 
 if( BUILD_EXAMPLES )
 	add_subdirectory( examples/hello )
