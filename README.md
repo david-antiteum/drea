@@ -19,7 +19,7 @@ Drea tries to extract as much functionality with the minimum required developer 
 
 ## An example
 
-This example has a single command ```this``` and one option ```reverse```. The configuration of the app is defined in a YAML file converted to a header file called ```commands.yml.h``` using the unix utility ```xxd```.
+This example has a single command ```this``` and one option ```reverse```. The configuration of the app is defined in a YAML file converted to a header file called ```commands.yml.h``` using the unix utility ```xxd``` (for Windows users: [Vim](https://www.vim.org/download.php) distributes a copy.)
 
 ```yaml
 app: say
