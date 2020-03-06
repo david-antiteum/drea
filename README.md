@@ -99,7 +99,6 @@ Use CMake to build and install Drea in Linux, macOS and Windows systems.
 
 ```CMake
 find_package(DreaCore REQUIRED)
-
 target_link_libraries(main PRIVATE DreaCore)
 ```
 
@@ -127,21 +126,18 @@ The command is ```this```, has the argument ```hello``` and the option ```revers
 
 The command is ```container``` and the subcommand ```ls```. Drea will ask for the execution of the command ```container.ls```. Can be defined as:
 
-```c++
-app.commander().addDefaults().add({
-    {
-        "container", "", "Manage containers"
-    },
-    {
-        "config", "", "Manage configs"
-    },
-    {
-        "ls", "", "List containers", {}, {}, "container"
-    },
-    {
-        "ls", "", "List configs", {}, {}, "config"
-    }
-});
+```yaml
+commands:
+  - command: container
+    description: Manage containers
+    commands:
+    - command: ls
+      description: List containers
+  - command: config
+    description: Manage configs
+    commands:
+    - command: ls
+      description: List configs
 ```
 
 ### Defining a command
@@ -171,14 +167,19 @@ The order of evaluation, from lower to higher priority:
 - command line flags
 - explicit call to set
 
-## Utils
+## Man pages
 
-The app ```shell_integrator``` generate man pages and scripts to enable autocompletion in the shell for a ```commands.yml``` file.
+TODO
+
+## Shell integration
+
+TODO
 
 ## Readings
 
 - [On formats](https://news.ycombinator.com/item?id=19653834)
 - [Terminology](https://pythonconquerstheuniverse.wordpress.com/2010/07/25/command-line-syntax-some-basic-concepts/): Command-line syntax: some basic concepts
+- [Man pages](https://liw.fi/manpages/)
 
 ### Meta configs
 

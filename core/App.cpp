@@ -109,6 +109,16 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 					}else{
 						option.mNbParams = optionNode.second.as<int>();
 					}
+				}else if( key == "scope" ){
+					if( optionNode.second.as<std::string>() == "both" ){
+						option.mScope = drea::core::Option::Scope::Both;
+					}else if( optionNode.second.as<std::string>() == "file" ){
+						option.mScope = drea::core::Option::Scope::File;
+					}else if( optionNode.second.as<std::string>() == "line" ){
+						option.mScope = drea::core::Option::Scope::Line;
+					}else if( optionNode.second.as<std::string>() == "none" ){
+						option.mScope = drea::core::Option::Scope::None;
+					}
 				}else if( key == "short" ){
 					option.mShortVersion = optionNode.second.as<std::string>();
 				}else if( key == "type" ){

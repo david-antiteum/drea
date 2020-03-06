@@ -19,7 +19,7 @@ class App;
 
 	Reads data from (in this order):
 	- defaults
-	- config file (if --config-file is used)
+	- config file (if --config-file or Config::setDefaultConfigFile are used)
 	- env variables (if the prefix is set, \see Config::setEnvPrefix)
 	- external systems (if a remote provider is set, \see Config::addRemoteProvider)
 	- command line flags
@@ -30,6 +30,11 @@ class DREA_CORE_API Config
 public:
 	explicit Config( App & app );
 	~Config();
+
+	/*! Add a default value for the config-file entry
+		This is a special value that must but set (if required) before parsing the commands
+	*/
+	void setDefaultConfigFile( const std::string & filePath );
 
 	/*! Adds defaults options to the app
 	*/

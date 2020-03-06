@@ -58,6 +58,7 @@ struct RemoteProvider
 
 struct drea::core::Config::Private
 {
+	std::string								mDefaultConfigFile;
 	std::vector<std::string>				mFlags;
 	std::vector<std::unique_ptr<Option>>	mOptions;
 	std::string								mEnvPrefix;
@@ -148,17 +149,20 @@ struct drea::core::Config::Private
 
 	void readConfig( const std::vector<std::string> & args )
 	{
-		std::string					configFileName;
+		std::string configFileName = mDefaultConfigFile;
 
 		for( int i = 0; i < int(args.size())-1; i++ ){
 			if( std::string( args.at( i ) ) == "--config-file" ){
-				auto fileData = readFile( args.at( i+1 ) );
-				if( !fileData.empty() ){
-					if( !readConfig( fileData ) ){
-						spdlog::error( "Cannot determine the format of the config file {}", args.at( i+1 ) );
-					}
-				}
+				configFileName = args.at( i+1 );
 				break;
+			}
+		}
+		if( !configFileName.empty() ){
+			auto fileData = readFile( configFileName );
+			if( !fileData.empty() ){
+				if( !readConfig( fileData ) ){
+					spdlog::error( "Cannot determine the format of the config file {}", configFileName );
+				}
 			}
 		}
 	}
@@ -170,6 +174,11 @@ drea::core::Config::Config( drea::core::App & app ) : d( std::make_unique<Privat
 
 drea::core::Config::~Config()
 {
+}
+
+void drea::core::Config::setDefaultConfigFile( const std::string & filePath )
+{
+	d->mDefaultConfigFile = filePath;
 }
 
 drea::core::Config & drea::core::Config::addDefaults()

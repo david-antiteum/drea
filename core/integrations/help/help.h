@@ -103,7 +103,7 @@ static void help( const drea::core::App & app, const std::string & command )
 				if( !cmd->mLocalParameters.empty() ){
 					fmt::print( "\nOptions:\n");
 					for( const std::string & arg: cmd->mLocalParameters ){
-						if( auto config = app.config().find( arg ) ){
+						if( auto config = app.config().find( arg ); config && config->helpInLine()  ){
 							fmt::print( "  --{} {}\n", config->mName, config->mDescription );
 						}
 					}
@@ -111,7 +111,7 @@ static void help( const drea::core::App & app, const std::string & command )
 				if( !cmd->mGlobalParameters.empty() ){
 					fmt::print( "\nGlobal options:\n");
 					for( const std::string & arg: cmd->mGlobalParameters ){
-						if( auto config = app.config().find( arg ) ){
+						if( auto config = app.config().find( arg ); config && config->helpInLine() ){
 							fmt::print( "  --{} {}\n", config->mName, config->mDescription );
 						}
 					}
@@ -124,10 +124,43 @@ static void help( const drea::core::App & app, const std::string & command )
 	}
 }
 
+static void helpOption( const Option & option, std::string::size_type offset, bool anyShort )
+{
+	std::string::size_type paramsSize = 2 + 2 + option.mName.size();
+
+	fmt::print( "  " );
+	if( !option.mShortVersion.empty() ){
+		fmt::print( "-{}, ", option.mShortVersion );
+	}else if( anyShort ){
+		fmt::print( "    " );
+	}
+	if( anyShort ){
+		paramsSize += 4;
+	}
+	fmt::print( "--{}", option.mName );
+	if( !option.mParamName.empty() ){
+		fmt::print( " {}", option.mParamName );
+		paramsSize += 1 + option.mParamName.size();
+	}
+	fmt::print("{:>{}}", "", 2 + offset - paramsSize );
+	fmt::print( "{}", option.mDescription );
+	if( option.mValues.empty() ){
+		fmt::print( "\n" );
+	}else{
+		fmt::print( ". Default" );
+		for( auto v: option.mValues ){
+			fmt::print( " {}", option.toString( v ));
+		}
+		fmt::print( "\n" );
+	}
+}
+
 static void help( const drea::core::App & app )
 {
 	std::string::size_type 	offset = 0;
 	bool					anyShort = false;
+	bool					anyLine = false;
+	bool					anyFile = false;
 
 	fmt::print( "\n{}\n", app.description() );
 	fmt::print("usage: {}", app.name() );
@@ -136,7 +169,7 @@ static void help( const drea::core::App & app )
 	}
 	fmt::print(" [OPTIONS]\n\n", app.name() );
 
-	app.config().options( [ &offset, &anyShort ](const Option & option){
+	app.config().options( [ &offset, &anyShort, &anyLine, &anyFile ](const Option & option){
 		std::string::size_type optionOffset = 2 + 2 + option.mName.size();
 		if( !option.mShortVersion.empty() ){
 			anyShort = true;
@@ -144,42 +177,34 @@ static void help( const drea::core::App & app )
 		if( !option.mParamName.empty() ){
 			optionOffset += 1 + option.mParamName.size();
 		}
+		if( option.helpInLine() ){
+			anyLine = true;
+		}
+		if( option.helpInFileOnly() ){
+			anyFile = true;
+		}
 		offset = std::max<std::string::size_type>( offset, optionOffset );
 	});
 	if( anyShort ){
 		offset += 4;
 	}
 	// Config
-	fmt::print( "Options:\n" );
-	app.config().options( [ offset, anyShort ](const Option & option){
-		std::string::size_type paramsSize = 2 + 2 + option.mName.size();
-
-		fmt::print( "  " );
-		if( !option.mShortVersion.empty() ){
-			fmt::print( "-{}, ", option.mShortVersion );
-		}else if( anyShort ){
-			fmt::print( "    " );
-		}
-		if( anyShort ){
-			paramsSize += 4;
-		}
-		fmt::print( "--{}", option.mName );
-		if( !option.mParamName.empty() ){
-			fmt::print( " {}", option.mParamName );
-			paramsSize += 1 + option.mParamName.size();
-		}
-		fmt::print("{:>{}}", "", 2 + offset - paramsSize );
-		fmt::print( "{}", option.mDescription );
-		if( option.mValues.empty() ){
-			fmt::print( "\n" );
-		}else{
-			fmt::print( ". Default" );
-			for( auto v: option.mValues ){
-				fmt::print( " {}", option.toString( v ));
+	if( anyLine ){
+		fmt::print( "Options:\n" );
+		app.config().options( [ offset, anyShort ](const Option & option){
+			if( option.helpInLine() ){
+				helpOption( option, offset, anyShort );
 			}
-			fmt::print( "\n" );
-		}
-	});
+		});
+	}
+	if( anyFile ){
+		fmt::print( "Config file options:\n" );
+		app.config().options( [ offset, anyShort ](const Option & option){
+			if( option.helpInFileOnly() ){
+				helpOption( option, offset, anyShort );
+			}
+		});
+	}
 	fmt::print( "\n" );
 
 	// Commander
