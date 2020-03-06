@@ -178,7 +178,13 @@ drea::core::Config::~Config()
 
 void drea::core::Config::setDefaultConfigFile( const std::string & filePath )
 {
-	d->mDefaultConfigFile = filePath;
+	add({
+		"config-file", "file", "read configs from file <file>", {}, typeid( std::string )
+	});
+	if( !filePath.empty() ){
+		d->mDefaultConfigFile = filePath;
+		set( "config-file", filePath );
+	}
 }
 
 drea::core::Config & drea::core::Config::addDefaults()
@@ -196,15 +202,15 @@ drea::core::Config & drea::core::Config::addDefaults()
 		{
 			"log-file", "file", "log messages to the file <file>", {}, typeid( std::string )
 		},
-		{
-			"config-file", "file", "read configs from file <file>", {}, typeid( std::string )
-		},
 #ifdef ENABLE_REST_USE
 		{
 			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
 		}
 #endif
 	});
+	if( d->mDefaultConfigFile.empty() ){
+		setDefaultConfigFile( {} );
+	}
 	find( "verbose" )->mShortVersion = "v";
 	find( "help" )->mShortVersion = "h";
 
