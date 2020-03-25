@@ -94,6 +94,8 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 {
 	if( optionsNode.IsMap()  ){
 		drea::core::Option	option;
+		bool				hasType = false;
+
 		for( auto optionNode: optionsNode ){
 			const std::string key = optionNode.first.as<std::string>();
 			if( optionNode.second.IsScalar() ){
@@ -131,9 +133,40 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 						option.mType = typeid( double );
 					}else if( type == "string" ){
 						option.mType = typeid( std::string );
+					}else{
+						// fatal, wrong type
+						app.logger().critical( "Wrong option type {} for {}", type, option.mName );
+						exit( 1 );
 					}
+					hasType = true;
 				}else if( key == "value" ){
-					option.mValues.push_back( optionNode.second.as<std::string>() );
+					try{
+						if( hasType ){
+							std::string possibleValue = optionNode.second.as< std::string >();
+							if( possibleValue.empty() ){
+								app.logger().critical( "Empty value for option {}", option.mName );
+								exit( 1 );
+							}else{
+								app.logger().critical( "Empty value for option {} <{}>", option.mName, possibleValue );
+								if( option.mType == typeid( bool ) ){
+									option.mValues.push_back( optionNode.second.as< bool >() );
+								}else if( option.mType == typeid( int ) ){
+									option.mValues.push_back( optionNode.second.as< int >() );
+								}else if( option.mType == typeid( double ) ){
+									option.mValues.push_back( optionNode.second.as< double >() );
+								}else if( option.mType == typeid( std::string ) ){
+									option.mValues.push_back( optionNode.second.as< std::string >() );
+								}
+							}
+						}else{
+							// fatal, wrong order
+							app.logger().critical( "Option value for {} requires the type to be declared", option.mName );
+							exit( 1 );
+						}
+					}catch(...){
+						app.logger().critical( "Option value for {} cannot be converted to its declared type", option.mName );
+						exit( 1 );
+					}
 				}
 			}else if( optionNode.second.IsSequence() ){
 				if( key == "values" ){
