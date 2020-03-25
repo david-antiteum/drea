@@ -147,7 +147,6 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 								app.logger().critical( "Empty value for option {}", option.mName );
 								exit( 1 );
 							}else{
-								app.logger().critical( "Empty value for option {} <{}>", option.mName, possibleValue );
 								if( option.mType == typeid( bool ) ){
 									option.mValues.push_back( optionNode.second.as< bool >() );
 								}else if( option.mType == typeid( int ) ){
