@@ -70,8 +70,6 @@ if (MSVC)
 	set_source_files_properties( Config.cpp PROPERTIES COMPILE_FLAGS /bigobj )
 endif()
 
-add_compile_definitions( _SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING )
-add_compile_definitions( _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING )
 add_compile_definitions( DREA_CORE_DLL )
 add_compile_definitions( DREA_CORE_EXPORTS )
 
