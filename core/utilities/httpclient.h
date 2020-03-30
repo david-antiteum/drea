@@ -72,7 +72,7 @@ private:
 		boost::asio::io_service ios;
 		tcp::socket sock{ ios };
 
-		tcp::endpoint endpoint( boost::asio::ip::address::from_string( uri.host() ), uri.port() );
+		tcp::endpoint endpoint( boost::asio::ip::address::from_string( uri.host() ), static_cast<unsigned short>(uri.port()) );
 		sock.connect( endpoint, ec );
 		if( ec ){
 			spdlog::error( "Error conecting to {}. {}", address, ec.message() );

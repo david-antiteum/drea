@@ -35,8 +35,8 @@ struct drea::core::Commander::Private
 		return {};
 	}
 
-	jss::object_ptr<Command> find( const std::string & cmdName ){
-		auto 						commands = utilities::string::split( cmdName, "." );
+	jss::object_ptr<Command> find( const std::string & fullCmdName ){
+		auto 						commands = utilities::string::split( fullCmdName, "." );
 		std::string 				parent;
 		jss::object_ptr<Command>	res;
 
@@ -176,7 +176,7 @@ void drea::core::Commander::unknownCommand( const std::string & command ) const
 {
 	if( command.empty() ){
 		d->mApp.logger().info( "A command is required." );
-	}else if( auto cmd = find( command ) ){
+	}else if( find( command ) ){
 		d->mApp.logger().error( "The command \"{}\" requires a sub command. Try: {} {} --help", utilities::string::replace( command, ".", " " ), d->mApp.args().at( 0 ), utilities::string::replace( command, ".", " " ) );
 	}else{
 		size_t			bestDist = 0;
