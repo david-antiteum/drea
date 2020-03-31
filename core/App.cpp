@@ -248,6 +248,7 @@ void drea::core::App::parse( const std::string & definitions )
 	if( !args.second.empty() && args.second.at(0) == "autocomplete" ){
 		commander().configureForAutocompletion( d->mArgs );
 	}else{
+		configureInRunTime();
 		config().configure( args.first );
 		d->mLogger = config().setupLogger();
 		commander().configure( args.second );

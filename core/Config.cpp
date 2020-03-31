@@ -202,6 +202,9 @@ drea::core::Config & drea::core::Config::addDefaults()
 		{
 			"log-file", "file", "log messages to the file <file>", {}, typeid( std::string )
 		},
+		{
+			"log-folder", "folder", "log messages to a file in <folder>", {}, typeid( std::string )
+		},
 #ifdef ENABLE_REST_USE
 		{
 			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
@@ -363,6 +366,13 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 	std::string							logFile = get<std::string>( "log-file" );
 
 	sinks.push_back( std::make_shared<spdlog::sinks::stdout_color_sink_st>() );
+	if( logFile.empty() ){
+		std::string						logFolder = get<std::string>( "log-folder" );
+		
+		if( !logFolder.empty() ){
+			logFile = fmt::format( "{}/{}.log", logFolder, d->mApp.name() );
+		}
+	}
 	if( !logFile.empty() ){
 		sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, 1048576 * 5, 3 ) );
 	}

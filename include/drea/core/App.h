@@ -59,6 +59,10 @@ public:
 	*/
 	std::vector<std::string> args() const;
 
+	/*! Set config values in runtime
+	*/
+	virtual void configureInRunTime(){};
+
 private:
 	struct Private;
 	std::unique_ptr<Private>	d;
