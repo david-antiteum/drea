@@ -55,6 +55,15 @@ public:
 	*/
 	void parse( const std::string & definitions );
 
+	/*! Add definitions to parse
+	*/
+	void addToParser( const std::string & definitions );
+
+	/*! After configuring the app, call this method to parse options for all
+		the selected sources. Definitions have been added using addToParser method
+	*/
+	void parse();
+
 	/*! The argumenst as passed in the App constructor
 	*/
 	std::vector<std::string> args() const;

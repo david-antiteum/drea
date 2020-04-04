@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "commands.yml.h"
+#include "version.yml.h"
 
 double sum( const drea::core::App & app )
 {
@@ -67,7 +68,9 @@ int main( int argc, char * argv[] )
 {
 	drea::core::App	 app( argc, argv );
 
-	app.parse( std::string( commands_yml, commands_yml + commands_yml_len ) );
+	app.addToParser( std::string( version_yml, version_yml + version_yml_len ) );
+	app.addToParser( std::string( commands_yml, commands_yml + commands_yml_len ) );
+	app.parse();
 	app.commander().run( [ &app ]( std::string cmd ){
 		app.logger().debug( "Run called for command {}", cmd );
 

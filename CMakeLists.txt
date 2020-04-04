@@ -18,7 +18,7 @@ set( CMAKE_CXX_STANDARD 17 )
 
 option( BUILD_EXAMPLES "Build examples" ON )
 
-function( generate_cpp_resource_file TARGET_NAME INPUT_DIR INPUT_FILE CPP_FILE )
+function( generate_cpp_resource_file INPUT_DIR INPUT_FILE CPP_FILE )
 	add_custom_command( 
 		OUTPUT ${CPP_FILE}
 		COMMAND cd ${INPUT_DIR} && xxd -i ${INPUT_FILE} ${CPP_FILE} 

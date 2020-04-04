@@ -4,7 +4,11 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 endif()
 
 project( calculator )
-add_executable( ${PROJECT_NAME} main.cpp ${CMAKE_CURRENT_BINARY_DIR}/commands.yml.h )
+add_executable( ${PROJECT_NAME}
+	main.cpp
+	${CMAKE_CURRENT_BINARY_DIR}/commands.yml.h
+	${CMAKE_CURRENT_BINARY_DIR}/version.yml.h
+)
 set_target_properties( ${PROJECT_NAME}
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" 
@@ -37,4 +41,5 @@ if(APPLE)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
 endif()
 
-generate_cpp_resource_file( "${PROJECT_NAME}_CMD_H" ${PROJECT_SOURCE_DIR} commands.yml ${CMAKE_CURRENT_BINARY_DIR}/commands.yml.h )
+generate_cpp_resource_file( ${PROJECT_SOURCE_DIR} commands.yml ${CMAKE_CURRENT_BINARY_DIR}/commands.yml.h )
+generate_cpp_resource_file( ${PROJECT_SOURCE_DIR} version.yml ${CMAKE_CURRENT_BINARY_DIR}/version.yml.h )

@@ -37,4 +37,4 @@ if(APPLE)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
 endif()
 
-generate_cpp_resource_file( "${PROJECT_NAME}_CMD_H" ${PROJECT_SOURCE_DIR} commands.yml ${CMAKE_CURRENT_BINARY_DIR}/commands.yml.h )
+generate_cpp_resource_file( ${PROJECT_SOURCE_DIR} commands.yml ${CMAKE_CURRENT_BINARY_DIR}/commands.yml.h )

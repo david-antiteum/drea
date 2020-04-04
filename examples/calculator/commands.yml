@@ -1,5 +1,4 @@
 app: calculator
-version: 0.0.2
 description: |
   A basic calculator as an example for the Drea Framework.
   Drea is available at https://github.com/david-antiteum/drea.

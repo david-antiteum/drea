@@ -21,6 +21,7 @@ struct drea::core::App::Private
 	Commander							mCommander;
 	std::shared_ptr<spdlog::logger>		mLogger;
 	std::vector<std::string>			mArgs;
+	std::string							mDefinitions;
 };
 
 static drea::core::App * mInstanceApp = nullptr;
@@ -206,6 +207,19 @@ void _parseRemote( drea::core::App & app, const YAML::Node & remoteNode )
 	}
 }
 
+void drea::core::App::addToParser( const std::string & definitions )
+{
+	if( !d->mDefinitions.empty() ){
+		d->mDefinitions += "\n";
+	}
+	d->mDefinitions += definitions;
+}
+
+void drea::core::App::parse()
+{
+	parse( d->mDefinitions );
+}
+
 void drea::core::App::parse( const std::string & definitions )
 {
 	// TODO.. disable defaults from definitions
@@ -287,6 +301,7 @@ void drea::core::App::setDescription( const std::string & value )
 
 void drea::core::App::setVersion( const std::string & value )
 {
+	fmt::print( "Version {}\n", value );
 	d->mVersion = value;
 }
 
