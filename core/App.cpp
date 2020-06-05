@@ -301,7 +301,6 @@ void drea::core::App::setDescription( const std::string & value )
 
 void drea::core::App::setVersion( const std::string & value )
 {
-	fmt::print( "Version {}\n", value );
 	d->mVersion = value;
 }
 

@@ -70,9 +70,6 @@ public:
 				cmds.push_back( arg );
 			}
 		}
-//		std::cout << "ARGS " << string::join( args, " " ) << "\n";
-//		std::cout << "CMDS " << string::join( cmds, " " ) << "\n";
-
 		return { args, cmds };
 	}
 

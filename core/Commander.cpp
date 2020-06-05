@@ -202,7 +202,13 @@ void drea::core::Commander::unknownCommand( const std::string & command ) const
 void drea::core::Commander::wrongNumberOfArguments( const std::string & command ) const
 {
 	if( auto cmd = find( command ) ){
-		d->mApp.logger().error( "The command \"{}\" requires {} command{}, {} given.", utilities::string::replace( command, ".", " " ), cmd->mNbParams, cmd->mNbParams > 1 ? "s": "", arguments().size() );
+		if( cmd->mNbParams == drea::core::Command::mUnlimitedParams ){
+			d->mApp.logger().error( "The command \"{}\" requires at least one argument.", utilities::string::replace( command, ".", " " ) );
+		}else if( cmd->mNbParams == 0 ){
+			d->mApp.logger().error( "The command \"{}\" has no arguments.", utilities::string::replace( command, ".", " " ) );
+		}else{
+			d->mApp.logger().error( "The command \"{}\" requires {} argument{}, {} given.", utilities::string::replace( command, ".", " " ), cmd->mNbParams, cmd->mNbParams > 1 ? "s": "", arguments().size() );
+		}
 	}
 }
 
