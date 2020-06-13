@@ -215,7 +215,11 @@ drea::core::Config & drea::core::Config::addDefaults()
 		setDefaultConfigFile( {} );
 	}
 	find( "verbose" )->mShortVersion = "v";
+	find( "verbose" )->mNbParams = 0;
 	find( "help" )->mShortVersion = "h";
+	find( "help" )->mNbParams = 0;
+	find( "version" )->mShortVersion = "V";
+	find( "version" )->mNbParams = 0;
 
 	return *this;
 }
@@ -342,10 +346,21 @@ bool drea::core::Config::used( const std::string & optionName ) const
 	return std::find( d->mFlags.begin(), d->mFlags.end(), optionName ) != d->mFlags.end();
 }
 
+unsigned int drea::core::Config::intensity( const std::string & optionName ) const
+{
+	return std::count( d->mFlags.begin(), d->mFlags.end(), optionName );
+}
+
 void drea::core::Config::registerUse( const std::string & optionName )
 {
-	if( !used( optionName ) ){
-		d->mFlags.push_back( optionName );
+	auto option = find( optionName );
+	if( option ){
+		// can repeat only options without arguments to increase intensity
+		bool	canBeIntense = option->mNbParams == 0;
+
+		if( canBeIntense || !used( optionName ) ){
+			d->mFlags.push_back( optionName );
+		}
 	}
 }
 
@@ -382,8 +397,10 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 	}
 #endif
 	res = std::make_shared<spdlog::logger>( d->mApp.name(), sinks.begin(), sinks.end() );
-	if( used( "verbose" ) ){
+	if( intensity( "verbose" ) == 1 ){
 		res->set_level( spdlog::level::debug );
+	}else if( intensity( "verbose" ) > 1 ){
+		res->set_level( spdlog::level::trace );
 	}
 	return res;
 }

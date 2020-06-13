@@ -50,6 +50,7 @@ add_library( ${PROJECT_NAME} SHARED
 	Config.cpp
 	Commander.cpp
 	Option.cpp
+	Command.cpp
 )
 set_target_properties( ${PROJECT_NAME}
 	PROPERTIES

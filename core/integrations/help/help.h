@@ -60,7 +60,7 @@ static void help( const drea::core::App & app, const std::string & command )
 					fmt::print( "COMMAND " );
 				}
 				if( cmd->numberOfParams() > 0 ){
-					fmt::print( "[ARGS] " );
+					fmt::print( "{} ", cmd->nameOfParamsForHelp() );
 				}
 				if( !cmd->mLocalParameters.empty() || !cmd->mGlobalParameters.empty() ){
 					fmt::print( "[OPTIONS]" );

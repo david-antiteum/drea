@@ -18,14 +18,8 @@ struct DREA_CORE_API Command
 	int								mNbParams = 1;
 	static const int				mUnlimitedParams = 0xfffffffa;
 		
-	int numberOfParams() const
-	{
-		if( mParamName.empty() ){
-			return 0;
-		}else{
-			return mNbParams;
-		}
-	}
+	int numberOfParams() const;
+	std::string nameOfParamsForHelp();
 
 	//! Set automatically using parent information
 	std::vector<std::string>		mSubcommand;

@@ -77,6 +77,10 @@ public:
 	*/
 	bool used( const std::string & optionName ) const;
 
+	/*! Returns the number of times that an option appears. Use, for example, to increase the verbosity.
+	*/
+	unsigned int intensity( const std::string & optionName ) const;
+
 	/*! 
 	*/
 	void registerUse( const std::string & optionName );
