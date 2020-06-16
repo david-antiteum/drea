@@ -380,7 +380,7 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 	std::vector<spdlog::sink_ptr> 		sinks;
 	std::string							logFile = get<std::string>( "log-file" );
 
-	sinks.push_back( std::make_shared<spdlog::sinks::stdout_color_sink_st>() );
+	sinks.push_back( std::make_shared<spdlog::sinks::stdout_color_sink_mt>() );
 	if( logFile.empty() ){
 		std::string						logFolder = get<std::string>( "log-folder" );
 		

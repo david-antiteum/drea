@@ -82,24 +82,4 @@ private:
 	}
 };
 
-std::shared_ptr<spdlog::logger> newLogger( const std::string & appName, bool verbose, const std::string & logFile, const std::string & graylogHost )
-{
-	std::shared_ptr<spdlog::logger> 	res;
-	std::vector<spdlog::sink_ptr> 		sinks;
-
-	sinks.push_back( std::make_shared<spdlog::sinks::stdout_color_sink_st>() );
-	if( !logFile.empty() ){
-		sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, 1048576 * 5, 3 ) );
-	}
-	if( !graylogHost.empty() ){
-		sinks.push_back( std::make_shared<graylog_sink<spdlog::details::null_mutex>>( appName, graylogHost ) );
-	}
-	res = std::make_shared<spdlog::logger>( appName, sinks.begin(), sinks.end() );
-
-	if( verbose ){
-		res->set_level( spdlog::level::debug );
-	}
-	return res;
-}
-
 }}}}
