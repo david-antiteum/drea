@@ -21,13 +21,13 @@ public:
 		std::vector<std::string>	res;
 
 		// TODO expand args (for example -v to --verbose or -zvf <filename> to --compress --verbose --file <filename)
-		for( int i = 1; i < mArgs.size(); i++ ){
+		for( size_t i = 1; i < mArgs.size(); i++ ){
 			std::string arg = mArgs.at(i);
 			if( arg.find( "--" ) == 0 ){
 				res.push_back( arg );
 			}else if( arg.find( "-" ) == 0 ){
 				// Expand
-				for( int j = 1; j < arg.size(); j++ ){
+				for( size_t j = 1; j < arg.size(); j++ ){
 					std::string mini;
 					mini.push_back( arg.at( j ) );
 					if( auto option = mApp.config().find( mini )){
@@ -49,7 +49,7 @@ public:
 		std::vector<std::string>	cmds;
 	
 		auto expandedArgs = expand();
-		for( int i = 0; i < expandedArgs.size(); ){
+		for( size_t i = 0; i < expandedArgs.size(); ){
 			std::string arg = expandedArgs.at( i++ );
 
 			if( arg.find( "--" ) == 0 ){

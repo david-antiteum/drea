@@ -24,7 +24,7 @@ static std::string join( const std::vector<std::string> & value, const std::stri
 {
 	std::string		res;
 
-	for( auto s: value ){
+	for( const std::string & s: value ){
 		if( res.empty() ){
 			res = s;
 		}else{

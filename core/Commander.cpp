@@ -112,7 +112,7 @@ void drea::core::Commander::configureForAutocompletion( const std::vector<std::s
 	d->createHierarchy();
 	if( args.size() > 1 ){
 		d->mCommand = "autocomplete";
-		for( int i = 2; i < args.size(); i++ ){
+		for( size_t i = 2; i < args.size(); i++ ){
 			d->mArguments.push_back( args[i] );
 		}
 	}
@@ -126,7 +126,7 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 			int	pos = 1;
 
 			d->mCommand = cmd->mName;
-			while( args.size() > pos ){
+			while( int(args.size()) > pos ){
 				if( auto it = std::find( cmd->mSubcommand.begin(), cmd->mSubcommand.end(), args.at( pos ) ); it != cmd->mSubcommand.end() ){
 					cmd = find( d->mCommand + "." + args.at( pos ));
 					if( cmd ){
@@ -139,7 +139,7 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 					break;
 				}
 			}
-			for( int i = pos; i < args.size(); i++ ){
+			for( size_t i = pos; i < args.size(); i++ ){
 				d->mArguments.push_back( args[i] );
 			}
 		}else{

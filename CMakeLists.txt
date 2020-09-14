@@ -6,13 +6,7 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 	message( "Using vcpkg settings" )
 endif()
 
-project( Drea VERSION 0.0.8 DESCRIPTION "Drea Framework" LANGUAGES CXX )
-
-if( NOT DEFINED USING_VCPKG AND EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
-	message( "Using conan settings" )
-	include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-	conan_basic_setup()
-endif()
+project( Drea VERSION 0.0.9 DESCRIPTION "Drea Framework" LANGUAGES CXX )
 
 set( CMAKE_CXX_STANDARD 17 )
 

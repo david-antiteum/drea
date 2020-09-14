@@ -314,7 +314,7 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 	}
 
 	// flags
-	for( int i = 0; i < args.size(); ){
+	for( size_t i = 0; i < args.size(); ){
 		std::string arg = args.at( i++ );
 
 		if( arg.find( "--" ) == 0 ){
@@ -348,7 +348,7 @@ bool drea::core::Config::used( const std::string & optionName ) const
 
 unsigned int drea::core::Config::intensity( const std::string & optionName ) const
 {
-	return std::count( d->mFlags.begin(), d->mFlags.end(), optionName );
+	return static_cast<unsigned int>(std::count( d->mFlags.begin(), d->mFlags.end(), optionName ));
 }
 
 void drea::core::Config::registerUse( const std::string & optionName )

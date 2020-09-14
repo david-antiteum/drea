@@ -14,7 +14,9 @@ set_target_properties( ${PROJECT_NAME}
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" 
 )
 
-add_compile_definitions(DREA_CORE_DLL)
+if( BUILD_SHARED_LIBS )
+	add_compile_definitions(DREA_CORE_DLL)
+endif()
 
 set_property( TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17 )
 

@@ -3,14 +3,14 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 	set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
 
-project( DreaCore VERSION 0.0.8 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
+project( DreaCore VERSION 0.0.9 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
 
-option( BUILD_REST_USE "Build support to accessREST services" ON )
+option( BUILD_REST_USE "Build support to access REST services" ON )
 
 find_package( fmt CONFIG REQUIRED )
 find_package( spdlog CONFIG REQUIRED )
-
 find_package( yaml-cpp CONFIG REQUIRED )
+
 link_libraries( yaml-cpp fmt::fmt spdlog::spdlog )
 
 if( BUILD_REST_USE )
@@ -45,7 +45,7 @@ else()
 	include_directories(${CPPTOML_INCLUDE_DIR})
 endif()
 
-add_library( ${PROJECT_NAME} SHARED 
+add_library( ${PROJECT_NAME} 
 	App.cpp
 	Config.cpp
 	Commander.cpp
@@ -71,8 +71,13 @@ if (MSVC)
 	set_source_files_properties( Config.cpp PROPERTIES COMPILE_FLAGS /bigobj )
 endif()
 
-add_compile_definitions( DREA_CORE_DLL )
-add_compile_definitions( DREA_CORE_EXPORTS )
+if( BUILD_SHARED_LIBS )
+	add_compile_definitions( DREA_CORE_DLL )
+	add_compile_definitions( DREA_CORE_EXPORTS )
+	message( "Drea Dynamic Build" )
+else()
+	message( "Drea Static Build" )
+endif()
 
 include( CheckCXXSymbolExists )
 set_property( TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17 )
