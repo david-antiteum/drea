@@ -11,7 +11,7 @@
 #include "App.h"
 #include "Config.h"
 
-namespace drea { namespace core { namespace integration { namespace toml {
+namespace drea::core::integration::toml {
 
 class Reader
 {
@@ -79,7 +79,7 @@ private:
 
 	void readConfig( const App & app, std::shared_ptr<cpptoml::table> config, const std::string & prefix ) const
 	{
-		for( auto & [key, value]: *config ){
+		for( const auto & [key, value]: *config ){
 			auto realKey = addPrefix( prefix, key );
 
 			if( dynamic_cast< cpptoml::table * >( value.get() )){
@@ -112,11 +112,11 @@ private:
 	}
 };
 
-}}}}
+}
 
 #else
 
-namespace drea { namespace core { namespace integration { namespace toml {
+namespace drea::core::integration::toml {
 
 class Reader
 {
@@ -130,6 +130,6 @@ public:
 	{}
 };
 
-}}}}
+}
 
 #endif

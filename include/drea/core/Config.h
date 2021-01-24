@@ -11,7 +11,7 @@
 #include "Export.h"
 #include "Option.h"
 
-namespace drea { namespace core {
+namespace drea::core {
 
 class App;
 
@@ -62,7 +62,7 @@ public:
 
 	/*! Any option?
 	*/
-	bool empty() const;
+	[[nodiscard]] bool empty() const;
 
 	/*! Access the options
 	*/
@@ -70,16 +70,16 @@ public:
 
 	/*! Find an option by name. Return nullptr if not found
 	*/
-	jss::object_ptr<Option> find( const std::string & optionName ) const;
+	[[nodiscard]] jss::object_ptr<Option> find( std::string_view optionName ) const;
 
 	/*! Returns true if the option has been set, either via flags, config files, sets... or because
 		it has a default value.
 	*/
-	bool used( const std::string & optionName ) const;
+	[[nodiscard]] bool used( const std::string & optionName ) const;
 
 	/*! Returns the number of times that an option appears. Use, for example, to increase the verbosity.
 	*/
-	unsigned int intensity( const std::string & optionName ) const;
+	[[nodiscard]] unsigned int intensity( const std::string & optionName ) const;
 
 	/*! 
 	*/
@@ -99,7 +99,7 @@ public:
 		If the value cannot be converted, the method will throw.
 	*/
 	template<typename T>
-	T get( const std::string & optionName ) const
+	[[nodiscard]] T get( std::string_view optionName ) const
 	{
 		auto option = find( optionName );
 
@@ -128,4 +128,4 @@ private:
 	std::unique_ptr<Private>	d;
 };
 
-}}
+}

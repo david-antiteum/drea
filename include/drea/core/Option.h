@@ -7,7 +7,7 @@
 
 #include "Export.h"
 
-namespace drea { namespace core {
+namespace drea::core {
 
 using OptionValue = std::variant<std::monostate,bool,int,double,std::string>;
 
@@ -30,7 +30,7 @@ struct DREA_CORE_API Option
 	std::string					mShortVersion = ""; 					
 	static const int			mUnlimitedParams = 0xfffffffa;
 
-	int numberOfParams() const
+	[[nodiscard]] int numberOfParams() const
 	{
 		if( mParamName.empty() ){
 			return 0;
@@ -39,19 +39,19 @@ struct DREA_CORE_API Option
 		}
 	}
 
-	std::string toString( const OptionValue & val ) const;
-	OptionValue fromString( const std::string & val ) const;
+	[[nodiscard]] std::string toString( const OptionValue & val ) const;
+	[[nodiscard]] OptionValue fromString( const std::string & val ) const;
 
-	bool helpInLine() const
+	[[nodiscard]] bool helpInLine() const
 	{
 		return mScope == Scope::Both || mScope == Scope::Line;
 	}
 
-	bool helpInFileOnly() const
+	[[nodiscard]] bool helpInFileOnly() const
 	{
 		return mScope == Scope::File;
 	}
 
 };
 
-}}
+}

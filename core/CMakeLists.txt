@@ -10,6 +10,8 @@ option( BUILD_REST_USE "Build support to access REST services" ON )
 find_package( fmt CONFIG REQUIRED )
 find_package( spdlog CONFIG REQUIRED )
 find_package( yaml-cpp CONFIG REQUIRED )
+find_package( yaml-cpp CONFIG REQUIRED )
+find_package( Microsoft.GSL CONFIG )
 
 link_libraries( yaml-cpp fmt::fmt spdlog::spdlog )
 

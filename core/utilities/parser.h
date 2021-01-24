@@ -9,21 +9,20 @@
 
 #include "utilities/string.h"
 
-namespace drea { namespace core { namespace utilities { 
+namespace drea::core::utilities { 
 	
 class Parser 
 {
 public:
 	explicit Parser( App & app, const std::vector<std::string> & args ) : mApp( app ), mArgs( args ){}
 
-	std::vector<std::string> expand() const
+	[[nodiscard]] std::vector<std::string> expand() const
 	{
 		std::vector<std::string>	res;
 
 		// TODO expand args (for example -v to --verbose or -zvf <filename> to --compress --verbose --file <filename)
 		for( size_t i = 1; i < mArgs.size(); i++ ){
-			std::string arg = mArgs.at(i);
-			if( arg.find( "--" ) == 0 ){
+			if( std::string arg = mArgs.at(i); arg.find( "--" ) == 0 ){
 				res.push_back( arg );
 			}else if( arg.find( "-" ) == 0 ){
 				// Expand
@@ -43,16 +42,14 @@ public:
 		return res;
 	}
 
-	std::pair<std::vector<std::string>,std::vector<std::string>> parse() const
+	[[nodiscard]] std::pair<std::vector<std::string>,std::vector<std::string>> parse() const
 	{
 		std::vector<std::string>	args;
 		std::vector<std::string>	cmds;
 	
 		auto expandedArgs = expand();
 		for( size_t i = 0; i < expandedArgs.size(); ){
-			std::string arg = expandedArgs.at( i++ );
-
-			if( arg.find( "--" ) == 0 ){
+			if( std::string arg = expandedArgs.at( i++ ); arg.find( "--" ) == 0 ){
 				args.push_back( arg );
 				arg.erase( 0, 2 );
 				if( auto option = mApp.config().find( arg ) ){
@@ -78,4 +75,4 @@ private:
 	const std::vector<std::string> 	& mArgs;
 };
 
-}}}
+}

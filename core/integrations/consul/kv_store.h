@@ -7,7 +7,7 @@
 #include "utilities/httpclient.h"
 #include <boost/beast/core/detail/base64.hpp>
 
-namespace drea { namespace core { namespace integrations { namespace Consul {
+namespace drea::core::integrations::Consul {
 
 /*! Access KV storer using the HTTP API.
 	Todo:
@@ -17,7 +17,7 @@ namespace drea { namespace core { namespace integrations { namespace Consul {
 class KVStore
 {
 public:
-	KVStore( const std::string & consulHost )
+	explicit KVStore( const std::string & consulHost )
 	{
 		mConsulService = fmt::format( "{}/v1/kv", consulHost );
 	}
@@ -48,4 +48,4 @@ private:
 	std::string			mConsulService;
 };
 
-}}}}
+}

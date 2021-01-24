@@ -10,7 +10,7 @@
 #include "Export.h"
 #include "Command.h"
 
-namespace drea { namespace core {
+namespace drea::core {
 
 class App;
 
@@ -41,28 +41,28 @@ public:
 
 	/*! Get the arguments of the command
 	*/
-	std::vector<std::string> arguments() const;
+	[[nodiscard]] std::vector<std::string> arguments() const;
 
 	/*! Any command?
 	*/
-	bool empty() const;
+	[[nodiscard]] bool empty() const;
 
 	/*! Access the commands
 	*/
-	void commands( std::function<void(const Command&)> f ) const;
+	void commands( const std::function<void(const Command&)> & f ) const;
 
 	/*! Find a command by name. Return nullptr if not found
 	*/
-	jss::object_ptr<Command> find( const std::string & cmdName ) const;
+	[[nodiscard]] jss::object_ptr<Command> find( std::string_view cmdName ) const;
 
 	/*! Report to the user that this is not a valid command because is either unknown or because requires a missing subcommand.
 		This method show a similar command if possible (Did you mean?).
 	*/
-	void unknownCommand( const std::string & command ) const;
+	void unknownCommand( std::string_view command ) const;
 
 	/*! Report to the user that the command needs a different number of arguments
 	*/
-	void wrongNumberOfArguments( const std::string & command ) const;
+	void wrongNumberOfArguments( std::string_view command ) const;
 
 	// Methods called by App
 
@@ -83,4 +83,4 @@ private:
 	std::unique_ptr<Private>	d;
 };
 
-}}
+}

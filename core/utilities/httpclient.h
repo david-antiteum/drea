@@ -16,95 +16,105 @@
 #include <spdlog/fmt/fmt.h>
 
 #include <nlohmann/json.hpp>
+#include <tl/expected.hpp>
 
 #include "utilities/uri.h"
 
 using tcp = boost::asio::ip::tcp; // from <boost/asio.hpp>
 namespace http = boost::beast::http; // from <beast/http.hpp>
 
-namespace drea { namespace core { namespace utilities {
+namespace drea::core::utilities {
 
 class HttpClient
 {
 public:
-	static std::optional<nlohmann::json> get( const std::string & address )
+	[[nodiscard]] static std::optional<nlohmann::json> get( std::string_view address )
 	{
 		return executeJson( address, {}, http::verb::get );
 	}
 
-	static std::optional<nlohmann::json> post( const std::string & address, const nlohmann::json & json )
+	[[nodiscard]] static std::optional<nlohmann::json> post( std::string_view address, const nlohmann::json & json )
 	{
 		return executeJson( address, json, http::verb::post );
 	}
 
-	static std::optional<nlohmann::json> put( const std::string & address, const nlohmann::json & json )
+	[[nodiscard]] static std::optional<nlohmann::json> put( std::string_view address, const nlohmann::json & json )
 	{
 		return executeJson( address, json, http::verb::put );
 	}
 
 private:
-	static std::optional<nlohmann::json> executeJson( const std::string & address, const nlohmann::json & json, http::verb verb )
+	static std::optional<nlohmann::json> executeJson( std::string_view address, const nlohmann::json & json, http::verb verb )
 	{
-		const auto response = execute( address, json.empty() ? "" : json.dump(), verb );
-
-		if( std::get<1>( response ) == http::status::ok ){
+		if( const auto response = execute( address, json.empty() ? "" : json.dump(), verb ); response ){
 			try{
-				return nlohmann::json::parse( std::get<0>( response ) );
-			}catch(...){
-				// TODO report parsing error
+				return nlohmann::json::parse( response.value());
+			} catch( const std::exception & e ) {
+				spdlog::error( "HttpClient error: {}. Response was: {}", e.what(), response.value() );
 			}
 		}else{
-			// TODO report empty 
+			spdlog::error( "HttpClient error: {}", response.error() );
 		}
 		return {};
 	}
 
-	static std::tuple<std::string,http::status> execute( const std::string & address, const std::string & value, http::verb verb )
+	static tl::expected<std::string,http::status> execute( std::string_view address, std::string_view value, http::verb verb )
 	{
-		std::tuple<std::string,http::status>	res{ "", http::status::internal_server_error };
-		Uri 									uri( address );
-		boost::beast::error_code 				ec;
+		tl::expected<std::string,http::status>	res;
 
-		if( !uri.isValid() ){
+		if( Uri uri( address ); !uri.isValid() ){
 			spdlog::error( "cannot parse uri {}", address );
-			return res;
-		}
-		boost::asio::io_service ios;
-		tcp::socket sock{ ios };
-
-		tcp::endpoint endpoint( boost::asio::ip::address::from_string( uri.host() ), static_cast<unsigned short>(uri.port()) );
-		sock.connect( endpoint, ec );
-		if( ec ){
-			spdlog::error( "Error conecting to {}. {}", address, ec.message() );
+			res = tl::make_unexpected( http::status::bad_request );
 		}else{
-			http::request<http::string_body> req;
-			req.method( verb );
-			req.target( uri.path() );
-			req.set( http::field::host, uri.host() + ":" + std::to_string( uri.port() ) );
-			req.set( http::field::user_agent, BOOST_BEAST_VERSION_STRING );
-			if( !value.empty() ){
-				req.body() = value;
-			}
-			req.prepare_payload();
+			boost::asio::io_service 		ios;
+			tcp::socket 					sock{ ios };
+			boost::beast::error_code 		ecConnect;
 
-			http::write( sock, req, ec );
-			if( ec ){
-				spdlog::error( "Error sending request to {}. {}", address, ec.message() );
+			tcp::endpoint endpoint( boost::asio::ip::address::from_string( uri.host() ), uri.port() );
+			sock.connect( endpoint, ecConnect );
+			if( ecConnect ){
+				spdlog::error( "Error conecting to {}. {}", address, ecConnect.message() );
+				res = tl::make_unexpected( http::status::service_unavailable );
 			}else{
-				boost::beast::flat_buffer b;
+				http::request<http::string_body> req;
+				req.method( verb );
 
-				http::response<http::string_body> response;
-				http::read(sock, b, response, ec);
-				if( ec ){
-					spdlog::error( "Error reading from {}. {}", address, ec.message() );
+				if( auto query = uri.query(); query.empty() ){
+					req.target( uri.path() );
 				}else{
-					res = { response.body(), response.result() };
+					req.target( uri.path() + "?" + query );
 				}
+				req.set( http::field::host, uri.host() + ":" + std::to_string( uri.port() ) );
+				req.set( http::field::user_agent, BOOST_BEAST_VERSION_STRING );
+				if( !value.empty() ){
+					req.body() = value;
+				}
+				req.prepare_payload();
+
+				boost::beast::error_code 	ecWrite;
+				http::write( sock, req, ecWrite );
+				if( ecWrite ){
+					spdlog::error( "Error sending request to {}. {}", address, ecWrite.message() );
+					res = tl::make_unexpected( http::status::service_unavailable );
+				}else{
+					boost::beast::flat_buffer 			b;
+					http::response<http::string_body> 	response;
+					boost::beast::error_code 			ecRead;
+
+					http::read( sock, b, response, ecRead );
+					if( ecRead ){
+						spdlog::error( "Error reading from {}. {}", address, ecRead.message() );
+						res = tl::make_unexpected( http::status::service_unavailable );
+					}else{
+						res = response.body();
+					}
+				}
+				boost::beast::error_code 		ecShutdown;
+				sock.shutdown(tcp::socket::shutdown_both, ecShutdown);
 			}
-			sock.shutdown(tcp::socket::shutdown_both, ec);
 		}
 		return res;
 	}
 };
 
-}}}
+}

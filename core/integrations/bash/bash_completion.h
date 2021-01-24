@@ -10,7 +10,7 @@
 #include "Commander.h"
 #include "Config.h"
 
-namespace drea { namespace core { namespace integrations { namespace Bash {
+namespace drea::core::integrations::Bash {
 
 static std::list<std::string> calculateAutoCompletion( const drea::core::App & app )
 {
@@ -104,4 +104,4 @@ static void generateAutoCompletion( const drea::core::App & app )
 	}
 }
 
-}}}}
+}

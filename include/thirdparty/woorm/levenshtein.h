@@ -5,18 +5,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <algorithm>
+#include <string>
 
 // Returns a size_t, depicting the difference between `a` and `b`.
 // See <http://en.wikipedia.org/wiki/Levenshtein_distance> for more information.
-static size_t levenshtein_private(const char *a, const size_t length, const char *b, const size_t bLength) {
-	size_t *cache = (size_t*)calloc(length, sizeof(size_t));
-	size_t index = 0;
-	size_t bIndex = 0;
-	size_t distance;
-	size_t bDistance;
-	size_t result = std::max( length, bLength );
-	char code;
-
+static size_t levenshtein_private(const char *a, const size_t length, const char *b, const size_t bLength)
+{
 	// Shortcut optimizations / degenerate cases.
 	if (a == b) {
 		return 0;
@@ -29,6 +24,14 @@ static size_t levenshtein_private(const char *a, const size_t length, const char
 	if (bLength == 0) {
 		return length;
 	}
+
+	size_t *cache = (size_t*)calloc(length, sizeof(size_t));
+	size_t index = 0;
+	size_t bIndex = 0;
+	size_t distance;
+	size_t bDistance;
+	size_t result = std::max( length, bLength );
+	char code;
 
 	// initialize the vector.
 	while (index < length) {
@@ -61,7 +64,7 @@ static size_t levenshtein_private(const char *a, const size_t length, const char
 	return result;
 }
 
-static size_t levenshtein( const std::string & a, const std::string & b )
+static size_t levenshtein( std::string_view a, std::string_view b )
 {
-	return levenshtein_private( a.c_str(), a.size(), b.c_str(), b.size() );
+	return levenshtein_private( a.data(), a.size(), b.data(), b.size() );
 }

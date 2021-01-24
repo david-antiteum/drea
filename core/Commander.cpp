@@ -22,7 +22,7 @@ struct drea::core::Commander::Private
 	std::vector<std::unique_ptr<Command>>	mCommands;
 	App										& mApp;
 
-	Private( App & app ) : mApp( app )
+	explicit Private( App & app ) : mApp( app )
 	{
 	}
 
@@ -35,7 +35,7 @@ struct drea::core::Commander::Private
 		return {};
 	}
 
-	jss::object_ptr<Command> find( const std::string & fullCmdName ){
+	jss::object_ptr<Command> find( std::string_view fullCmdName ){
 		auto 						commands = utilities::string::split( fullCmdName, "." );
 		std::string 				parent;
 		jss::object_ptr<Command>	res;
@@ -74,11 +74,9 @@ drea::core::Commander::Commander( drea::core::App & app ) : d( std::make_unique<
 {
 }
 
-drea::core::Commander::~Commander()
-{
-}
+drea::core::Commander::~Commander() = default;
 
-void drea::core::Commander::commands( std::function<void(const drea::core::Command&)> f ) const
+void drea::core::Commander::commands( const std::function<void(const drea::core::Command&)> & f ) const
 {	
 	for( const auto & cmd: d->mCommands ){
 		f( *cmd );
@@ -172,7 +170,7 @@ std::vector<std::string> drea::core::Commander::arguments() const
 	return d->mArguments;
 }
 
-void drea::core::Commander::unknownCommand( const std::string & command ) const
+void drea::core::Commander::unknownCommand( std::string_view command ) const
 {
 	if( command.empty() ){
 		d->mApp.logger().info( "A command is required." );
@@ -199,7 +197,7 @@ void drea::core::Commander::unknownCommand( const std::string & command ) const
 	}
 }
 
-void drea::core::Commander::wrongNumberOfArguments( const std::string & command ) const
+void drea::core::Commander::wrongNumberOfArguments( std::string_view command ) const
 {
 	if( auto cmd = find( command ) ){
 		if( cmd->mNbParams == drea::core::Command::mUnlimitedParams ){
@@ -212,7 +210,7 @@ void drea::core::Commander::wrongNumberOfArguments( const std::string & command 
 	}
 }
 
-jss::object_ptr<drea::core::Command> drea::core::Commander::find( const std::string & cmdName ) const
+jss::object_ptr<drea::core::Command> drea::core::Commander::find( std::string_view cmdName ) const
 {
 	return d->find( cmdName );
 }

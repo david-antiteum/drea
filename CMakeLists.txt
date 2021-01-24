@@ -1,57 +1,15 @@
-cmake_minimum_required( VERSION 3.12 )
+cmake_minimum_required( VERSION 3.12...3.16 )
 
-if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-	set( USING_VCPKG "ON" )
-	set( CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "" )
-	message( "Using vcpkg settings" )
-endif()
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
+include( Common )
+include( Tools )
 
 project( Drea VERSION 0.0.9 DESCRIPTION "Drea Framework" LANGUAGES CXX )
 
-set( CMAKE_CXX_STANDARD 17 )
-
 option( BUILD_EXAMPLES "Build examples" ON )
 
-function( generate_cpp_resource_file INPUT_DIR INPUT_FILE CPP_FILE )
-	add_custom_command( 
-		OUTPUT ${CPP_FILE}
-		COMMAND cd ${INPUT_DIR} && xxd -i ${INPUT_FILE} ${CPP_FILE} 
-		DEPENDS ${INPUT_DIR}/${INPUT_FILE}
-		COMMENT "Generating header file ${CPP_FILE}"
-		VERBATIM
-	)
-	set_source_files_properties( ${CPP_FILE} PROPERTIES GENERATED TRUE )
-endfunction()
-
-add_compile_definitions( _SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING )
-add_compile_definitions( _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING )
-
-if( WIN32 )
-	add_compile_definitions( _WIN32_WINNT=0x0A00 )
-	add_compile_definitions( UNICODE )
-	add_compile_definitions( _UNICODE )
-endif()
-
-if( WIN32 )
-	add_compile_options( /W4 /MP /permissive- /wd4251 /wd4275 )
-else()
-	add_compile_options( -Wall -Wextra -pedantic )
-endif()
-
-# Enable clang-tidy either setting the app or using the option
-option( ENABLE_CLANG_TIDY "Enable clang-tidy building." OFF )
-if( ENABLE_CLANG_TIDY OR CLANG_TIDY )
-	if( NOT CLANG_TIDY )
-		if( WIN32 )
-			find_program( CLANG_TIDY NAMES "clang-tidy" HINTS $ENV{VCINSTALLDIR}/Tools/Llvm/bin )
-		else()
-			find_program( CLANG_TIDY NAMES "clang-tidy" )
-		endif()
-	endif()
-	if( CLANG_TIDY )
-		set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY}" -checks=readability-*,cppcoreguidelines-*)
-	endif()
-endif()
+sonarqube_setup()
 
 add_subdirectory( core )
 

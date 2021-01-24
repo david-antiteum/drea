@@ -9,19 +9,19 @@
 #include "Config.h"
 #include "utilities/string.h"
 
-namespace drea { namespace core { namespace integrations { namespace Help {
+namespace drea::core::integrations::Help {
 
 static void version( const drea::core::App & app )
 {
 	fmt::print( "{} version {}\n", app.name(), app.version() );
 }
 
-static void help( const drea::core::App & app, const std::string & command )
+static void help( const drea::core::App & app, std::string_view commandName )
 {
 	if( app.commander().empty() ){
 		fmt::print( "This app has no commands\n" );
 	}else{
-		if( command.empty() ){
+		if( commandName.empty() ){
 			fmt::print( "Commands:\n" );
 
 			std::string::size_type offset = 0;
@@ -51,8 +51,8 @@ static void help( const drea::core::App & app, const std::string & command )
 
 			fmt::print( "\nUse \"{} COMMAND --help\" for more information about a command.\n", app.name() );
 		}else{
-			if( auto cmd = app.commander().find( command ) ){
-				auto commands = utilities::string::split( command, "." );
+			if( auto cmd = app.commander().find( commandName ) ){
+				auto commands = utilities::string::split( commandName, "." );
 
 				fmt::print( "\nusage:");
 				fmt::print( " {} {} ", app.name(), utilities::string::join( commands, " " ));
@@ -74,7 +74,7 @@ static void help( const drea::core::App & app, const std::string & command )
 					bool anySubCmd = false;
 				
 					for( const std::string & subCmdName: cmd->mSubcommand ){
-						if( auto subCmd = app.commander().find( command + "." + subCmdName ) ){
+						if( auto subCmd = app.commander().find( std::string( commandName ) + "." + subCmdName ) ){
 							offset = std::max<std::string::size_type>( offset, subCmd->mName.size() + 2 );
 							if( !subCmd->mSubcommand.empty() ){
 								anySubCmd = true;
@@ -86,7 +86,7 @@ static void help( const drea::core::App & app, const std::string & command )
 					}
 					fmt::print( "\nCommands:\n");
 					for( const std::string & subCmdName: cmd->mSubcommand ){
-						if( auto subCmd = app.commander().find( command + "." + subCmdName ) ){
+						if( auto subCmd = app.commander().find( std::string( commandName ) + "." + subCmdName ) ){
 							std::string::size_type cmdSize = 2 + subCmd->mName.size();
 					
 							fmt::print( "  {}", subCmd->mName );
@@ -148,7 +148,7 @@ static void helpOption( const Option & option, std::string::size_type offset, bo
 		fmt::print( "\n" );
 	}else{
 		fmt::print( ". Default" );
-		for( auto v: option.mValues ){
+		for( const auto & v: option.mValues ){
 			fmt::print( " {}", option.toString( v ));
 		}
 		fmt::print( "\n" );
@@ -211,4 +211,4 @@ static void help( const drea::core::App & app )
 	help( app, {} );
 }
 
-}}}}
+}

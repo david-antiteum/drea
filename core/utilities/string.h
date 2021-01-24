@@ -3,24 +3,24 @@
 #include <string>
 #include <vector>
 
-namespace drea { namespace core { namespace utilities { namespace string {
+namespace drea::core::utilities::string {
 
-static std::vector<std::string> split( const std::string & s, const std::string & delimiter )
+static [[nodiscard]] std::vector<std::string> split( std::string_view s, const std::string & delimiter )
 {
 	std::vector<std::string>	res;
 	size_t 						last = 0; 
 	size_t 						next = 0; 
 	
 	while(( next = s.find( delimiter, last )) != std::string::npos ){
-		res.push_back( s.substr( last, next-last ));
+		res.push_back( std::string{ s.substr( last, next-last ) });
 		last = next + 1;
 	}
-	res.push_back( s.substr( last ));
+	res.push_back( std::string{ s.substr( last ) });
 
 	return res;
 }
 
-static std::string join( const std::vector<std::string> & value, const std::string & delimiter )
+static [[nodiscard]] std::string join( const std::vector<std::string> & value, const std::string & delimiter )
 {
 	std::string		res;
 
@@ -34,9 +34,9 @@ static std::string join( const std::vector<std::string> & value, const std::stri
 	return res;
 }
 
-static std::string replace( const std::string & str, const std::string & from, const std::string & to )
+static [[nodiscard]] std::string replace( std::string_view str, std::string_view from, std::string_view to )
 {
-	std::string	res = str;
+	std::string	res{ str };
 	size_t start_pos = 0;
 	while((start_pos = res.find(from, start_pos)) != std::string::npos) {
 		res.replace(start_pos, from.length(), to);
@@ -45,4 +45,4 @@ static std::string replace( const std::string & str, const std::string & from, c
 	return res;
 }
 
-}}}}
+}

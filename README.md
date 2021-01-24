@@ -197,3 +197,15 @@ HN [discussion]( https://news.ycombinator.com/item?id=19656821 )
 - [CLI11](https://github.com/CLIUtils/CLI11): CLI11 is a command line parser for C++11 and beyond that provides a rich feature set with a simple and intuitive interface.
 
 - [Consul C++](https://github.com/oliora/ppconsul)
+
+## Quality Checks
+
+### Sonarqube
+
+1. Install and add to the path both build-wrapper and sonar-scanner
+2. Set the SONAR_TOKEN environment variable
+3. Use the sonarqube target:
+
+```shell
+cmake --build build --target sonarqube
+```

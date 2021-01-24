@@ -12,7 +12,7 @@ int drea::core::Command::numberOfParams() const
 	}
 }
 
-std::string drea::core::Command::nameOfParamsForHelp()
+std::string drea::core::Command::nameOfParamsForHelp() const
 {
 	std::string		res;
 	auto names = utilities::string::split( mParamName, " " );

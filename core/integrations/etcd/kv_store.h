@@ -7,7 +7,7 @@
 
 #include "utilities/httpclient.h"
 
-namespace drea { namespace core { namespace integrations { namespace etcd {
+namespace drea::core::integrations::etcd {
 
 /*! Access KV storer using the old v2 HTTP API.
 	Todo:
@@ -17,7 +17,7 @@ namespace drea { namespace core { namespace integrations { namespace etcd {
 class KVStore
 {
 public:
-	KVStore( const std::string & etcdHost )
+	explicit KVStore( const std::string & etcdHost )
 	{
 		mEtcdService = fmt::format( "{}/v2/keys", etcdHost );
 	}
@@ -45,4 +45,4 @@ private:
 	std::string			mEtcdService;
 };
 
-}}}}
+}

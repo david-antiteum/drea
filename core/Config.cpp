@@ -26,7 +26,7 @@
 #include "Config.h"
 #include "App.h"
 
-namespace drea { namespace core {
+namespace drea::core {
 
 static std::string getenv( const std::string & prefix, const std::string & name )
 {
@@ -54,7 +54,7 @@ struct RemoteProvider
 	std::string		mKey;
 };
 
-}}
+}
 
 struct drea::core::Config::Private
 {
@@ -65,11 +65,11 @@ struct drea::core::Config::Private
 	std::vector<RemoteProvider>				mRemoteProviders;
 	App										& mApp;
 
-	Private( App & app ) : mApp( app )
+	explicit Private( App & app ) : mApp( app )
 	{
 	}
 
-	jss::object_ptr<Option> find( const std::string & optionName ){
+	jss::object_ptr<Option> find( std::string_view optionName ){
 		jss::object_ptr<Option>	res;
 
 		if( !optionName.empty() ){
@@ -172,9 +172,7 @@ drea::core::Config::Config( drea::core::App & app ) : d( std::make_unique<Privat
 {
 }
 
-drea::core::Config::~Config()
-{
-}
+drea::core::Config::~Config() = default;
 
 void drea::core::Config::setDefaultConfigFile( const std::string & filePath )
 {
@@ -258,7 +256,7 @@ void drea::core::Config::addRemoteProvider( const std::string & provider, const 
 	d->mRemoteProviders.push_back( { provider, host, key } );
 }
 
-jss::object_ptr<drea::core::Option> drea::core::Config::find( const std::string & optionName ) const
+jss::object_ptr<drea::core::Option> drea::core::Config::find( std::string_view optionName ) const
 {
 	return d->find( optionName );
 }

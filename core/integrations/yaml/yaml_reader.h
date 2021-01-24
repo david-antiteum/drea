@@ -8,7 +8,7 @@
 #include "App.h"
 #include "Config.h"
 
-namespace drea { namespace core { namespace integration { namespace yaml {
+namespace drea::core::integration::yaml {
 
 class Reader
 {
@@ -81,4 +81,4 @@ private:
 	}
 };
 
-}}}}
+}

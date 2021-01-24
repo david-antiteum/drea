@@ -10,7 +10,7 @@ namespace spdlog {
 	class logger;
 }
 
-namespace drea { namespace core {
+namespace drea::core {
 
 class Config;
 class Commander;
@@ -30,25 +30,25 @@ public:
 	*/
 	static App & instance();
 
-	const std::string & name() const;
-	const std::string & description() const;
-	const std::string & version() const;
+	[[nodiscard]] const std::string & name() const;
+	[[nodiscard]] const std::string & description() const;
+	[[nodiscard]] const std::string & version() const;
 
-	void setName( const std::string & value );
-	void setDescription( const std::string & value );
-	void setVersion( const std::string & value );
+	void setName( std::string_view value );
+	void setDescription( std::string_view value );
+	void setVersion( std::string_view value );
 
 	/*! Access the config to configure it.
 	*/
-	Config & config() const;
+	[[nodiscard]] Config & config() const;
 
 	/*! Access the commander to configure it.
 	*/
-	Commander & commander() const;
+	[[nodiscard]] Commander & commander() const;
 
 	/*! Logger
 	*/
-	spdlog::logger & logger() const;
+	[[nodiscard]] spdlog::logger & logger() const;
 
 	/*! After configuring the app, call this method to parse options for all
 		the selected sources.
@@ -57,7 +57,7 @@ public:
 
 	/*! Add definitions to parse
 	*/
-	void addToParser( const std::string & definitions );
+	void addToParser( std::string_view definitions );
 
 	/*! After configuring the app, call this method to parse options for all
 		the selected sources. Definitions have been added using addToParser method
@@ -66,7 +66,7 @@ public:
 
 	/*! The argumenst as passed in the App constructor
 	*/
-	std::vector<std::string> args() const;
+	[[nodiscard]] std::vector<std::string> args() const;
 
 	/*! Set config values in runtime
 	*/
@@ -77,4 +77,4 @@ private:
 	std::unique_ptr<Private>	d;
 };
 
-}}
+}

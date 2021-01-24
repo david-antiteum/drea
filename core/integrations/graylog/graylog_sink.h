@@ -7,7 +7,7 @@
 
 #include "utilities/httpclient.h"
 
-namespace drea { namespace core { namespace integrations { namespace logs {
+namespace drea::core::integrations::logs {
 
 // example
 // auto sink = std::make_shared<drea::core::integrations::logs::graylog_sink<spdlog::details::null_mutex>>( appName, graylogHost );
@@ -34,7 +34,9 @@ protected:
 			logJSON["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>( msg.time.time_since_epoch() ).count() / 1000.0;
 			logJSON["level"] = toLevel( msg.level );
 
-			utilities::HttpClient::post( mGraylogService, logJSON );
+			if( !utilities::HttpClient::post( mGraylogService, logJSON ) ){
+				spdlog::error( "cannot write to graylog" );
+			}
 		}
 	}
 
@@ -46,7 +48,7 @@ private:
 	std::string			mHostName;
 	std::string			mGraylogService;
 
-	int toLevel( spdlog::level::level_enum level ){
+	[[nodiscard]] int toLevel( spdlog::level::level_enum level ){
 		int grayLevel = 1;
 
 		switch( level )
@@ -82,4 +84,4 @@ private:
 	}
 };
 
-}}}}
+}

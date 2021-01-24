@@ -89,7 +89,9 @@
 		"forward_list": "cpp",
 		"future": "cpp",
 		"valarray": "cpp",
-		"concepts": "cpp"
+		"concepts": "cpp",
+		"compare": "cpp",
+		"stack": "cpp"
 	},
 	"editor.insertSpaces": false,
 	"editor.detectIndentation": false,

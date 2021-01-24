@@ -10,7 +10,7 @@
 #include "App.h"
 #include "Config.h"
 
-namespace drea { namespace core { namespace integration { namespace json {
+namespace drea::core::integration::json {
 
 class Reader
 {
@@ -72,7 +72,7 @@ private:
 	void readConfig( const App & app, const nlohmann::json & config, const std::string & prefix ) const
 	{
 		if( config.is_object() ){
-			for( auto & [key, value]: config.items() ){
+			for( const auto & [key, value]: config.items() ){
 				auto realKey = addPrefix( prefix, key );
 
 				if( value.is_object() ){
@@ -104,11 +104,11 @@ private:
 	}
 };
 
-}}}}
+}
 
 #else
 
-namespace drea { namespace core { namespace integration { namespace json {
+namespace drea::core::integration::json {
 
 class Reader
 {
@@ -122,6 +122,6 @@ public:
 	{}
 };
 
-}}}}
+}
 
 #endif

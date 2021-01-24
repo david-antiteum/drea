@@ -10,7 +10,7 @@
 
 struct drea::core::App::Private
 {
-	Private( App & app ) : mConfig( app ), mCommander( app )
+	explicit Private( App & app ) : mConfig( app ), mCommander( app )
 	{
 	}
 
@@ -125,8 +125,7 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 				}else if( key == "short" ){
 					option.mShortVersion = optionNode.second.as<std::string>();
 				}else if( key == "type" ){
-					const std::string & type = optionNode.second.as<std::string>();
-					if( type == "bool" ){
+					if( const std::string & type = optionNode.second.as<std::string>(); type == "bool" ){
 						option.mType = typeid( bool );
 					}else if( type == "int" ){
 						option.mType = typeid( int );
@@ -143,8 +142,7 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 				}else if( key == "value" ){
 					try{
 						if( hasType ){
-							std::string possibleValue = optionNode.second.as< std::string >();
-							if( possibleValue.empty() ){
+							if( std::string possibleValue = optionNode.second.as< std::string >(); possibleValue.empty() ){
 								app.logger().critical( "Empty value for option {}", option.mName );
 								exit( 1 );
 							}else{
@@ -190,8 +188,7 @@ void _parseRemote( drea::core::App & app, const YAML::Node & remoteNode )
 		std::string		remoteKey;
 
 		for( auto node: remoteNode ){
-			const std::string key = node.first.as<std::string>();
-			if( node.second.IsScalar() ){
+			if( const std::string key = node.first.as<std::string>(); node.second.IsScalar() ){
 				if( key == "provider" ){
 					provider = node.second.as<std::string>();
 				}else if( key == "address" ){
@@ -207,7 +204,7 @@ void _parseRemote( drea::core::App & app, const YAML::Node & remoteNode )
 	}
 }
 
-void drea::core::App::addToParser( const std::string & definitions )
+void drea::core::App::addToParser( std::string_view definitions )
 {
 	if( !d->mDefinitions.empty() ){
 		d->mDefinitions += "\n";
@@ -228,8 +225,7 @@ void drea::core::App::parse( const std::string & definitions )
 
 	if( !definitions.empty() ){
 		for( auto node: YAML::Load( definitions ) ){
-			const std::string key = node.first.as<std::string>();
-			if( key == "app" && node.second.IsScalar() ){
+			if( const std::string key = node.first.as<std::string>(); key == "app" && node.second.IsScalar() ){
 				setName( node.second.as<std::string>() );
 			}else if( key == "version" && node.second.IsScalar() ){
 				setVersion( node.second.as<std::string>() );
@@ -258,8 +254,7 @@ void drea::core::App::parse( const std::string & definitions )
 	if( useCommanderDefaults ){
 		commander().addDefaults();
 	}
-	auto args = utilities::Parser( *this, d->mArgs ).parse();
-	if( !args.second.empty() && args.second.at(0) == "autocomplete" ){
+	if( auto args = utilities::Parser( *this, d->mArgs ).parse(); !args.second.empty() && args.second.at(0) == "autocomplete" ){
 		commander().configureForAutocompletion( d->mArgs );
 	}else{
 		configureInRunTime();
@@ -289,17 +284,17 @@ const std::string & drea::core::App::version() const
 	return d->mVersion;
 }
 
-void drea::core::App::setName( const std::string & value )
+void drea::core::App::setName( std::string_view value )
 {
 	d->mAppExeName = value;
 }
 
-void drea::core::App::setDescription( const std::string & value )
+void drea::core::App::setDescription( std::string_view value )
 {
 	d->mDescription = value;
 }
 
-void drea::core::App::setVersion( const std::string & value )
+void drea::core::App::setVersion( std::string_view value )
 {
 	d->mVersion = value;
 }

@@ -5,7 +5,7 @@
 
 #include "Export.h"
 
-namespace drea { namespace core {
+namespace drea::core {
 
 struct DREA_CORE_API Command
 {	
@@ -18,11 +18,11 @@ struct DREA_CORE_API Command
 	int								mNbParams = 1;
 	static const int				mUnlimitedParams = 0xfffffffa;
 		
-	int numberOfParams() const;
-	std::string nameOfParamsForHelp();
+	[[nodiscard]] int numberOfParams() const;
+	[[nodiscard]] std::string nameOfParamsForHelp() const;
 
 	//! Set automatically using parent information
 	std::vector<std::string>		mSubcommand;
 };
 
-}}
+}

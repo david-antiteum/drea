@@ -16,7 +16,7 @@ double sum( const drea::core::App & app )
 	for( auto arg: app.commander().arguments() ){
 		try{
 			sum += std::stod( arg );
-		}catch( std::exception & e ){
+		}catch( const std::exception & e ){
 			app.logger().error( "Argument {} is not a number: {}", arg, e.what() );
 		}
 	}
@@ -32,7 +32,7 @@ std::optional<double> power( const drea::core::App & app )
 		double 	exponent = std::stod( app.commander().arguments().at( 1 ) );
 
 		res = std::pow( base, exponent );
-	}catch( std::exception & e ){
+	}catch( const std::exception & e ){
 		app.logger().error( "Argument is not a number: {}", e.what() );
 	}
 	return res;

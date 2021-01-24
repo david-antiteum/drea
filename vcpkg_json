@@ -1,0 +1,14 @@
+{
+	"name": "drea",
+	"version": "0.0.9",
+	"dependencies": [
+		"fmt",
+		"spdlog",
+		"boost",
+		"yaml-cpp",
+		"nlohmann-json",
+		"consulcpp",
+		"uriparser",
+		"tl-expected"
+	]
+}
