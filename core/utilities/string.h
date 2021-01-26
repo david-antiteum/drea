@@ -5,7 +5,7 @@
 
 namespace drea::core::utilities::string {
 
-static [[nodiscard]] std::vector<std::string> split( std::string_view s, const std::string & delimiter )
+[[nodiscard]] static std::vector<std::string> split( std::string_view s, const std::string & delimiter )
 {
 	std::vector<std::string>	res;
 	size_t 						last = 0; 
@@ -20,7 +20,7 @@ static [[nodiscard]] std::vector<std::string> split( std::string_view s, const s
 	return res;
 }
 
-static [[nodiscard]] std::string join( const std::vector<std::string> & value, const std::string & delimiter )
+[[nodiscard]] static std::string join( const std::vector<std::string> & value, const std::string & delimiter )
 {
 	std::string		res;
 
@@ -34,7 +34,7 @@ static [[nodiscard]] std::string join( const std::vector<std::string> & value, c
 	return res;
 }
 
-static [[nodiscard]] std::string replace( std::string_view str, std::string_view from, std::string_view to )
+[[nodiscard]] static std::string replace( std::string_view str, std::string_view from, std::string_view to )
 {
 	std::string	res{ str };
 	size_t start_pos = 0;
