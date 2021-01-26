@@ -7,6 +7,10 @@ include( Tools )
 
 project( Drea VERSION 0.0.10 DESCRIPTION "Drea Framework" LANGUAGES CXX )
 
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+	include( CTest )
+endif()
+
 option( BUILD_EXAMPLES "Build examples" ON )
 
 sonarqube_setup()
@@ -18,4 +22,7 @@ if( BUILD_EXAMPLES )
 	add_subdirectory( examples/saythis )
 	add_subdirectory( examples/say )
 	add_subdirectory( examples/calculator )
+endif()
+if( BUILD_TESTING )
+	add_subdirectory( tests )
 endif()

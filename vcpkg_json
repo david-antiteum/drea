@@ -10,6 +10,7 @@
 		"consulcpp",
 		"uriparser",
 		"tl-expected",
-		"ms-gsl"
+		"ms-gsl",
+		"catch2"
 	]
 }
