@@ -26,8 +26,8 @@ public:
 			stream << val;
 			auto config = cpptoml::parser( stream ).parse();
 			res = true;
-		}catch(...){
-
+		}catch( const std::exception & e ){
+			spdlog::error( "Invalid TOML: {}. Json was: {}", e.what(), val );
 		}
 		return res;
 	}

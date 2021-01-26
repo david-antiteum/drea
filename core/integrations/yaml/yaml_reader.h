@@ -20,8 +20,8 @@ public:
 		try{
 			auto node = YAML::Load( val );
 			res = true;
-		}catch(...){
-
+		}catch( const std::exception & e ){
+			spdlog::error( "Invalid YAML: {}. Json was: {}", e.what(), val );
 		}
 		return res;
 	}

@@ -28,7 +28,7 @@ public:
 
 	/*! Access to the single instance of the app
 	*/
-	static App & instance();
+	[[nodiscard]] static App & instance();
 
 	[[nodiscard]] const std::string & name() const;
 	[[nodiscard]] const std::string & description() const;

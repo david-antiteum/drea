@@ -22,8 +22,8 @@ public:
 		try{
 			auto json = nlohmann::json::parse( val );
 			res = true;
-		}catch(...){
-
+		}catch( const std::exception & e ){
+			spdlog::error( "Invalid JSON: {}. Json was: {}", e.what(), val );
 		}
 		return res;
 	}

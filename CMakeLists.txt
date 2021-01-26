@@ -5,7 +5,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 include( Common )
 include( Tools )
 
-project( Drea VERSION 0.0.9 DESCRIPTION "Drea Framework" LANGUAGES CXX )
+project( Drea VERSION 0.0.10 DESCRIPTION "Drea Framework" LANGUAGES CXX )
 
 option( BUILD_EXAMPLES "Build examples" ON )
 

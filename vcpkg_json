@@ -1,6 +1,6 @@
 {
 	"name": "drea",
-	"version": "0.0.9",
+	"version": "0.0.10",
 	"dependencies": [
 		"fmt",
 		"spdlog",
@@ -9,6 +9,7 @@
 		"nlohmann-json",
 		"consulcpp",
 		"uriparser",
-		"tl-expected"
+		"tl-expected",
+		"ms-gsl"
 	]
 }

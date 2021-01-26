@@ -202,6 +202,8 @@ HN [discussion]( https://news.ycombinator.com/item?id=19656821 )
 
 ### Sonarqube
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=david-antiteum_drea&metric=alert_status)](https://sonarcloud.io/dashboard?id=david-antiteum_drea)
+
 1. Install and add to the path both build-wrapper and sonar-scanner
 2. Set the SONAR_TOKEN environment variable
 3. Use the sonarqube target:

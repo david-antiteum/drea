@@ -28,14 +28,14 @@ drea::core::OptionValue drea::core::Option::fromString( const std::string & val 
 	}else if( mType == typeid( int ) ){
 		try{
 			res = std::stoi( val );
-		}catch(...){
-			spdlog::critical( "Incorrect argument type for option {}. Must be an integer number", mName );
+		}catch( const std::exception & e ){
+			spdlog::critical( "Incorrect argument type for option {}: {}. Must be an integer number", mName, e.what() );
 		}
 	}else if( mType == typeid( double ) ){
 		try{
 			res = std::stod( val );
-		}catch(...){
-			spdlog::critical( "Incorrect argument type for option {}. Must be an floating number", mName );
+		}catch( const std::exception & e ){
+			spdlog::critical( "Incorrect argument type for option {}: {}. Must be an floating number", mName, e.what() );
 		}
 	}else if( mType == typeid( std::string ) ){
 		res = val;

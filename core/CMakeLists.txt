@@ -3,7 +3,7 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 	set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
 
-project( DreaCore VERSION 0.0.9 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
+project( DreaCore VERSION 0.0.10 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
 
 option( BUILD_REST_USE "Build support to access REST services" ON )
 
