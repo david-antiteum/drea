@@ -284,11 +284,12 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 #ifdef ENABLE_REST_USE
 	for( const RemoteProvider & provider: d->mRemoteProviders ){
 		if( provider.mProvider == "consul" ){
-			consulcpp::Consul	consul( provider.mHost );
-			auto				valueMaybe = consul.kv().get( provider.mKey );
+			if( consulcpp::Consul consul; consul.connect( provider.mHost )){
+				auto	valueMaybe = consul.kv().get( provider.mKey );
 
-			if( valueMaybe ){
-				d->readConfig( valueMaybe.value() );
+				if( valueMaybe ){
+					d->readConfig( valueMaybe.value() );
+				}
 			}
 		}else if( provider.mProvider == "etcd" ){
 			d->readConfig( integrations::etcd::KVStore( provider.mHost ).get( provider.mKey ) );
