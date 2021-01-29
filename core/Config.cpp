@@ -195,11 +195,11 @@ struct drea::core::Config::Private
 		if( !configFileName.empty() ){
 			auto [fileData, extension] = readFile( configFileName );
 			if( !fileData.empty() ){
-				if( extension == "toml" ){
+				if( extension == ".toml" ){
 					readConfigTOML( fileData );
-				}else if( extension == "json" ){
+				}else if( extension == ".json" ){
 					readConfigJSON( fileData );
-				}else if( extension == "yaml" ){
+				}else if( extension == ".yaml" ){
 					readConfigYAML( fileData );
 				}else if( !readConfig( fileData ) ){
 					spdlog::error( "Cannot determine the format of the config file {}", configFileName );
