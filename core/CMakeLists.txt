@@ -3,13 +3,12 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 	set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
 
-project( DreaCore VERSION 0.0.10 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
+project( DreaCore VERSION 0.1.0 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
 
 option( BUILD_REST_USE "Build support to access REST services" ON )
 
 find_package( fmt CONFIG REQUIRED )
 find_package( spdlog CONFIG REQUIRED )
-find_package( yaml-cpp CONFIG REQUIRED )
 find_package( yaml-cpp CONFIG REQUIRED )
 find_package( Microsoft.GSL CONFIG )
 

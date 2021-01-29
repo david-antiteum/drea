@@ -5,6 +5,7 @@
 #include <memory>
 #include <stdlib.h>
 #include <fstream>
+#include <filesystem>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
@@ -12,6 +13,7 @@
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/fmt/fmt.h>
 #include <woorm/levenshtein.h>
+#include <boost/algorithm/string.hpp>
 
 #include "integrations/yaml/yaml_reader.h"
 #include "integrations/json/json_reader.h"
@@ -104,20 +106,42 @@ struct drea::core::Config::Private
 		}
 	}
 
-	bool readConfig( const std::string & val )
+	bool readConfigTOML( const std::string & val )
 	{
 		bool		res = false;
 
 		if( !val.empty() ){
-			if( !res && drea::core::integration::toml::Reader().valid( val ) ){
+			if( drea::core::integration::toml::Reader().valid( val ) ){
 				drea::core::integration::toml::Reader().readConfig( mApp, val );
 				res = true;
 			}
-			if( !res && drea::core::integration::json::Reader().valid( val ) ){
+		}else{
+			res = true;
+		}
+		return res;
+	}
+
+	bool readConfigJSON( const std::string & val )
+	{
+		bool		res = false;
+
+		if( !val.empty() ){
+			if( drea::core::integration::json::Reader().valid( val ) ){
 				drea::core::integration::json::Reader().readConfig( mApp, val );
 				res = true;
 			}
-			if( !res && drea::core::integration::yaml::Reader().valid( val ) ){
+		}else{
+			res = true;
+		}
+		return res;
+	}
+
+	bool readConfigYAML( const std::string & val )
+	{
+		bool		res = false;
+
+		if( !val.empty() ){
+			if( drea::core::integration::yaml::Reader().valid( val ) ){
 				drea::core::integration::yaml::Reader().readConfig( mApp, val );
 				res = true;
 			}
@@ -127,13 +151,24 @@ struct drea::core::Config::Private
 		return res;
 	}
 
-	std::string readFile( const std::string & configFileName )
+	bool readConfig( const std::string & val )
 	{
-		// TODO ... use  std::filesystem::exists( configFileName )
-		std::string		res;
-		std::ifstream 	configFile;
+		bool		res = false;
 
-		configFile.open( configFileName.c_str(), std::ios::in );
+		res = res || readConfigTOML( val );
+		res = res || readConfigJSON( val );
+		res = res || readConfigYAML( val );
+
+		return res;
+	}
+
+	std::pair<std::string, std::string> readFile( const std::string & configFileName )
+	{
+		std::string		res, extension;
+		std::ifstream 	configFile;
+		auto			path = std::filesystem::u8path( configFileName );
+
+		configFile.open( path, std::ios::in );
 		if( configFile.is_open() ){
 			std::stringstream buffer;
 			buffer << configFile.rdbuf();
@@ -144,7 +179,7 @@ struct drea::core::Config::Private
 		}else{
 			spdlog::error( "Cannot read the config file {}", configFileName );
 		}
-		return res;
+		return { res, boost::algorithm::to_lower_copy( path.extension().string() ) };
 	}
 
 	void readConfig( const std::vector<std::string> & args )
@@ -158,9 +193,15 @@ struct drea::core::Config::Private
 			}
 		}
 		if( !configFileName.empty() ){
-			auto fileData = readFile( configFileName );
+			auto [fileData, extension] = readFile( configFileName );
 			if( !fileData.empty() ){
-				if( !readConfig( fileData ) ){
+				if( extension == "toml" ){
+					readConfigTOML( fileData );
+				}else if( extension == "json" ){
+					readConfigJSON( fileData );
+				}else if( extension == "yaml" ){
+					readConfigYAML( fileData );
+				}else if( !readConfig( fileData ) ){
 					spdlog::error( "Cannot determine the format of the config file {}", configFileName );
 				}
 			}
