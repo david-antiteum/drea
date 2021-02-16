@@ -20,6 +20,15 @@
 #   error Could not find system header "<filesystem>" or "<experimental/filesystem>"
 #endif
 
+#if INCLUDE_STD_FILESYSTEM_EXPERIMENTAL
+#   include <experimental/filesystem>
+namespace std {
+    namespace filesystem = experimental::filesystem;
+}
+#else
+#   include <filesystem>
+#endif
+
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
