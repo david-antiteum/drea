@@ -59,7 +59,7 @@ static void help( const drea::core::App & app, std::string_view commandName )
 				if( !cmd->mSubcommand.empty() ){
 					fmt::print( "COMMAND " );
 				}
-				if( cmd->numberOfParams() > 0 ){
+				if( cmd->numberOfParams() > 0 || cmd->numberOfParams() == drea::core::Command::mUnlimitedParams ){
 					fmt::print( "{} ", cmd->nameOfParamsForHelp() );
 				}
 				if( !cmd->mLocalParameters.empty() || !cmd->mGlobalParameters.empty() ){

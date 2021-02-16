@@ -14,6 +14,7 @@ options:
 commands:
   - command: sum
     params-names: number...
+    params: unlimited
     description: sum all the arguments
     local-options:
       - round
