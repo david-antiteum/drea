@@ -3,7 +3,7 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 	set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
 
-project( DreaCore VERSION 0.10.2 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
+project( DreaCore VERSION 0.10.3 DESCRIPTION "Drea Framework Core" LANGUAGES CXX )
 
 option( BUILD_REST_USE "Build support to access REST services" ON )
 
@@ -103,5 +103,5 @@ install(EXPORT ${PROJECT_NAME}Config DESTINATION share/${PROJECT_NAME}/cmake)
 export(TARGETS ${PROJECT_NAME} FILE ${PROJECT_NAME}Config.cmake)
 
 if(APPLE)
-	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
+	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 endif()
