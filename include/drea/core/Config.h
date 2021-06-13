@@ -96,6 +96,7 @@ public:
 	void append( const std::string & optionName, const std::string & value );
 
 	/*! Read the value of an option using a give type.
+		If there is more than one value, returns the first one.
 		If the value cannot be converted, the method will throw.
 	*/
 	template<typename T>
@@ -107,6 +108,25 @@ public:
 			return std::get<T>( option->mValues.front() );
 		}
 		return T{};
+	}
+
+	/*! Read all the values of an option using a give type.
+		If any of the values cannot be converted, the method will throw.
+	*/
+	template<typename T>
+	[[nodiscard]] std::vector<T> getAll( std::string_view optionName ) const
+	{
+		auto option = find( optionName );
+
+		if( option && !option->mValues.empty() ){
+			std::vector<T>	res;
+
+			for( const OptionValue & optionValue: option->mValues ){
+				res.push_back( std::get<T>( optionValue ) );
+			}
+			return res;
+		}
+		return std::vector<T>{};
 	}
 
 	void reportUnknownArgument( const std::string & optionName ) const;

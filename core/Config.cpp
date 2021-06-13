@@ -384,7 +384,6 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 			
 			if( auto option = d->find( arg ) ){
 				registerUse( arg );
-				option->mValues.clear();
 				for( int np = 0; np < option->numberOfParams() && i < args.size(); np++ ){
 					std::string subArg = args.at( i );
 					if( subArg.find( "-" ) == 0 ){
