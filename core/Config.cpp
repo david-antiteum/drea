@@ -375,6 +375,14 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 		}
 	}
 
+	// What defaults we have?
+	std::set<jss::object_ptr<drea::core::Option>> optionsWithDefault;
+
+	for( const auto & option: d->mOptions ){
+		if( !option->mValues.empty() ){
+			optionsWithDefault.insert( option );
+		}
+	}
 	// flags
 	for( size_t i = 0; i < args.size(); ){
 		std::string arg = args.at( i++ );
@@ -384,6 +392,11 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 			
 			if( auto option = d->find( arg ) ){
 				registerUse( arg );
+				if( optionsWithDefault.count( option ) > 0 ){
+					// override default. Clean value and keep values from user
+					option->mValues.clear();
+					optionsWithDefault.erase( option );
+				}
 				for( int np = 0; np < option->numberOfParams() && i < args.size(); np++ ){
 					std::string subArg = args.at( i );
 					if( subArg.find( "-" ) == 0 ){

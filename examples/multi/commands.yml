@@ -1,0 +1,12 @@
+app: multi
+version: 0.0.2
+description: |
+  A test for multi options
+options:
+  - option: env
+    params-names: var=value
+    description: variables
+    type: string
+    scope: line
+    params: 1
+    value: Y=Z
