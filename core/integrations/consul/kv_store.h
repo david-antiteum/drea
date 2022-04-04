@@ -29,8 +29,7 @@ public:
 
 		spdlog::info( "accesing to consul KV store for {}", address );
 
-		auto jsonMaybe = utilities::HttpClient::get( address );
-		if( jsonMaybe ){
+		if( auto jsonMaybe = utilities::HttpClient::get( address ); jsonMaybe ){
 			auto jsonValue = jsonMaybe.value();
 			try{
 				res = jsonValue[0].at( "Value" ).get<std::string>();

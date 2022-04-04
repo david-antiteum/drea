@@ -53,7 +53,7 @@ private:
 				spdlog::error( "HttpClient error: {}. Response was: {}", e.what(), response.value() );
 			}
 		}else{
-			spdlog::error( "HttpClient error: {}", static_cast<int>(response.error()) );
+			spdlog::error( "HttpClient error: {}", static_cast<unsigned>( response.error() ));
 		}
 		return {};
 	}

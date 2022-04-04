@@ -427,8 +427,7 @@ unsigned int drea::core::Config::intensity( const std::string & optionName ) con
 
 void drea::core::Config::registerUse( const std::string & optionName )
 {
-	auto option = find( optionName );
-	if( option ){
+	if( auto option = find( optionName ); option ){
 		// can repeat only options without arguments to increase intensity
 		bool	canBeIntense = option->mNbParams == 0;
 

@@ -9,7 +9,7 @@ int main( int argc, char * argv[] )
 	drea::core::App	 app( argc, argv );
 	
 	app.parse( std::string( commands_yml, commands_yml + commands_yml_len ) );
-	app.commander().run( [ &app ]( std::string cmd ){
+	app.commander().run( [ &app ]( const std::string & cmd ){
 		app.logger().debug( "command to run {}", cmd );
 
 		bool reverse = app.config().used( "reverse" );

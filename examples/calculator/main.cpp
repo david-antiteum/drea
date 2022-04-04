@@ -13,7 +13,7 @@ double sum( const drea::core::App & app )
 {
 	double sum = 0.0;
 
-	for( auto arg: app.commander().arguments() ){
+	for( const auto & arg: app.commander().arguments() ){
 		try{
 			sum += std::stod( arg );
 		}catch( const std::exception & e ){
@@ -42,7 +42,7 @@ size_t count( const drea::core::App & app )
 {
 	size_t sum = 0;
 
-	for( auto arg: app.commander().arguments() ){
+	for( const auto & arg: app.commander().arguments() ){
 		sum += arg.size();
 	}
 	return sum;
@@ -71,7 +71,7 @@ int main( int argc, char * argv[] )
 	app.addToParser( std::string( version_yml, version_yml + version_yml_len ) );
 	app.addToParser( std::string( commands_yml, commands_yml + commands_yml_len ) );
 	app.parse();
-	app.commander().run( [ &app ]( std::string cmd ){
+	app.commander().run( [ &app ]( const std::string & cmd ){
 		app.logger().debug( "Run called for command {}", cmd );
 
 		std::optional<double>		valueMaybe;

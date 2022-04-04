@@ -102,9 +102,7 @@ public:
 	template<typename T>
 	[[nodiscard]] T get( std::string_view optionName ) const
 	{
-		auto option = find( optionName );
-
-		if( option && !option->mValues.empty() ){
+		if( auto option = find( optionName ); option && !option->mValues.empty() ){
 			return std::get<T>( option->mValues.front() );
 		}
 		return T{};
@@ -116,9 +114,7 @@ public:
 	template<typename T>
 	[[nodiscard]] std::vector<T> getAll( std::string_view optionName ) const
 	{
-		auto option = find( optionName );
-
-		if( option && !option->mValues.empty() ){
+		if( auto option = find( optionName ); option && !option->mValues.empty() ){
 			std::vector<T>	res;
 
 			for( const OptionValue & optionValue: option->mValues ){

@@ -29,8 +29,7 @@ public:
 
 		spdlog::info( "accesing to etcd KV store for {}", address );
 
-		auto jsonMaybe = utilities::HttpClient::get( address );
-		if( jsonMaybe ){
+		if( auto jsonMaybe = utilities::HttpClient::get( address ); jsonMaybe ){
 			auto jsonValue = jsonMaybe.value();
 			try{
 				res = jsonValue.at( "node" ).at( "value" ).get<std::string>();
