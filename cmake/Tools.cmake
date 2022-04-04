@@ -52,39 +52,22 @@ endfunction()
 
 function(sonarqube_setup)
 	if( WIN32 )
-		find_program( buildwrapper_tmp build-wrapper-win-x86-64.exe )
-	elseif( APPLE )
-		find_program( buildwrapper_tmp build-wrapper-macosx-x86 )
+		find_program( sonar-scanner_tmp sonar-scanner.bat )
 	else()
-		find_program( buildwrapper_tmp build-wrapper-linux-x86-64 )
+		find_program( sonar-scanner_tmp sonar-scanner )
 	endif()
-	if( buildwrapper_tmp )
-		set( BUILDWRAPPER_EXECUTABLE ${buildwrapper_tmp})
-		unset( buildwrapper_tmp )
-
-		add_custom_target( sonarqube-build
-			COMMAND
-				${CMAKE_MAKE_PROGRAM} clean
-			COMMAND
-				${BUILDWRAPPER_EXECUTABLE}
-				--out-dir bw-output
-				${CMAKE_MAKE_PROGRAM}
-			COMMENT
-				"Run sonarqube build"
-			WORKING_DIRECTORY 
-				${CMAKE_BINARY_DIR} 
-		)
+	if( sonar-scanner_tmp )
+		set( SONAR_SCANNER_EXECUTABLE ${sonar-scanner_tmp})
+		unset( sonar-scanner_tmp )
 
 		add_custom_target( sonarqube
 			COMMAND
-				sonar-scanner
+				${SONAR_SCANNER_EXECUTABLE}
 			COMMENT
 				"Run sonarqube analysis"
 			WORKING_DIRECTORY 
 				${CMAKE_SOURCE_DIR} 
 		)
-
-		add_dependencies( sonarqube sonarqube-build )
 	endif()
 endfunction()
 ###
