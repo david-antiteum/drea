@@ -1,14 +1,10 @@
-cmake_minimum_required( VERSION 3.12...3.16 )
+cmake_minimum_required( VERSION 3.16...3.22 )
 
 if( CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release)$")
 	message( FATAL_ERROR "Invalid value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}. Use Debug or Release." )
 endif()
 
-if( EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake" )
-	message( "Using conan settings: ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake" )
-	include( ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake )
-	conan_basic_setup()
-elseif( DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE )
+if( DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE )
 	message( "Using vcpkg settings: $ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" )
 	set( CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "" )
 endif()

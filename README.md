@@ -48,7 +48,7 @@ int main( int argc, char * argv[] )
     drea::core::App     app( argc, argv );
 
     app.parse( std::string( commands_yml, commands_yml + commands_yml_len ) );
-    app.commander().run( [ &app ]( std::string cmd ){
+    app.commander().run( [ &app ]( const std::string & cmd ){
         if( cmd == "this" && app.commander().arguments().size() == 1 ){
             std::string say = app.commander().arguments().front();
             if( app.config().used( "reverse" ) ){
@@ -98,8 +98,8 @@ Use CMake to build and install Drea in Linux, macOS and Windows systems.
 ## How to Use Drea
 
 ```CMake
-find_package(DreaCore REQUIRED)
-target_link_libraries(main PRIVATE DreaCore)
+find_package(drea REQUIRED)
+target_link_libraries(main PRIVATE drea)
 ```
 
 ## Commands

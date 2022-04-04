@@ -23,7 +23,7 @@ set_property( TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17 )
 include_directories( ../../include ../../include/thirdparty ${CMAKE_CURRENT_BINARY_DIR} )
 
 target_link_libraries( ${PROJECT_NAME} 
-	DreaCore
+	drea
 )
 
 if( UNIX )

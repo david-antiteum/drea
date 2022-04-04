@@ -23,7 +23,7 @@ endif()
 target_link_libraries( ${PROJECT_NAME} 
 	PRIVATE
 		Catch2::Catch2
-		DreaCore
+		drea
 )
 
 if( UNIX )

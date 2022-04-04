@@ -31,7 +31,7 @@ protected:
 			logJSON["version"] = "1.1";
 			logJSON["host"] = mHostName;
 			logJSON["short_message"] = fmt::format( msg.payload );
-			logJSON["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>( msg.time.time_since_epoch() ).count() / 1000.0;
+			logJSON["timestamp"] = std::chrono::duration_cast<std::chrono::milliseconds>( msg.time.time_since_epoch() ).count() / 1000;
 			logJSON["level"] = toLevel( msg.level );
 
 			if( !utilities::HttpClient::post( mGraylogService, logJSON ) ){
