@@ -5,7 +5,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 include( Common )
 include( Tools )
 
-project( drea VERSION 0.11.0 DESCRIPTION "Drea Framework" LANGUAGES CXX )
+project( drea VERSION 0.11.1 DESCRIPTION "Drea Framework" LANGUAGES CXX )
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 	include( CTest )
