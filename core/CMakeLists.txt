@@ -73,7 +73,7 @@ if (MSVC)
 	set_source_files_properties( Config.cpp PROPERTIES COMPILE_FLAGS /bigobj )
 endif()
 
-if( LINUX )
+if( UNIX )
 	set( CMAKE_SKIP_BUILD_RPATH FALSE )
 	set( CMAKE_BUILD_WITH_INSTALL_RPATH TRUE )
 	set_target_properties( ${PROJECT_NAME} PROPERTIES

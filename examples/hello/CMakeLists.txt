@@ -22,7 +22,7 @@ target_link_libraries( ${PROJECT_NAME}
 	drea
 )
 
-if( LINUX )
+if( UNIX )
 	set( CMAKE_SKIP_BUILD_RPATH FALSE )
 	set( CMAKE_BUILD_WITH_INSTALL_RPATH TRUE )
 	set_target_properties( ${PROJECT_NAME} PROPERTIES
