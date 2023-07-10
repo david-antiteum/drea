@@ -22,6 +22,15 @@ target_link_libraries( ${PROJECT_NAME}
 	drea
 )
 
+if( LINUX )
+	set( CMAKE_SKIP_BUILD_RPATH FALSE )
+	set( CMAKE_BUILD_WITH_INSTALL_RPATH TRUE )
+	set_target_properties( ${PROJECT_NAME} PROPERTIES
+		BUILD_RPATH "$ORIGIN"
+		INSTALL_RPATH "$ORIGIN"
+	)
+endif()
+
 if( UNIX )
 	find_package( Threads REQUIRED )
 	target_link_libraries( ${PROJECT_NAME} 

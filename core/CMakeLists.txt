@@ -73,6 +73,15 @@ if (MSVC)
 	set_source_files_properties( Config.cpp PROPERTIES COMPILE_FLAGS /bigobj )
 endif()
 
+if( LINUX )
+	set( CMAKE_SKIP_BUILD_RPATH FALSE )
+	set( CMAKE_BUILD_WITH_INSTALL_RPATH TRUE )
+	set_target_properties( ${PROJECT_NAME} PROPERTIES
+		BUILD_RPATH "$ORIGIN"
+		INSTALL_RPATH "$ORIGIN"
+	)
+endif()
+
 if( BUILD_SHARED_LIBS )
 	add_compile_definitions( DREA_CORE_DLL )
 	add_compile_definitions( DREA_CORE_EXPORTS )
