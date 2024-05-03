@@ -48,7 +48,11 @@ private:
 	{
 		if( const auto response = execute( address, json.empty() ? "" : json.dump(), verb ); response ){
 			try{
-				return nlohmann::json::parse( response.value());
+				if( response.value().empty() ){
+					return nlohmann::json::parse( "{}" );
+				}else{
+					return nlohmann::json::parse( response.value());
+				}
 			} catch( const std::exception & e ) {
 				spdlog::error( "HttpClient error: {}. Response was: {}", e.what(), response.value() );
 			}
