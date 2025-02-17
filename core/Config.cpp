@@ -462,7 +462,7 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 		}
 	}
 	if( !logFile.empty() ){
-		sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, 1048576 * 5, 3 ) );
+		sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, 1048576 * 10, 10 ) );
 	}
 #ifdef ENABLE_REST_USE	
 	if( used( "graylog-host" ) ){
