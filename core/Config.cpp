@@ -465,9 +465,9 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 		try{
 			sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, 1048576 * 10, 10 ) );
 		}catch( spdlog::spdlog_ex & se ){
-			fmt::println( "Cannot use log file {}: {}", logFile, se.what() );
+			fmt::print( "Cannot use log file {}: {}\n", logFile, se.what() );
 		}catch( std::exception & e ){
-			fmt::println( "Cannot use log file {}: {}", logFile, e.what() );
+			fmt::print( "Cannot use log file {}: {}\n", logFile, e.what() );
 		}
 	}
 #ifdef ENABLE_REST_USE	
