@@ -250,6 +250,8 @@ void drea::core::Config::setDefaultConfigFile( const std::string & filePath )
 
 drea::core::Config & drea::core::Config::addDefaults()
 {
+	std::string logFolderInfo = fmt::format( "log messages to file {}.log in <folder>", d->mApp.name() );
+
 	add({
 		{
 			"verbose", "", "increase the logging level to debug"
@@ -264,7 +266,13 @@ drea::core::Config & drea::core::Config::addDefaults()
 			"log-file", "file", "log messages to the file <file>", {}, typeid( std::string )
 		},
 		{
-			"log-folder", "folder", "log messages to a file in <folder>", {}, typeid( std::string )
+			"log-folder", "folder", logFolderInfo, {}, typeid( std::string )
+		},
+		{
+			"log-size", "size", "log <size> (in MB) for each log file", {10}, typeid( int )
+		},
+		{
+			"log-nb-files", "number-of-log-files", "<number-of-log-files> to keep", {10}, typeid( int )
 		},
 #ifdef ENABLE_REST_USE
 		{
@@ -462,8 +470,11 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 		}
 	}
 	if( !logFile.empty() ){
+		int max_size = 1048576 * get<int>( "log-size" );
+		int max_files = get<int>( "log-nb-files" );
+
 		try{
-			sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, 1048576 * 10, 10 ) );
+			sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, max_size, max_files ) );
 		}catch( spdlog::spdlog_ex & se ){
 			fmt::print( "Cannot use log file {}: {}\n", logFile, se.what() );
 		}catch( std::exception & e ){
