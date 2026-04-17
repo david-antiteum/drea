@@ -68,6 +68,8 @@ void _parseCmd( drea::core::App & app, const YAML::Node & cmdsNode, const std::s
 					}else{
 						command.mNbParams = cmdNode.second.as<int>();
 					}
+				}else if( key == "min-params" ){
+					command.mMinParams = cmdNode.second.as<int>();
 				}
 			}else if( cmdNode.second.IsSequence() ){
 				if( key == "global-options" || key == "local-options" ){

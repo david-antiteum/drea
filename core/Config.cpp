@@ -397,7 +397,7 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 
 		if( arg.find( "--" ) == 0 ){
 			arg = arg.erase( 0, 2 );
-			
+
 			if( auto option = d->find( arg ) ){
 				registerUse( arg );
 				if( optionsWithDefault.count( option ) > 0 ){
@@ -415,6 +415,16 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 				}
 				if( option->numberOfParams() > 0 &&  option->mValues.empty() ){
 					spdlog::warn( "Missing arguments for flag {}", arg );
+				}
+			}else if( arg.rfind( "no-", 0 ) == 0 ){
+				std::string boolName = arg.substr( 3 );
+				if( auto boolOpt = d->find( boolName ); boolOpt && boolOpt->mType == typeid( bool ) ){
+					registerUse( boolName );
+					boolOpt->mValues.clear();
+					boolOpt->mValues.push_back( false );
+					optionsWithDefault.erase( boolOpt );
+				}else{
+					reportUnknownArgument( arg );
 				}
 			}else{
 				reportUnknownArgument( arg );

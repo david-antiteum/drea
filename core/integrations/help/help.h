@@ -3,6 +3,8 @@
 #include <spdlog/fmt/fmt.h>
 #include <iostream>
 #include <fstream>
+#include <set>
+#include <string>
 
 #include "App.h"
 #include "Commander.h"
@@ -162,6 +164,27 @@ static void help( const drea::core::App & app )
 	bool					anyLine = false;
 	bool					anyFile = false;
 
+	// Options exclusively used as local-options on specific commands — hide from global help
+	std::set<std::string> localOnlyOptions;
+	{
+		std::set<std::string> allLocalOptions;
+		std::set<std::string> allGlobalOptions;
+
+		app.commander().commands( [&allLocalOptions, &allGlobalOptions]( const Command & command ){
+			for( const auto & opt: command.mLocalParameters ){
+				allLocalOptions.insert( opt );
+			}
+			for( const auto & opt: command.mGlobalParameters ){
+				allGlobalOptions.insert( opt );
+			}
+		});
+		for( const auto & opt: allLocalOptions ){
+			if( allGlobalOptions.find( opt ) == allGlobalOptions.end() ){
+				localOnlyOptions.insert( opt );
+			}
+		}
+	}
+
 	fmt::print( "\n{}\n", app.description() );
 	fmt::print("usage: {}", app.name() );
 	if( !app.commander().empty() ){
@@ -169,7 +192,10 @@ static void help( const drea::core::App & app )
 	}
 	fmt::print(" [OPTIONS]\n\n", app.name() );
 
-	app.config().options( [ &offset, &anyShort, &anyLine, &anyFile ](const Option & option){
+	app.config().options( [ &offset, &anyShort, &anyLine, &anyFile, &localOnlyOptions ](const Option & option){
+		if( localOnlyOptions.find( option.mName ) != localOnlyOptions.end() ){
+			return;
+		}
 		std::string::size_type optionOffset = 2 + 2 + option.mName.size();
 		if( !option.mShortVersion.empty() ){
 			anyShort = true;
@@ -191,16 +217,16 @@ static void help( const drea::core::App & app )
 	// Config
 	if( anyLine ){
 		fmt::print( "Options:\n" );
-		app.config().options( [ offset, anyShort ](const Option & option){
-			if( option.helpInLine() ){
+		app.config().options( [ offset, anyShort, &localOnlyOptions ](const Option & option){
+			if( option.helpInLine() && localOnlyOptions.find( option.mName ) == localOnlyOptions.end() ){
 				helpOption( option, offset, anyShort );
 			}
 		});
 	}
 	if( anyFile ){
 		fmt::print( "Config file options:\n" );
-		app.config().options( [ offset, anyShort ](const Option & option){
-			if( option.helpInFileOnly() ){
+		app.config().options( [ offset, anyShort, &localOnlyOptions ](const Option & option){
+			if( option.helpInFileOnly() && localOnlyOptions.find( option.mName ) == localOnlyOptions.end() ){
 				helpOption( option, offset, anyShort );
 			}
 		});

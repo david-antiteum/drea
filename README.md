@@ -6,20 +6,20 @@ A C++ framework for CLI apps and services that includes support for:
 - Options
 - Logging
 
-Drea tries to extract as much functionality with the minimum required developer intervention while preventing repeating information already present. For example, the developer declares commands and flags and, using that definition, Drea generates:
+Drea aims to give you maximum functionality with minimum ceremony. Declare your commands and options once; Drea derives the rest:
 
-- Help
-- Shell integration: Man pages and autocompletion
-- Support for configuration options:
-  - using files. Supported formats: TOML, YAML, JSON
-  - shell variables
-  - command flags
-  - KV storers: consul and etcd
-- User's input validation, including configuration files
+- Help output
+- Shell integration: man pages and autocompletion
+- Configuration from multiple sources:
+  - files (TOML, YAML, JSON)
+  - environment variables
+  - command-line flags
+  - KV stores (Consul, etcd)
+- Input validation, including automatic argument-count checks and configuration files
 
 ## An example
 
-This example has a single command ```this``` and one option ```reverse```. The configuration of the app is defined in a YAML file converted to a header file called ```commands.yml.h``` using the unix utility ```xxd``` (for Windows users: [Vim](https://www.vim.org/download.php) distributes a copy.)
+This example has a single command `this` and one option `reverse`. The configuration of the app is defined in a YAML file converted to a header file called `commands.yml.h` using the Unix utility `xxd` (Windows users: [Vim](https://www.vim.org/download.php) ships a copy).
 
 ```yaml
 app: say
@@ -49,7 +49,7 @@ int main( int argc, char * argv[] )
 
     app.parse( std::string( commands_yml, commands_yml + commands_yml_len ) );
     app.commander().run( [ &app ]( const std::string & cmd ){
-        if( cmd == "this" && app.commander().arguments().size() == 1 ){
+        if( cmd == "this" ){
             std::string say = app.commander().arguments().front();
             if( app.config().used( "reverse" ) ){
                 std::reverse( say.begin(), say.end() );
@@ -67,7 +67,7 @@ An example of use:
 [2019-04-16 09:44:44.649] [say] [info] hello
 ```
 
-Execute the example as ```./saythis --help``` to get help:
+Execute the example as `./saythis --help` to get help:
 
 ```text
 Prints the argument of the command "this" and quits.
@@ -75,25 +75,33 @@ Prints the argument of the command "this" and quits.
 usage: say COMMAND [OPTIONS]
 
 Options:
-      --config-file file                 read configs from file <file>
-      --graylog-host schema://host:port  Send logs to a graylog server. Example: http://localhost:12201
-  -h, --help                             show help and quit
-      --log-file file                    log messages to the file <file>
-      --reverse                          reverse string
-  -v, --verbose                          increase the logging level to debug
-      --version                          print version information and quit
+      --config-file file                  read configs from file <file>
+      --graylog-host schema://host:port   Send logs to a graylog server. Example: http://localhost:12201
+  -h, --help                              show help and quit
+      --log-file file                     log messages to the file <file>
+      --log-folder folder                 log messages to file say.log in <folder>
+      --log-nb-files number-of-log-files  <number-of-log-files> to keep. Default 10
+      --log-size size                     log <size> (in MB) for each log file. Default 10
+  -v, --verbose                           increase the logging level to debug
+  -V, --version                           print version information and quit
 
 Commands:
-  this
+  this  prints the argument
 
 Use "say COMMAND --help" for more information about a command.
 ```
 
-We can also get additional help from a particular command, try this: ```./saythis this --help```.
+Note that `--reverse` is not listed in the global help: options declared only as `local-options` of a command are shown only where they apply. Try `./saythis this --help` to see them.
 
 ## How to Build
 
-Use CMake to build and install Drea in Linux, macOS and Windows systems.
+Use CMake to build and install Drea on Linux, macOS and Windows:
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
 
 ## How to Use Drea
 
@@ -104,7 +112,7 @@ target_link_libraries(main PRIVATE drea)
 
 ## Commands
 
-Commands are the actions that your application can execute. A command can have subcommands, creating a hierarchy. When Drea requests the execution of a command, it will present the complete path, making it possible to have two subcommands with the same name.
+Commands are the actions that your application can execute. A command can have subcommands, creating a hierarchy. When Drea invokes the run callback, it passes the full command path (for example, `container.ls`), so two subcommands under different parents can share the same name.
 
 ### The anatomy of a command
 
@@ -114,9 +122,9 @@ Commands are the actions that your application can execute. A command can have s
 ./say this hello --reverse
 ```
 
-The command is ```this```, has the argument ```hello``` and the option ```reverse```.
+The command is `this`, with argument `hello` and option `reverse`.
 
-2. Any number of arguments
+2. A command can take a fixed number of arguments, an unlimited number (`params: unlimited`), or a range where some are optional (see `min-params` below).
 
 3. A command can have subcommands. Example:
 
@@ -124,7 +132,7 @@ The command is ```this```, has the argument ```hello``` and the option ```revers
 ./myapp container ls
 ```
 
-The command is ```container``` and the subcommand ```ls```. Drea will ask for the execution of the command ```container.ls```. Can be defined as:
+The command is `container` and the subcommand is `ls`. Drea will invoke the callback with the full path `container.ls`. It can be defined as:
 
 ```yaml
 commands:
@@ -144,13 +152,16 @@ commands:
 
 A command has the following information:
 
-- name: must be unique in a command path
-- arguments: name of the arguments, if any
-- description: the command description used by the help system
-- local options: list of options that applies to this command
-- global options: list of global options that applies to this and command
-- parent command: the name of the parent command
-- number of parameters: 0, 1,... unlimited
+- `command`: name, must be unique in a command path
+- `params-names`: names of the positional arguments, if any
+- `description`: the command description used by the help system
+- `local-options`: options that apply only to this command
+- `global-options`: options that apply to this command and its subcommands
+- `parent`: the name of the parent command (set automatically when nested under `commands:`)
+- `params`: number of positional arguments: `0`, `1`, ..., or `unlimited`
+- `min-params` (optional): minimum number of positional arguments when some are optional. If set, `params` is the maximum and `min-params` the minimum.
+
+When `run()` is invoked, Drea validates the argument count against `params` (and `min-params` if set) and reports an error without calling the callback if they do not match.
 
 ## Configuration
 
@@ -161,11 +172,15 @@ Use configuration options to modify the behavior of commands and to set values f
 The order of evaluation, from lower to higher priority:
 
 - defaults
-- KV Store (as Consul or etcd)
+- KV store (Consul or etcd)
 - config file
-- env variables
-- command line flags
-- explicit call to set
+- environment variables
+- command-line flags
+- explicit call to `Config::set`
+
+### Boolean negation
+
+Boolean options can be explicitly disabled from the command line by prefixing them with `--no-`. For example, if `dry-run` defaults to `true` (from a config file or a declared default), passing `--no-dry-run` on the command line overrides it to `false`. This works automatically for any option of type `bool`.
 
 ## Man pages
 

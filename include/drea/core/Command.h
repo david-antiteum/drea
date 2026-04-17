@@ -8,7 +8,7 @@
 namespace drea::core {
 
 struct DREA_CORE_API Command
-{	
+{
 	std::string 					mName;
 	std::string						mParamName;
 	std::string						mDescription;
@@ -16,9 +16,12 @@ struct DREA_CORE_API Command
 	std::vector<std::string>		mGlobalParameters;
 	std::string						mParentCommand;
 	int								mNbParams = 1;
+	int								mMinParams = -1;
 	static const int				mUnlimitedParams = 0xfffffffa;
-		
+
 	[[nodiscard]] int numberOfParams() const;
+	[[nodiscard]] int minParams() const;
+	[[nodiscard]] int maxParams() const;
 	[[nodiscard]] std::string nameOfParamsForHelp() const;
 
 	//! Set automatically using parent information

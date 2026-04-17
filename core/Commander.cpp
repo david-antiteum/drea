@@ -68,6 +68,27 @@ struct drea::core::Commander::Private
 			}
 		}
 	}
+
+	void detectLocalOptionCollisions()
+	{
+		std::vector<std::pair<std::string, std::vector<std::string>>> optionToCommands;
+		for( const auto & cmd: mCommands ){
+			for( const auto & opt: cmd->mLocalParameters ){
+				auto it = std::find_if( optionToCommands.begin(), optionToCommands.end(),
+					[&opt]( const auto & p ){ return p.first == opt; } );
+				if( it == optionToCommands.end() ){
+					optionToCommands.push_back( { opt, { cmd->mName } } );
+				}else{
+					it->second.push_back( cmd->mName );
+				}
+			}
+		}
+		for( const auto & entry: optionToCommands ){
+			if( entry.second.size() > 1 ){
+				mApp.logger().debug( "Option \"{}\" used as local-option in multiple commands: {}", entry.first, utilities::string::join( entry.second, ", " ) );
+			}
+		}
+	}
 };
 
 drea::core::Commander::Commander( drea::core::App & app ) : d( std::make_unique<Private>( app ) )
@@ -119,6 +140,7 @@ void drea::core::Commander::configureForAutocompletion( const std::vector<std::s
 void drea::core::Commander::configure( const std::vector<std::string> & args )
 {
 	d->createHierarchy();
+	d->detectLocalOptionCollisions();
 	if( !args.empty() ){
 		if( auto cmd = find( args.at( 0 ) ); cmd ){
 			int	pos = 1;
@@ -161,6 +183,22 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 			fmt::print( "{}\n", var );
 		}
 	}else{
+		if( !d->mCommand.empty() ){
+			if( auto cmd = find( d->mCommand ) ){
+				const int maxP = cmd->maxParams();
+				const int minP = cmd->minParams();
+				const int actual = static_cast<int>( d->mArguments.size() );
+				if( maxP != drea::core::Command::mUnlimitedParams ){
+					if( actual < minP || actual > maxP ){
+						wrongNumberOfArguments( d->mCommand );
+						return;
+					}
+				}else if( actual < minP ){
+					wrongNumberOfArguments( d->mCommand );
+					return;
+				}
+			}
+		}
 		f( d->mCommand );
 	}
 }

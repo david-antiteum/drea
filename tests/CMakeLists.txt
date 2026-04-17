@@ -4,8 +4,12 @@ project( drea-test )
 
 find_package(Catch2 REQUIRED)
 
-set( SOURCES 
+set( SOURCES
 	main.cpp
+	CommandTest.cpp
+	OptionTest.cpp
+	CommanderTest.cpp
+	ConfigTest.cpp
 )
 add_executable( ${PROJECT_NAME}
 	${SOURCES}
