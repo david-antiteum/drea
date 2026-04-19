@@ -17,6 +17,7 @@ struct DREA_CORE_API Command
 	std::string						mParentCommand;
 	int								mNbParams = 1;
 	int								mMinParams = -1;
+	bool							mHidden = false;
 	static const int				mUnlimitedParams = 0xfffffffa;
 
 	[[nodiscard]] int numberOfParams() const;

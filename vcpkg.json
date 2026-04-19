@@ -1,6 +1,6 @@
 {
 	"name": "drea",
-	"version": "0.1.0",
+	"version": "0.30.0",
 	"dependencies": [
 		"fmt",
 		"spdlog",
@@ -11,6 +11,11 @@
 		"uriparser",
 		"tl-expected",
 		"ms-gsl",
-		"catch2"
+		"catch2",
+		{
+			"name": "aws-sdk-cpp",
+			"default-features": false,
+			"features": ["secretsmanager"]
+		}
 	]
 }

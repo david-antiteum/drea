@@ -1,0 +1,8 @@
+Package: aws-c-io
+Version: 0.22.0
+Depends: aws-c-cal, aws-c-common, s2n, vcpkg-cmake, vcpkg-cmake-config
+Architecture: arm64-osx
+Multi-Arch: same
+Abi: a52705e13206e9c3557b98e13685dad687a2e02424c6ae4908f033139a8b306e
+Description: Handles all IO and TLS work for application protocols.
+Status: install ok installed

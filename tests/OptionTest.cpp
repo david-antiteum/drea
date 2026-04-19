@@ -84,3 +84,9 @@ TEST_CASE( "Option::toString/fromString round-trip bool true", "[option]" )
 	OptionValue v = opt.fromString( "true" );
 	REQUIRE( std::get<bool>( v ) == true );
 }
+
+TEST_CASE( "Option::mSensitive defaults to false", "[option]" )
+{
+	Option opt;
+	REQUIRE( opt.mSensitive == false );
+}

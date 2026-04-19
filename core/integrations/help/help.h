@@ -30,6 +30,9 @@ static void help( const drea::core::App & app, std::string_view commandName )
 			bool anySubCmd = false;
 
 			app.commander().commands( [ &offset, &anySubCmd ](const Command & command ){
+				if( command.mHidden ){
+					return;
+				}
 				offset = std::max<std::string::size_type>( offset, command.mName.size() + 2 );
 				if( !command.mSubcommand.empty() ){
 					anySubCmd = true;
@@ -39,6 +42,9 @@ static void help( const drea::core::App & app, std::string_view commandName )
 				offset += 8;
 			}
 			app.commander().commands( [ offset ](const Command & command ){
+				if( command.mHidden ){
+					return;
+				}
 				if( command.mParentCommand.empty() ){
 					std::string::size_type cmdSize = 2 + command.mName.size();
 					fmt::print( "  {}", command.mName );
@@ -74,9 +80,9 @@ static void help( const drea::core::App & app, std::string_view commandName )
 				if( !cmd->mSubcommand.empty() ){
 					std::string::size_type offset = 0;
 					bool anySubCmd = false;
-				
+
 					for( const std::string & subCmdName: cmd->mSubcommand ){
-						if( auto subCmd = app.commander().find( std::string( commandName ) + "." + subCmdName ) ){
+						if( auto subCmd = app.commander().find( std::string( commandName ) + "." + subCmdName ); subCmd && !subCmd->mHidden ){
 							offset = std::max<std::string::size_type>( offset, subCmd->mName.size() + 2 );
 							if( !subCmd->mSubcommand.empty() ){
 								anySubCmd = true;
@@ -88,9 +94,9 @@ static void help( const drea::core::App & app, std::string_view commandName )
 					}
 					fmt::print( "\nCommands:\n");
 					for( const std::string & subCmdName: cmd->mSubcommand ){
-						if( auto subCmd = app.commander().find( std::string( commandName ) + "." + subCmdName ) ){
+						if( auto subCmd = app.commander().find( std::string( commandName ) + "." + subCmdName ); subCmd && !subCmd->mHidden ){
 							std::string::size_type cmdSize = 2 + subCmd->mName.size();
-					
+
 							fmt::print( "  {}", subCmd->mName );
 							if( !subCmd->mSubcommand.empty() ){
 								fmt::print( " COMMAND" );
@@ -148,6 +154,8 @@ static void helpOption( const Option & option, std::string::size_type offset, bo
 	fmt::print( "{}", option.mDescription );
 	if( option.mValues.empty() ){
 		fmt::print( "\n" );
+	}else if( option.mSensitive ){
+		fmt::print( ". Default (hidden)\n" );
 	}else{
 		fmt::print( ". Default" );
 		for( const auto & v: option.mValues ){

@@ -219,7 +219,7 @@ void drea::core::Commander::unknownCommand( std::string_view command ) const
 		std::string		bestCmd;
 
 		for( const auto & cmd: d->mCommands ){
-			if( cmd->mParentCommand.empty() ){
+			if( cmd->mParentCommand.empty() && !cmd->mHidden ){
 				size_t	nd = levenshtein( command, cmd->mName );
 				if( bestCmd.empty() || nd < bestDist ){
 					bestDist = nd;

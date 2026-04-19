@@ -1,11 +1,12 @@
-cmake_minimum_required( VERSION 3.12 )
+cmake_minimum_required( VERSION 3.21 )
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 	set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
 
-project( drea VERSION 0.11.1 DESCRIPTION "Drea Framework" LANGUAGES CXX )
+project( drea VERSION 0.30.0 DESCRIPTION "Drea Framework" LANGUAGES CXX )
 
 option( BUILD_REST_USE "Build support to access REST services" ON )
+option( ENABLE_AWS "Build support for AWS Secrets Manager as a config source" OFF )
 
 find_package( fmt CONFIG REQUIRED )
 find_package( spdlog CONFIG REQUIRED )
@@ -46,6 +47,12 @@ if( nlohmann_json_FOUND )
 	add_compile_definitions( ENABLE_JSON )
 else()
 	message( "Could not find nlohmann_json. Disabling JSON support." )
+endif()
+
+if( ENABLE_AWS )
+	find_package( AWSSDK CONFIG REQUIRED COMPONENTS secretsmanager )
+	add_compile_definitions( ENABLE_AWS )
+	link_libraries( ${AWSSDK_LINK_LIBRARIES} )
 endif()
 
 find_path( CPPTOML_INCLUDE_DIR cpptoml.h )

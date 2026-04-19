@@ -31,10 +31,3 @@ commands:
     description: count the characters of a text arguments
     local-options:
       - equal
-remote-config:
-#  - provider: consul
-#    address: http://127.0.0.1:8500
-#    key: calculator-key
-#  - provider: etcd
-#    address: http://127.0.0.1:2379
-#    key: calculator-key

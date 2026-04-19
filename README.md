@@ -14,7 +14,7 @@ Drea aims to give you maximum functionality with minimum ceremony. Declare your 
   - files (TOML, YAML, JSON)
   - environment variables
   - command-line flags
-  - KV stores (Consul, etcd)
+  - remote sources via `--config-source` (currently AWS Secrets Manager)
 - Input validation, including automatic argument-count checks and configuration files
 
 ## An example
@@ -163,6 +163,24 @@ A command has the following information:
 
 When `run()` is invoked, Drea validates the argument count against `params` (and `min-params` if set) and reports an error without calling the callback if they do not match.
 
+### Hiding commands at runtime
+
+Set `Command::mHidden = true` to exclude a command from `--help`, bash autocompletion, and the "did you mean?" suggestions. Hidden commands still execute when invoked by name, so they are useful for engineering-only diagnostics, feature-flagged operations, role-gated commands, etc.
+
+Hiding is always a runtime decision (there is no YAML flag for it), so the decision can depend on environment, license, authenticated role, a CLI flag, or any other context known to the app:
+
+```c++
+if( !userIsAdmin ) {
+    if( auto cmd = app.commander().find( "debug" ) ) {
+        cmd->mHidden = true;
+    }
+}
+```
+
+Commands added programmatically can ship with `mHidden = true` from the start; use this for commands that are never declared in `commands.yml`. See `examples/hidden/` for a full sample, including a `--dev` flag that toggles hiding.
+
+Note: hiding applied after `parse()` only affects `--help` rendering and autocompletion. "Did you mean?" suggestions are emitted during `parse()`. To suppress hidden names from those errors too, set `mHidden` before calling `parse()` using a condition that does not depend on CLI flags.
+
 ## Configuration
 
 Use configuration options to modify the behavior of commands and to set values for required parameters.
@@ -172,15 +190,74 @@ Use configuration options to modify the behavior of commands and to set values f
 The order of evaluation, from lower to higher priority:
 
 - defaults
-- KV store (Consul or etcd)
+- remote config sources (`--config-source`, see below)
 - config file
 - environment variables
 - command-line flags
 - explicit call to `Config::set`
 
+### Remote config sources
+
+Drea can load configuration from remote systems using the repeatable `--config-source <uri>` command-line flag. The payload is parsed as JSON and merged into the app's options (nested objects flatten into dotted keys).
+
+Supported schemes:
+
+- `aws://<region>/<secret-id>` — AWS Secrets Manager. Fetches the secret string using the local IAM principal (SDK default credential chain). Requires drea built with `-DENABLE_AWS=ON` and `aws-sdk-cpp[secretsmanager]` installed. An empty region (`aws:///<secret-id>`) falls back to the SDK default region resolution.
+
+Example:
+
+```bash
+./myapp --config-source aws://us-east-1/prod/myapp/config
+```
+
+The secret is expected to be a JSON document, for instance:
+
+```json
+{
+  "db": {
+    "host": "db.example.com",
+    "password": "s3cr3t"
+  }
+}
+```
+
+This populates `db.host` and `db.password` options. The flag is repeatable, so multiple secrets can be merged. See `examples/aws-secrets/` for a runnable sample.
+
+> The legacy `remote-config:` YAML block and `Config::addRemoteProvider` API have been removed. Migrate to `--config-source`.
+
 ### Boolean negation
 
 Boolean options can be explicitly disabled from the command line by prefixing them with `--no-`. For example, if `dry-run` defaults to `true` (from a config file or a declared default), passing `--no-dry-run` on the command line overrides it to `false`. This works automatically for any option of type `bool`.
+
+### Sensitive options
+
+Mark an option as sensitive to hide its default value from `--help`. Useful for passwords, API tokens, or keys that are loaded from a config file or a remote source and would otherwise be printed in the help output.
+
+In `commands.yml`:
+
+```yaml
+options:
+  - option: db-password
+    description: Database password
+    type: string
+    sensitive: true
+```
+
+Or programmatically:
+
+```c++
+drea::core::Option pw;
+pw.mName = "db-password";
+pw.mType = typeid( std::string );
+pw.mSensitive = true;
+app.config().add( pw );
+```
+
+The option still parses and loads its value normally; only the help rendering is affected. In `--help`, the default appears as:
+
+```text
+--db-password password  Database password. Default (hidden)
+```
 
 ## Man pages
 

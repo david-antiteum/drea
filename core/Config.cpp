@@ -43,8 +43,10 @@ namespace std {
 
 #ifdef ENABLE_REST_USE
 	#include "integrations/graylog/graylog_sink.h"
-	#include "integrations/etcd/kv_store.h"
-	#include <consulcpp/ConsulCpp>
+#endif
+
+#ifdef ENABLE_AWS
+	#include "integrations/aws/secrets_manager.h"
 #endif
 
 #include "Config.h"
@@ -56,7 +58,7 @@ static std::string getenv( const std::string & prefix, const std::string & name 
 {
 	std::string		res;
 	char			*env_p = nullptr;
-#ifdef WIN32			
+#ifdef WIN32
 	size_t 	sz = 0;
 	if( _dupenv_s( &env_p, &sz, (prefix + "_" + name).c_str() ) == 0 && env_p ){
 		res = env_p;
@@ -71,13 +73,6 @@ static std::string getenv( const std::string & prefix, const std::string & name 
 	return res;
 }
 
-struct RemoteProvider
-{
-	std::string		mProvider;
-	std::string		mHost;
-	std::string		mKey;
-};
-
 }
 
 struct drea::core::Config::Private
@@ -86,7 +81,6 @@ struct drea::core::Config::Private
 	std::vector<std::string>				mFlags;
 	std::vector<std::unique_ptr<Option>>	mOptions;
 	std::string								mEnvPrefix;
-	std::vector<RemoteProvider>				mRemoteProviders;
 	App										& mApp;
 
 	explicit Private( App & app ) : mApp( app )
@@ -229,6 +223,50 @@ struct drea::core::Config::Private
 			}
 		}
 	}
+
+	// Parses "aws://<region>/<secret-id>". An empty region means "use the SDK default chain".
+	// A value with no '/' after the scheme is treated as the secret id with no explicit region.
+	static std::pair<std::string, std::string> parseAwsUri( const std::string & uri )
+	{
+		constexpr std::string_view prefix = "aws://";
+		std::string rest = uri.substr( prefix.size() );
+		if( rest.empty() ){
+			return {};
+		}
+		auto slash = rest.find( '/' );
+		if( slash == std::string::npos ){
+			return { std::string(), rest };
+		}
+		return { rest.substr( 0, slash ), rest.substr( slash + 1 ) };
+	}
+
+	void fetchConfigSource( const std::string & uri )
+	{
+		constexpr std::string_view awsPrefix = "aws://";
+		if( uri.size() >= awsPrefix.size() && uri.compare( 0, awsPrefix.size(), awsPrefix ) == 0 ){
+#ifdef ENABLE_AWS
+			auto [region, secretId] = parseAwsUri( uri );
+			if( secretId.empty() ){
+				spdlog::error( "Invalid config-source URI '{}': missing secret id", uri );
+				return;
+			}
+			readConfigJSON( integrations::aws::SecretsManager( region ).get( secretId ) );
+#else
+			spdlog::error( "config-source '{}' requires drea built with ENABLE_AWS", uri );
+#endif
+		}else{
+			spdlog::warn( "Unsupported config-source scheme: '{}'", uri );
+		}
+	}
+
+	void readConfigSources( const std::vector<std::string> & args )
+	{
+		for( int i = 0; i < int(args.size()) - 1; i++ ){
+			if( args.at( i ) == "--config-source" ){
+				fetchConfigSource( args.at( i + 1 ) );
+			}
+		}
+	}
 };
 
 drea::core::Config::Config( drea::core::App & app ) : d( std::make_unique<Private>( app ) )
@@ -261,6 +299,11 @@ drea::core::Config & drea::core::Config::addDefaults()
 		},
 		{
 			"version", "", "print version information and quit"
+		},
+		{
+			"config-source", "uri", "read configs from a remote source. Can be repeated. "
+			                       "Supported schemes: aws://<region>/<secret-id> (requires ENABLE_AWS)",
+			{}, typeid( std::string )
 		},
 		{
 			"log-file", "file", "log messages to the file <file>", {}, typeid( std::string )
@@ -322,11 +365,6 @@ void drea::core::Config::setEnvPrefix( const std::string & value )
 	d->mEnvPrefix = value;
 }
 
-void drea::core::Config::addRemoteProvider( const std::string & provider, const std::string & host, const std::string & key )
-{
-	d->mRemoteProviders.push_back( { provider, host, key } );
-}
-
 jss::object_ptr<drea::core::Option> drea::core::Config::find( std::string_view optionName ) const
 {
 	return d->find( optionName );
@@ -336,7 +374,7 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 {
 	// Order (lower to higher)
 	// - defaults
-	// - KV Store (as Consul or etcd)
+	// - remote config sources (--config-source)
 	// - config file
 	// - env variables
 	// - command line flags
@@ -351,22 +389,9 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 			registerUse( option->mName );
 		}
 	}
-	// KV Store
-#ifdef ENABLE_REST_USE
-	for( const RemoteProvider & provider: d->mRemoteProviders ){
-		if( provider.mProvider == "consul" ){
-			if( consulcpp::Consul consul; consul.connect( provider.mHost )){
-				auto	valueMaybe = consul.kv().get( provider.mKey );
+	// Remote config sources: --config-source <uri> (repeatable).
+	d->readConfigSources( args );
 
-				if( valueMaybe ){
-					d->readConfig( valueMaybe.value() );
-				}
-			}
-		}else if( provider.mProvider == "etcd" ){
-			d->readConfig( integrations::etcd::KVStore( provider.mHost ).get( provider.mKey ) );
-		}
-	}
-#endif
 	// Read the config file
 	d->readConfig( args );
 

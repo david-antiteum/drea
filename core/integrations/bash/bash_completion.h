@@ -18,7 +18,7 @@ static std::list<std::string> calculateAutoCompletion( const drea::core::App & a
 
 	if( app.commander().arguments().size() == 0 ){
 		app.commander().commands( [&res]( const Command & cmd ){
-			if( cmd.mParentCommand.empty() ){
+			if( cmd.mParentCommand.empty() && !cmd.mHidden ){
 				res.push_back( cmd.mName );
 			}
 		});
@@ -32,6 +32,9 @@ static std::list<std::string> calculateAutoCompletion( const drea::core::App & a
 			std::list<std::string>	possibleCommand;
 
 			app.commander().commands( [&exactCommand, &possibleCommand, &app]( const Command & cmd ){
+				if( cmd.mHidden ){
+					return;
+				}
 				if( app.commander().arguments().at(0) == cmd.mName ){
 					exactCommand = cmd.mName;
 				}else if( cmd.mName.find( app.commander().arguments().at(0), 0 ) != std::string::npos ){

@@ -1,0 +1,8 @@
+Package: aws-c-common
+Version: 0.12.4
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: arm64-osx
+Multi-Arch: same
+Abi: 275a8ab3a74c54411cefb3869b0efd03fedcb4e5507f7892c8426d67d82b8c7c
+Description: AWS common library for C
+Status: install ok half-installed

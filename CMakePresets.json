@@ -1,0 +1,106 @@
+{
+	"version": 3,
+	"cmakeMinimumRequired": {
+		"major": 3,
+		"minor": 22,
+		"patch": 0
+	},
+	"configurePresets": [
+		{
+			"name": "default-vcpkg",
+			"hidden": true,
+			"description": "Default config using Ninja generator with vcpkg libraries",
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/build/${presetName}",
+			"cacheVariables": {
+				"CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+				"BUILD_EXAMPLES": "ON",
+				"ENABLE_AWS": "OFF"
+			}
+		},
+		{
+			"name": "default-system",
+			"hidden": true,
+			"description": "Default config using Ninja generator with system libraries (apt/brew/etc.)",
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/build/${presetName}",
+			"cacheVariables": {
+				"USE_SYSTEM_LIBS": "ON",
+				"BUILD_EXAMPLES": "ON",
+				"ENABLE_AWS": "OFF"
+			}
+		},
+		{
+			"name": "debug",
+			"inherits": "default-vcpkg",
+			"displayName": "Debug",
+			"description": "Debug build with examples and tests (vcpkg)",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		},
+		{
+			"name": "release",
+			"inherits": "default-vcpkg",
+			"displayName": "Release",
+			"description": "Release build with examples and tests (vcpkg)",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
+			}
+		},
+		{
+			"name": "sdk",
+			"inherits": "default-vcpkg",
+			"displayName": "SDK",
+			"description": "SDK build: library only, no examples, no tests (vcpkg)",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release",
+				"BUILD_EXAMPLES": "OFF",
+				"BUILD_TESTING": "OFF"
+			}
+		},
+		{
+			"name": "debug-system",
+			"inherits": "default-system",
+			"displayName": "Debug (system libs)",
+			"description": "Debug build with examples and tests, system libraries",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		},
+		{
+			"name": "release-system",
+			"inherits": "default-system",
+			"displayName": "Release (system libs)",
+			"description": "Release build with examples and tests, system libraries",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
+			}
+		},
+		{
+			"name": "sdk-system",
+			"inherits": "default-system",
+			"displayName": "SDK (system libs)",
+			"description": "SDK build: library only, no examples, no tests, system libraries",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release",
+				"BUILD_EXAMPLES": "OFF",
+				"BUILD_TESTING": "OFF"
+			}
+		}
+	],
+	"buildPresets": [
+		{ "name": "debug",          "configurePreset": "debug" },
+		{ "name": "release",        "configurePreset": "release" },
+		{ "name": "sdk",            "configurePreset": "sdk" },
+		{ "name": "debug-system",   "configurePreset": "debug-system" },
+		{ "name": "release-system", "configurePreset": "release-system" },
+		{ "name": "sdk-system",     "configurePreset": "sdk-system" }
+	],
+	"testPresets": [
+		{ "name": "debug",          "configurePreset": "debug",          "output": { "outputOnFailure": true } },
+		{ "name": "release",        "configurePreset": "release",        "output": { "outputOnFailure": true } },
+		{ "name": "debug-system",   "configurePreset": "debug-system",   "output": { "outputOnFailure": true } },
+		{ "name": "release-system", "configurePreset": "release-system", "output": { "outputOnFailure": true } }
+	]
+}

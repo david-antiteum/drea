@@ -1,0 +1,7 @@
+Package: curl
+Feature: openssl
+Depends: openssl
+Architecture: arm64-osx
+Multi-Arch: same
+Description: TLS support (OpenSSL)
+Status: install ok installed

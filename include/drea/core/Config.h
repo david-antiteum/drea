@@ -19,9 +19,10 @@ class App;
 
 	Reads data from (in this order):
 	- defaults
+	- remote config sources passed on the command line as --config-source <uri>.
+	  Supported URI schemes: aws://<region>/<secret-id> (requires ENABLE_AWS).
 	- config file (if --config-file or Config::setDefaultConfigFile are used)
 	- env variables (if the prefix is set, \see Config::setEnvPrefix)
-	- external systems (if a remote provider is set, \see Config::addRemoteProvider)
 	- command line flags
 	- set values by the app (\see Config::set)
 */
@@ -54,11 +55,6 @@ public:
 		we will look for the variable CAL_verbose
 	*/
 	void setEnvPrefix( const std::string & value );
-
-	/*! Add a remote provider (only consul for now) in a endpoint to read config settings (in YAML or JSON)
-		stored in a key.
-	*/
-	void addRemoteProvider( const std::string & provider, const std::string & host, const std::string & key );
 
 	/*! Any option?
 	*/

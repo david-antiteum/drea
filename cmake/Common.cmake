@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.16...3.22 )
+cmake_minimum_required( VERSION 3.21 )
 
 if( CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release)$")
 	message( FATAL_ERROR "Invalid value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}. Use Debug or Release." )

@@ -1,0 +1,8 @@
+Package: s2n
+Version: 1.5.25
+Depends: openssl, vcpkg-cmake, vcpkg-cmake-config
+Architecture: arm64-osx
+Multi-Arch: same
+Abi: 5ecb7cf5e98c0dcb251523b289c989d1602295fccbba5f5e16eb3a9d4547ef74
+Description: C99 implementation of the TLS/SSL protocols.
+Status: install ok half-installed

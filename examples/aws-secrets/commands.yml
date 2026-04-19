@@ -1,0 +1,27 @@
+app: aws-secrets
+version: 0.0.1
+description: |
+  Sample application that loads its configuration from AWS Secrets Manager.
+  Drea is available at https://github.com/david-antiteum/drea.
+
+  Run with:
+    ./aws-secrets --config-source aws://<region>/<secret-id>
+
+  Example:
+    ./aws-secrets --config-source aws://us-east-1/drea/aws-secrets-example
+
+  The secret should contain JSON like:
+    {
+      "db": {
+        "host": "db.example.com",
+        "port": 5432,
+        "user": "app",
+        "password": "s3cr3t"
+      }
+    }
+
+  The local IAM principal must have secretsmanager:GetSecretValue permission
+  on the secret. Credentials are resolved via the default AWS SDK chain
+  (env vars, shared credentials file, SSO, EC2/ECS/IAM Roles Anywhere, etc).
+
+  --config-source is repeatable, so multiple secrets can be merged.

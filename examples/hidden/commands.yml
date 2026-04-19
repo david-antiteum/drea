@@ -1,0 +1,32 @@
+app: hidden
+version: 0.0.1
+description: |
+  Sample showing how to hide commands from --help at runtime, based on conditions.
+  Drea is available at https://github.com/david-antiteum/drea.
+
+  There is no YAML flag for hiding commands. Hiding is always a runtime
+  decision: the application sets Command::mHidden = true after parse() based
+  on whatever context it has (build flags, env vars, CLI options, licenses,
+  feature toggles, etc).
+
+  This sample defines three commands:
+    - "ping":     always visible
+    - "debug":    declared in commands.yml, hidden at runtime unless --dev is set
+    - "internal": added programmatically, hidden at runtime unless --dev is set
+
+  Hidden commands still execute when invoked by name. Try:
+    ./hidden                # lists only "ping"
+    ./hidden --help         # same
+    ./hidden --dev --help   # lists all three
+    ./hidden debug          # runs even when hidden
+    ./hidden internal       # runs even when hidden
+
+options:
+  - option: dev
+    description: unhide developer-only commands
+
+commands:
+  - command: ping
+    description: print "pong"
+  - command: debug
+    description: dump internal state

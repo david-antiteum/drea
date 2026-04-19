@@ -1,11 +1,11 @@
-cmake_minimum_required( VERSION 3.12...3.16 )
+cmake_minimum_required( VERSION 3.21 )
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 include( Common )
 include( Tools )
 
-project( drea VERSION 0.11.1 DESCRIPTION "Drea Framework" LANGUAGES CXX )
+project( drea VERSION 0.30.0 DESCRIPTION "Drea Framework" LANGUAGES CXX )
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 	include( CTest )
@@ -23,6 +23,10 @@ if( BUILD_EXAMPLES )
 	add_subdirectory( examples/say )
 	add_subdirectory( examples/calculator )
 	add_subdirectory( examples/multi )
+	add_subdirectory( examples/hidden )
+	if( ENABLE_AWS )
+		add_subdirectory( examples/aws-secrets )
+	endif()
 endif()
 if( BUILD_TESTING )
 	add_subdirectory( tests )

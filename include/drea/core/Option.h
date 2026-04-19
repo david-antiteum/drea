@@ -27,7 +27,8 @@ struct DREA_CORE_API Option
 	std::type_index				mType = typeid( std::string );
 	Scope						mScope = Scope::Both;
 	int							mNbParams = 1;
-	std::string					mShortVersion = ""; 					
+	std::string					mShortVersion = "";
+	bool						mSensitive = false;
 	static const int			mUnlimitedParams = 0xfffffffa;
 
 	[[nodiscard]] int numberOfParams() const

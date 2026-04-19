@@ -80,3 +80,9 @@ TEST_CASE( "Command::nameOfParamsForHelp preserves legacy bracket style without 
 	REQUIRE( cmd.nameOfParamsForHelp() == "[src] [dst]" );
 }
 
+TEST_CASE( "Command::mHidden defaults to false", "[command]" )
+{
+	Command cmd;
+	REQUIRE( cmd.mHidden == false );
+}
+
