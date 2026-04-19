@@ -1,6 +1,0 @@
-Package: curl
-Feature: ssl
-Architecture: arm64-osx
-Multi-Arch: same
-Description: Default SSL / TLS implementation.
-Status: install ok half-installed

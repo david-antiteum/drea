@@ -1,9 +1,0 @@
-Package: curl
-Version: 8.16.0
-Depends: vcpkg-cmake, vcpkg-cmake-config, zlib
-Architecture: arm64-osx
-Multi-Arch: same
-Abi: 0f91702411abc88baaab919a38aea0f8e4d5261146656ed7b89f7264f376a64b
-Description: A library for transferring data with URLs
-Default-Features: non-http, ssl
-Status: install ok installed
