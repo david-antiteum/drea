@@ -1,0 +1,27 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(fmt CONFIG)
+find_dependency(spdlog CONFIG)
+find_dependency(yaml-cpp CONFIG)
+find_dependency(tl-expected CONFIG)
+
+set(DREA_BUILT_WITH_REST @BUILD_REST_USE@)
+set(DREA_BUILT_WITH_AWS @ENABLE_AWS@)
+set(DREA_BUILT_WITH_JSON @DREA_JSON_ENABLED@)
+
+if(DREA_BUILT_WITH_REST)
+	find_dependency(uriparser CONFIG)
+	find_dependency(Boost)
+endif()
+if(DREA_BUILT_WITH_JSON)
+	find_dependency(nlohmann_json CONFIG)
+endif()
+if(DREA_BUILT_WITH_AWS)
+	find_dependency(AWSSDK CONFIG COMPONENTS secretsmanager)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/dreaTargets.cmake")
+
+check_required_components(drea)

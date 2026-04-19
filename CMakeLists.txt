@@ -1,17 +1,20 @@
 cmake_minimum_required( VERSION 3.21 )
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+list( APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake )
 
 include( Common )
 include( Tools )
 
 project( drea VERSION 0.30.0 DESCRIPTION "Drea Framework" LANGUAGES CXX )
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+if( CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME )
 	include( CTest )
 endif()
 
-option( BUILD_EXAMPLES "Build examples" ON )
+option( BUILD_EXAMPLES  "Build examples"                                               ON  )
+option( BUILD_REST_USE  "Build support to access REST services"                        ON  )
+option( ENABLE_AWS      "Build support for AWS Secrets Manager as a config source"     OFF )
+option( USE_SYSTEM_LIBS "Use system-installed dependencies (apt/brew/etc) not vcpkg"   OFF )
 
 sonarqube_setup()
 

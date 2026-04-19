@@ -95,7 +95,37 @@ Note that `--reverse` is not listed in the global help: options declared only as
 
 ## How to Build
 
-Use CMake to build and install Drea on Linux, macOS and Windows:
+Drea ships CMake presets (requires CMake >= 3.21 and Ninja). Point `VCPKG_ROOT`
+at your vcpkg checkout and pick a preset:
+
+```bash
+cmake --preset debug
+cmake --build --preset debug
+ctest --preset debug
+```
+
+Available configure presets:
+
+| Preset           | Build type      | Examples | Tests | Toolchain      |
+|------------------|-----------------|----------|-------|----------------|
+| `debug`          | Debug           | yes      | yes   | vcpkg          |
+| `release`        | RelWithDebInfo  | yes      | yes   | vcpkg          |
+| `sdk`            | Release         | no       | no    | vcpkg          |
+| `debug-system`   | Debug           | yes      | yes   | system libs    |
+| `release-system` | RelWithDebInfo  | yes      | yes   | system libs    |
+| `sdk-system`     | Release         | no       | no    | system libs    |
+
+Opt-in vcpkg features (add to the configure call):
+
+```bash
+cmake --preset debug -DVCPKG_MANIFEST_FEATURES=toml        # TOML config files
+cmake --preset debug -DVCPKG_MANIFEST_FEATURES=aws         # AWS Secrets Manager
+cmake --preset debug -DVCPKG_MANIFEST_FEATURES="toml;aws"  # both
+```
+
+To enable the AWS Secrets Manager source in code, also pass `-DENABLE_AWS=ON`.
+
+If you prefer a bare configure (no preset), the usual form still works:
 
 ```bash
 cmake -S . -B build
@@ -296,9 +326,10 @@ HN [discussion]( https://news.ycombinator.com/item?id=19656821 )
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=david-antiteum_drea&metric=alert_status)](https://sonarcloud.io/dashboard?id=david-antiteum_drea)
 
-1. Install and add to the path both build-wrapper and sonar-scanner
-2. Set the SONAR_TOKEN environment variable
-3. Use the sonarqube target:
+1. Install `build-wrapper` and `sonar-scanner`, and make sure both are on your `PATH`.
+2. Set the `SONAR_TOKEN` environment variable.
+3. Reconfigure CMake so it picks up `sonar-scanner`. The `sonarqube` target always exists, but it only runs the scanner when `sonar-scanner` was found at configure time; otherwise it fails with a short message explaining what to install.
+4. Invoke the target:
 
 ```shell
 cmake --build build --target sonarqube

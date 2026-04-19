@@ -4,18 +4,28 @@
 	"dependencies": [
 		"fmt",
 		"spdlog",
-		"boost",
+		"boost-algorithm",
+		"boost-beast",
 		"yaml-cpp",
 		"nlohmann-json",
-		"consulcpp",
 		"uriparser",
 		"tl-expected",
-		"ms-gsl",
-		"catch2",
-		{
-			"name": "aws-sdk-cpp",
-			"default-features": false,
-			"features": ["secretsmanager"]
+		"catch2"
+	],
+	"features": {
+		"aws": {
+			"description": "AWS Secrets Manager config source",
+			"dependencies": [
+				{
+					"name": "aws-sdk-cpp",
+					"default-features": false,
+					"features": ["secretsmanager"]
+				}
+			]
+		},
+		"toml": {
+			"description": "TOML config-file support (cpptoml)",
+			"dependencies": ["cpptoml"]
 		}
-	]
+	}
 }

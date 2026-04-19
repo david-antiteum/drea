@@ -52,21 +52,22 @@ endfunction()
 
 function(sonarqube_setup)
 	if( WIN32 )
-		find_program( sonar-scanner_tmp sonar-scanner.bat )
+		find_program( SONAR_SCANNER_EXECUTABLE sonar-scanner.bat )
 	else()
-		find_program( sonar-scanner_tmp sonar-scanner )
+		find_program( SONAR_SCANNER_EXECUTABLE sonar-scanner )
 	endif()
-	if( sonar-scanner_tmp )
-		set( SONAR_SCANNER_EXECUTABLE ${sonar-scanner_tmp})
-		unset( sonar-scanner_tmp )
 
+	if( SONAR_SCANNER_EXECUTABLE )
 		add_custom_target( sonarqube
-			COMMAND
-				${SONAR_SCANNER_EXECUTABLE}
-			COMMENT
-				"Run sonarqube analysis"
-			WORKING_DIRECTORY 
-				${CMAKE_SOURCE_DIR} 
+			COMMAND ${SONAR_SCANNER_EXECUTABLE}
+			COMMENT "Run sonarqube analysis"
+			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		)
+	else()
+		add_custom_target( sonarqube
+			COMMAND ${CMAKE_COMMAND} -E echo "sonar-scanner not found on PATH. Install it and reconfigure to enable the sonarqube target."
+			COMMAND ${CMAKE_COMMAND} -E false
+			COMMENT "sonarqube target is unavailable (sonar-scanner missing)"
 		)
 	endif()
 endfunction()
@@ -111,12 +112,22 @@ endif()
 
 # XDD
 function( generate_cpp_resource_file INPUT_DIR INPUT_FILE CPP_FILE )
-	add_custom_command( 
+	add_custom_command(
 		OUTPUT ${CPP_FILE}
-		COMMAND cd ${INPUT_DIR} && xxd -i ${INPUT_FILE} ${CPP_FILE} 
+		COMMAND cd ${INPUT_DIR} && xxd -i ${INPUT_FILE} ${CPP_FILE}
 		DEPENDS ${INPUT_DIR}/${INPUT_FILE}
 		COMMENT "Generating header file ${CPP_FILE}"
 		VERBATIM
 	)
 	set_source_files_properties( ${CPP_FILE} PROPERTIES GENERATED TRUE )
+endfunction()
+
+# Set $ORIGIN-relative rpath so binaries find co-installed shared libs.
+function( drea_set_rpath target )
+	if( UNIX )
+		set_target_properties( ${target} PROPERTIES
+			BUILD_RPATH "$ORIGIN"
+			INSTALL_RPATH "$ORIGIN"
+		)
+	endif()
 endfunction()
