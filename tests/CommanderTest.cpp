@@ -3,6 +3,11 @@
 #include <drea/core/App.h>
 #include <drea/core/Commander.h>
 #include <drea/core/Command.h>
+#include <drea/core/Config.h>
+#include <drea/core/Option.h>
+
+#include <iostream>
+#include <sstream>
 
 using drea::core::App;
 using drea::core::Command;
@@ -196,4 +201,164 @@ TEST_CASE( "Commander::run rejects over-max args with min-params set", "[command
 	bool called = false;
 	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
 	REQUIRE_FALSE( called );
+}
+
+// Capture std::cout during a callable's execution.
+namespace {
+struct CoutCapture {
+	std::ostringstream			buffer;
+	std::streambuf *			oldBuf;
+	CoutCapture() : oldBuf( std::cout.rdbuf( buffer.rdbuf() ) ) {}
+	~CoutCapture() { std::cout.rdbuf( oldBuf ); }
+	std::string str() const { return buffer.str(); }
+};
+
+struct BuiltinFixture {
+	char  argv0[16] = "myapp";
+	char* argv[1]   = { argv0 };
+	App   app;
+	BuiltinFixture() : app( 1, argv ) {
+		app.setName( "myapp" );
+		app.setVersion( "1.2.3" );
+		app.setDescription( "Test application" );
+
+		Command hello;
+		hello.mName = "hello";
+		hello.mDescription = "print a greeting";
+		hello.mLocalParameters = { "loud" };
+		app.commander().add( hello );
+
+		drea::core::Option loud;
+		loud.mName = "loud";
+		loud.mDescription = "shout it";
+		loud.mType = typeid( bool );
+		loud.mNbParams = 0;
+		app.config().add( loud );
+
+		app.config().addDefaults();
+		app.commander().addDefaults();
+	}
+};
+}
+
+TEST_CASE( "Commander::addDefaults registers completion and man builtins", "[commander][builtins]" )
+{
+	BuiltinFixture fx;
+	REQUIRE( fx.app.commander().find( "completion" ) );
+	REQUIRE( fx.app.commander().find( "man" ) );
+}
+
+TEST_CASE( "completion bash produces a bash script", "[commander][builtins]" )
+{
+	BuiltinFixture fx;
+	fx.app.commander().configure( { "completion", "bash" } );
+
+	CoutCapture cap;
+	bool called = false;
+	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
+	REQUIRE_FALSE( called );
+
+	const std::string out = cap.str();
+	REQUIRE( out.find( "#!/usr/bin/env bash" ) != std::string::npos );
+	REQUIRE( out.find( "_myapp()" ) != std::string::npos );
+	REQUIRE( out.find( "complete -F _myapp myapp" ) != std::string::npos );
+	REQUIRE( out.find( "hello" ) != std::string::npos );
+	REQUIRE( out.find( "--loud" ) != std::string::npos );
+}
+
+TEST_CASE( "completion zsh produces a compdef script", "[commander][builtins]" )
+{
+	BuiltinFixture fx;
+	fx.app.commander().configure( { "completion", "zsh" } );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	const std::string out = cap.str();
+	REQUIRE( out.find( "#compdef myapp" ) != std::string::npos );
+	REQUIRE( out.find( "_myapp_opts_for" ) != std::string::npos );
+	REQUIRE( out.find( "'hello:print a greeting'" ) != std::string::npos );
+}
+
+TEST_CASE( "completion fish produces fish completions", "[commander][builtins]" )
+{
+	BuiltinFixture fx;
+	fx.app.commander().configure( { "completion", "fish" } );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	const std::string out = cap.str();
+	REQUIRE( out.find( "complete -c myapp" ) != std::string::npos );
+	REQUIRE( out.find( "-a 'hello'" ) != std::string::npos );
+	REQUIRE( out.find( "-l loud" ) != std::string::npos );
+}
+
+TEST_CASE( "completion with unsupported shell does not print a script", "[commander][builtins]" )
+{
+	BuiltinFixture fx;
+	fx.app.commander().configure( { "completion", "powershell" } );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	REQUIRE( cap.str().find( "#!/usr/bin/env bash" ) == std::string::npos );
+	REQUIRE( cap.str().find( "#compdef" ) == std::string::npos );
+}
+
+TEST_CASE( "man produces a roff man page", "[commander][builtins]" )
+{
+	BuiltinFixture fx;
+	fx.app.commander().configure( { "man" } );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	const std::string out = cap.str();
+	REQUIRE( out.find( ".TH MYAPP 1" ) != std::string::npos );
+	REQUIRE( out.find( ".SH NAME" ) != std::string::npos );
+	REQUIRE( out.find( ".SH SYNOPSIS" ) != std::string::npos );
+	REQUIRE( out.find( ".SH COMMANDS" ) != std::string::npos );
+	REQUIRE( out.find( "myapp 1.2.3" ) != std::string::npos );
+	REQUIRE( out.find( "hello" ) != std::string::npos );
+}
+
+TEST_CASE( "man <command> produces a per-command man page", "[commander][builtins]" )
+{
+	BuiltinFixture fx;
+	fx.app.commander().configure( { "man", "hello" } );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	const std::string out = cap.str();
+	REQUIRE( out.find( ".TH MYAPP\\-HELLO 1" ) != std::string::npos );
+	REQUIRE( out.find( "print a greeting" ) != std::string::npos );
+	REQUIRE( out.find( ".BR myapp (1)" ) != std::string::npos );
+}
+
+TEST_CASE( "user command named completion takes precedence over builtin", "[commander][builtins]" )
+{
+	char argv0[] = "myapp";
+	char* argv[] = { argv0 };
+	App app( 1, argv );
+	app.setName( "myapp" );
+
+	Command userCompletion;
+	userCompletion.mName = "completion";
+	userCompletion.mDescription = "user-defined";
+	userCompletion.mNbParams = 0;
+	app.commander().add( userCompletion );
+
+	app.config().addDefaults();
+	app.commander().addDefaults();
+
+	app.commander().configure( { "completion" } );
+
+	CoutCapture cap;
+	bool called = false;
+	app.commander().run( [&]( const std::string & cmd ){ if( cmd == "completion" ) called = true; } );
+
+	REQUIRE( called );
+	REQUIRE( cap.str().find( "#!/usr/bin/env bash" ) == std::string::npos );
 }

@@ -291,11 +291,48 @@ The option still parses and loads its value normally; only the help rendering is
 
 ## Man pages
 
-TODO
+Drea apps expose a built-in `man` command that prints a groff-formatted man page to standard output. Pipe it through `groff`/`mandoc` to preview, or install it under `/usr/local/share/man/man1/` (or `$MANPATH`):
+
+```bash
+./myapp man > myapp.1
+./myapp man | mandoc              # preview
+sudo install -m 0644 myapp.1 /usr/local/share/man/man1/
+man myapp
+```
+
+Pass a command name to get a per-command page. Nested subcommands use dot- or space-separated paths:
+
+```bash
+./myapp man container > myapp-container.1
+./myapp man "container ls" > myapp-container-ls.1
+```
+
+The page is derived from the same metadata used by `--help`: app name, version, description, commands, subcommands, and options. Hidden commands are omitted. The `man` command is only registered when the application does not already define one with the same name.
 
 ## Shell integration
 
-TODO
+Drea apps expose a built-in `completion` command that prints a completion script to standard output for `bash`, `zsh`, or `fish`:
+
+```bash
+./myapp completion bash
+./myapp completion zsh
+./myapp completion fish
+```
+
+Typical install:
+
+```bash
+# bash (per user)
+./myapp completion bash > ~/.local/share/bash-completion/completions/myapp
+
+# zsh (per user — ensure the directory is on $fpath before compinit)
+./myapp completion zsh > "${fpath[1]}/_myapp"
+
+# fish (per user)
+./myapp completion fish > ~/.config/fish/completions/myapp.fish
+```
+
+All three shells complete top-level commands, subcommands, and per-command options (including short forms where declared). Hidden commands are omitted. As with `man`, the `completion` command is skipped when the application already defines one.
 
 ## Readings
 

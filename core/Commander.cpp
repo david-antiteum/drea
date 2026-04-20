@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <optional>
 #include <memory>
+#include <set>
+#include <iostream>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/fmt.h>
@@ -13,6 +15,9 @@
 
 #include "integrations/help/help.h"
 #include "integrations/bash/bash_completion.h"
+#include "integrations/zsh/zsh_completion.h"
+#include "integrations/fish/fish_completion.h"
+#include "integrations/man/man.h"
 #include "utilities/string.h"
 
 struct drea::core::Commander::Private
@@ -20,6 +25,7 @@ struct drea::core::Commander::Private
 	std::string								mCommand;
 	std::vector<std::string>				mArguments;
 	std::vector<std::unique_ptr<Command>>	mCommands;
+	std::set<std::string>					mBuiltins;
 	App										& mApp;
 
 	explicit Private( App & app ) : mApp( app )
@@ -106,7 +112,65 @@ void drea::core::Commander::commands( const std::function<void(const drea::core:
 
 drea::core::Commander & drea::core::Commander::addDefaults()
 {
+	auto hasCommand = [this]( std::string_view name ){
+		for( const auto & c: d->mCommands ){
+			if( c->mParentCommand.empty() && c->mName == name ){
+				return true;
+			}
+		}
+		return false;
+	};
+
+	if( !hasCommand( "completion" ) ){
+		Command cmd;
+		cmd.mName = "completion";
+		cmd.mDescription = "Print a shell completion script";
+		cmd.mParamName = "shell";
+		cmd.mNbParams = 1;
+		cmd.mMinParams = 0;
+		add( cmd );
+		d->mBuiltins.insert( "completion" );
+	}
+	if( !hasCommand( "man" ) ){
+		Command cmd;
+		cmd.mName = "man";
+		cmd.mDescription = "Print a man page for this application";
+		cmd.mParamName = "command";
+		cmd.mNbParams = 1;
+		cmd.mMinParams = 0;
+		add( cmd );
+		d->mBuiltins.insert( "man" );
+	}
 	return *this;
+}
+
+static bool runBuiltin( drea::core::App & app, const std::string & cmd, const std::vector<std::string> & args )
+{
+	if( cmd == "completion" ){
+		std::string shell = args.empty() ? std::string( "bash" ) : args.front();
+		if( shell == "bash" ){
+			drea::core::integrations::Bash::generateAutoCompletion( app, std::cout );
+		}else if( shell == "zsh" ){
+			drea::core::integrations::Zsh::generateAutoCompletion( app, std::cout );
+		}else if( shell == "fish" ){
+			drea::core::integrations::Fish::generateAutoCompletion( app, std::cout );
+		}else{
+			app.logger().error( "Unsupported shell \"{}\". Supported: bash, zsh, fish.", shell );
+			return true;
+		}
+		return true;
+	}
+	if( cmd == "man" ){
+		if( args.empty() ){
+			drea::core::integrations::Man::generateManPage( app, std::cout );
+		}else{
+			std::string target = args.front();
+			std::replace( target.begin(), target.end(), ' ', '.' );
+			drea::core::integrations::Man::generateManPage( app, target, std::cout );
+		}
+		return true;
+	}
+	return false;
 }
 
 jss::object_ptr<drea::core::Command> drea::core::Commander::add( const drea::core::Command & cmd )
@@ -197,6 +261,11 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 					wrongNumberOfArguments( d->mCommand );
 					return;
 				}
+			}
+		}
+		if( !d->mCommand.empty() && d->mBuiltins.count( d->mCommand ) ){
+			if( runBuiltin( d->mApp, d->mCommand, d->mArguments ) ){
+				return;
 			}
 		}
 		f( d->mCommand );

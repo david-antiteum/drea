@@ -3,7 +3,9 @@
 #include <spdlog/fmt/fmt.h>
 #include <iostream>
 #include <fstream>
+#include <ostream>
 #include <list>
+#include <set>
 
 
 #include "App.h"
@@ -60,49 +62,61 @@ static std::list<std::string> calculateAutoCompletion( const drea::core::App & a
 }
 
 // as seem in https://debian-administration.org/article/317/An_introduction_to_bash_completion_part_2
+static void generateAutoCompletion( const drea::core::App & app, std::ostream & out )
+{
+	out << "#!/usr/bin/env bash\n";
+	out << "_" << app.name() << "()\n";
+	out << "{\n";
+	out << "    local cur prev opts base\n";
+	out << "    COMPREPLY=()\n";
+	out << "    cur=\"${COMP_WORDS[COMP_CWORD]}\"\n";
+	out << "    prev=\"${COMP_WORDS[COMP_CWORD-1]}\"\n";
+	out << "    opts=\"";
+	app.commander().commands( [&out]( const Command & cmd ){
+		if( !cmd.mHidden && cmd.mParentCommand.empty() ){
+			out << " " << cmd.mName;
+		}
+	});
+	out << "\"\n";
+
+	out << "    case \"${prev}\" in\n";
+	app.commander().commands( [&out]( const Command & cmd ){
+		if( cmd.mHidden ){
+			return;
+		}
+		out << "        " << cmd.mName << ")\n";
+		out << "            COMPREPLY=( $(compgen -W \"";
+		for( const auto & sub: cmd.mSubcommand ){
+			out << " " << sub;
+		}
+		for( const auto & str: cmd.mLocalParameters ){
+			out << " --" << str;
+		}
+		for( const auto & str: cmd.mGlobalParameters ){
+			out << " --" << str;
+		}
+		out << "\" -- ${cur}) )\n";
+		out << "            return 0\n";
+		out << "            ;;\n";
+	});
+	out << "        *)\n";
+	out << "        ;;\n";
+	out << "    esac\n";
+
+	out << "    COMPREPLY=($(compgen -W \"${opts}\" -- ${cur}))\n";
+	out << "    return 0\n";
+	out << "}\n";
+	out << "complete -F _" << app.name() << " " << app.name() << "\n";
+}
+
 static void generateAutoCompletion( const drea::core::App & app )
 {
 	std::ofstream completionFile;
-	
+
 	completionFile.open( fmt::format( "{}-completion.sh", app.name() ).c_str(), std::ios::out );
 
 	if( completionFile.is_open() ){
-		completionFile << "#!/bin/bash\n";
-		completionFile << "_" << app.name() << "()\n";
-		completionFile << "{\n";
-		completionFile << "    local cur prev opts base\n";
-		completionFile << "    COMPREPLY=()\n";
-		completionFile << "    cur=\"${COMP_WORDS[COMP_CWORD]}\"\n";
-		completionFile << "    prev=\"${COMP_WORDS[COMP_CWORD-1]}\"\n";
-		completionFile << "    opts=\"";
-		app.commander().commands( [&completionFile]( const Command & cmd ){
-			completionFile << " " << cmd.mName;
-		});
-		completionFile << "\"\n";
-
-		completionFile << "    case \"${prev}\" in\n";
-		app.commander().commands( [&completionFile]( const Command & cmd ){
-			completionFile << "        " << cmd.mName << ")\n";
-			completionFile << "            COMPREPLY=( $(compgen -W \"";
-			for( auto str: cmd.mLocalParameters ){
-				completionFile << " --" << str;
-			}
-			for( auto str: cmd.mGlobalParameters ){
-				completionFile << " --" << str;
-			}
-			completionFile << "\" -- ${cur}) )\n";
-			completionFile << "            return 0\n";
-			completionFile << "            ;;\n";
-		});
-		completionFile << "        *)\n";
-		completionFile << "        ;;\n";
-		completionFile << "    esac\n";
-
-		completionFile << "    COMPREPLY=($(compgen -W \"${opts}\" -- ${cur}))\n";
-		completionFile << "    return 0\n";
-		completionFile << "}\n";
-		completionFile << "complete -F _" << app.name() << " " << app.name() << "\n";
-
+		generateAutoCompletion( app, completionFile );
 		completionFile.close();
 	}
 }
