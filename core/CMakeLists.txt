@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.21 )
 
-project( drea VERSION 0.30.0 DESCRIPTION "Drea Framework" LANGUAGES CXX )
+project( drea VERSION 0.30.1 DESCRIPTION "Drea Framework" LANGUAGES CXX )
 
 # Options are declared in the top-level CMakeLists when drea is the root
 # project. When consumed via add_subdirectory they may already be set by the
@@ -63,6 +63,8 @@ endif()
 #
 # Library target
 #
+
+include( GNUInstallDirs )
 
 add_library( ${PROJECT_NAME}
 	App.cpp
@@ -150,7 +152,6 @@ endif()
 # Install + package config
 #
 
-include( GNUInstallDirs )
 include( CMakePackageConfigHelpers )
 
 install( TARGETS ${PROJECT_NAME}
