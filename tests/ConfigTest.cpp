@@ -62,6 +62,111 @@ TEST_CASE( "Config --X followed by --no-X yields false", "[config]" )
 	REQUIRE( fx.app.config().get<bool>( "verbose" ) == false );
 }
 
+TEST_CASE( "Config --X enables bool option with no default", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "verbose";
+	opt.mType = typeid( bool );
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--verbose" } );
+
+	REQUIRE( fx.app.config().used( "verbose" ) );
+	REQUIRE( fx.app.config().get<bool>( "verbose" ) == true );
+}
+
+TEST_CASE( "Config --X enables bool option that defaulted to false", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "trace";
+	opt.mType = typeid( bool );
+	opt.mValues = { false };
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--trace" } );
+
+	REQUIRE( fx.app.config().used( "trace" ) );
+	REQUIRE( fx.app.config().get<bool>( "trace" ) == true );
+}
+
+TEST_CASE( "Config::set marks option as used", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "log-file";
+	opt.mParamName = "file";
+	opt.mType = typeid( std::string );
+	fx.app.config().add( opt );
+
+	REQUIRE_FALSE( fx.app.config().used( "log-file" ) );
+
+	fx.app.config().set( "log-file", "/tmp/x.log" );
+
+	REQUIRE( fx.app.config().used( "log-file" ) );
+	REQUIRE( fx.app.config().get<std::string>( "log-file" ) == "/tmp/x.log" );
+}
+
+TEST_CASE( "Config --opt=value sets string value", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "log-file";
+	opt.mParamName = "file";
+	opt.mType = typeid( std::string );
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--log-file=/tmp/x.log" } );
+
+	REQUIRE( fx.app.config().used( "log-file" ) );
+	REQUIRE( fx.app.config().get<std::string>( "log-file" ) == "/tmp/x.log" );
+}
+
+TEST_CASE( "Config --opt=value accepts hyphen-leading values", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "threshold";
+	opt.mParamName = "x";
+	opt.mType = typeid( double );
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--threshold=-0.5" } );
+
+	REQUIRE( fx.app.config().used( "threshold" ) );
+	REQUIRE( fx.app.config().get<double>( "threshold" ) == -0.5 );
+}
+
+TEST_CASE( "Config --opt=value accepts integer with sign", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "offset";
+	opt.mParamName = "n";
+	opt.mType = typeid( int );
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--offset=-1" } );
+
+	REQUIRE( fx.app.config().get<int>( "offset" ) == -1 );
+}
+
+TEST_CASE( "Config --opt= sets empty string", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "label";
+	opt.mParamName = "text";
+	opt.mType = typeid( std::string );
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--label=" } );
+
+	REQUIRE( fx.app.config().used( "label" ) );
+	REQUIRE( fx.app.config().get<std::string>( "label" ) == "" );
+}
+
 TEST_CASE( "Config::remove erases an option from the registry", "[config]" )
 {
 	AppFixture fx;

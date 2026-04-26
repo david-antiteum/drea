@@ -11,7 +11,7 @@ All samples live under [`examples/`](../examples). Build with `BUILD_EXAMPLES=ON
 | [`calculator`](../examples/calculator) | Multiple commands (`sum`, `power`, `count`), typed options (`int`, `double`), env-prefix (`CAL_*`), `params: unlimited`, short forms. |
 | [`multi`](../examples/multi) | Repeated options with `params: 1, scope: line`. Read all values via `Config::getAll<T>`. |
 | [`hidden`](../examples/hidden) | `Command::mHidden` — runtime-only hide based on a CLI flag (`--dev`). Demonstrates programmatic command registration alongside YAML. |
-| [`groups`](../examples/groups) | Command groups (tier-style gating), `setEnabledGroups`, dynamic help footer for anonymous callers. Mirrors the ABO-334 myaimsun pattern. |
+| [`groups`](../examples/groups) | Command groups (tier-style gating), `setEnabledGroups`, dynamic help footer for anonymous callers. |
 | [`aws-secrets`](../examples/aws-secrets) | Loading config from AWS Secrets Manager via `--config-source aws://…`. Requires `-DENABLE_AWS=ON` and the `aws` vcpkg feature. |
 
 ## Running

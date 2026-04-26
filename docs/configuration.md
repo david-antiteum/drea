@@ -44,6 +44,27 @@ Fields:
 them to true. They can be explicitly disabled with `--no-<name>` (see
 *Boolean negation* below).
 
+## Passing values
+
+Two forms are accepted for any option that takes a value:
+
+```bash
+./myapp --log-file /var/log/app.log     # space-separated
+./myapp --log-file=/var/log/app.log     # equals form
+```
+
+Use the equals form when the value would otherwise be parsed as another
+flag — for example a negative number or any string starting with `-`:
+
+```bash
+./myapp --threshold=-0.5
+./myapp --label=-quiet
+```
+
+`--<name>=` (empty right-hand side) sets the option to an empty string for
+`string` options. The equals form is rejected on flags that take no value
+(`bool` toggles, repeated counters such as `--verbose`).
+
 ## Reading options
 
 ```cpp
@@ -83,7 +104,9 @@ Drea autodetects the format from the extension when reading
 
 - `.toml` — requires the `toml` vcpkg feature (`-DVCPKG_MANIFEST_FEATURES=toml`)
 - `.yaml`, `.yml` — always available
-- `.json` — always available
+- `.json` — available when drea is built with `nlohmann_json` (always pulled in
+  by `-DBUILD_REST_USE=ON`; otherwise opportunistic — disabled when the package
+  is not found)
 
 Nested objects flatten into dotted keys. Given:
 

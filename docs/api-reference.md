@@ -65,8 +65,11 @@ should return the text to print, or an empty string to skip.
 
 ### `configureInRunTime()`
 
-Virtual hook. Subclass `App` and override to mutate config/commands before
-`parse()` configures everything. Called once, at the start of `parse()`.
+Virtual hook. Subclass `App` and override to mutate config/commands after
+`addDefaults` has populated built-in options/commands and before
+`Config::configure` reads CLI values. Typical use: drop default options the
+app does not want to expose. See [Configuration → Disabling default
+options](configuration.md#disabling-default-options).
 
 ---
 

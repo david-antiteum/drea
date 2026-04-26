@@ -5,6 +5,40 @@ All notable changes to drea are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.0] — 2026-04-26
+
+### Added
+
+- `--opt=value` syntax on the command line. Works for any option that takes
+  a value and is the way to pass values that begin with `-` (negative
+  numbers, hyphen-leading strings) since the space-separated form treats a
+  leading `-` as the start of the next flag.
+- Tests covering `--opt=value` for `string`/`int`/`double`, hyphen-leading
+  values, empty right-hand side, and bool enable/`Config::set` paths.
+
+### Changed
+
+- A bool option declared with `type: bool` (no params) now has its value
+  set to `true` when its `--flag` is present on the CLI, so
+  `config().get<bool>(name)` returns `true`. Previously `--flag` only
+  registered the option as used and `get<bool>` returned `false`.
+- `Config::set( name, value )` now also calls `registerUse( name )`, so
+  `used()` returns `true` after a programmatic override — matching the
+  documented contract.
+- Numeric positional arguments that begin with `-` (`-1`, `-0.5`,
+  `-.25`) are no longer eaten by the short-option expander. Parser
+  treats `-` followed by a digit or `.` as a literal positional, so
+  `mycli sum -1 2 3` reaches the command unchanged.
+
+### Fixed
+
+- `docs/api-reference.md` description of `App::configureInRunTime()` now
+  reflects the actual call site (after `addDefaults`, before
+  `Config::configure`), not "at the start of `parse()`".
+- `docs/configuration.md` no longer claims `.json` config-file support is
+  "always available"; it depends on `nlohmann_json` being present at build
+  time when `BUILD_REST_USE=OFF`.
+
 ## [0.31.0] — 2026-04-26
 
 ### Added

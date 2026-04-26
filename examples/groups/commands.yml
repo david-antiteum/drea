@@ -19,7 +19,7 @@ description: |
   own. Declaring a group on a subcommand overrides the parent's groups.
 
   This example also installs a help footer that suggests "auth login" only to
-  anonymous callers, mirroring the ABO-334 discoverability hint.
+  anonymous callers.
 
   Try:
     ./groups --help                 # ping only, with anonymous footer

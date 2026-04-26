@@ -1,7 +1,5 @@
 cmake_minimum_required( VERSION 3.21 )
 
-project( drea VERSION 0.30.1 DESCRIPTION "Drea Framework" LANGUAGES CXX )
-
 # Options are declared in the top-level CMakeLists when drea is the root
 # project. When consumed via add_subdirectory they may already be set by the
 # parent; declare here as a fallback so this subdir is usable standalone.

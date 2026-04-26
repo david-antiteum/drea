@@ -437,6 +437,14 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 		if( arg.find( "--" ) == 0 ){
 			arg = arg.erase( 0, 2 );
 
+			std::string inlineValue;
+			bool hasInlineValue = false;
+			if( auto eq = arg.find( '=' ); eq != std::string::npos ){
+				inlineValue = arg.substr( eq + 1 );
+				arg = arg.substr( 0, eq );
+				hasInlineValue = true;
+			}
+
 			if( auto option = d->find( arg ) ){
 				registerUse( arg );
 				if( optionsWithDefault.count( option ) > 0 ){
@@ -444,16 +452,27 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 					option->mValues.clear();
 					optionsWithDefault.erase( option );
 				}
-				for( int np = 0; np < option->numberOfParams() && i < args.size(); np++ ){
-					std::string subArg = args.at( i );
-					if( subArg.find( "-" ) == 0 ){
-						break;
+				if( hasInlineValue ){
+					if( option->numberOfParams() > 0 ){
+						append( option->mName, inlineValue );
+					}else{
+						spdlog::warn( "Flag {} does not take a value; ignoring '={}'", arg, inlineValue );
 					}
-					append( option->mName, subArg );
-					i++;
+				}else{
+					for( int np = 0; np < option->numberOfParams() && i < args.size(); np++ ){
+						std::string subArg = args.at( i );
+						if( subArg.find( "-" ) == 0 ){
+							break;
+						}
+						append( option->mName, subArg );
+						i++;
+					}
 				}
 				if( option->numberOfParams() > 0 &&  option->mValues.empty() ){
 					spdlog::warn( "Missing arguments for flag {}", arg );
+				}else if( option->numberOfParams() == 0 && option->mType == typeid( bool ) ){
+					option->mValues.clear();
+					option->mValues.push_back( true );
 				}
 			}else if( arg.rfind( "no-", 0 ) == 0 ){
 				std::string boolName = arg.substr( 3 );
@@ -497,6 +516,7 @@ void drea::core::Config::registerUse( const std::string & optionName )
 void drea::core::Config::set( const std::string & optionName, const std::string & value )
 {
 	d->set( optionName, value );
+	registerUse( optionName );
 }
 
 void drea::core::Config::append( const std::string & optionName, const std::string & value )

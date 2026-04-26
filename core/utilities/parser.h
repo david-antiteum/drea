@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cctype>
 #include <string>
 #include <vector>
 #include <spdlog/fmt/fmt.h>
@@ -24,6 +25,9 @@ public:
 		for( size_t i = 1; i < mArgs.size(); i++ ){
 			if( std::string arg = mArgs.at(i); arg.find( "--" ) == 0 ){
 				res.push_back( arg );
+			}else if( arg.size() >= 2 && arg.at( 0 ) == '-' && ( std::isdigit( static_cast<unsigned char>( arg.at( 1 ) ) ) || arg.at( 1 ) == '.' ) ){
+				// Negative number / numeric positional: pass through unchanged.
+				res.push_back( arg );
 			}else if( arg.find( "-" ) == 0 ){
 				// Expand
 				for( size_t j = 1; j < arg.size(); j++ ){
@@ -46,13 +50,18 @@ public:
 	{
 		std::vector<std::string>	args;
 		std::vector<std::string>	cmds;
-	
+
 		auto expandedArgs = expand();
 		for( size_t i = 0; i < expandedArgs.size(); ){
 			if( std::string arg = expandedArgs.at( i++ ); arg.find( "--" ) == 0 ){
 				args.push_back( arg );
-				arg.erase( 0, 2 );
-				if( auto option = mApp.config().find( arg ) ){
+				std::string nameOnly = arg.substr( 2 );
+				bool hasInlineValue = false;
+				if( auto eq = nameOnly.find( '=' ); eq != std::string::npos ){
+					nameOnly = nameOnly.substr( 0, eq );
+					hasInlineValue = true;
+				}
+				if( auto option = mApp.config().find( nameOnly ); option && !hasInlineValue ){
 					for( int np = 0; np < option->numberOfParams() && i < expandedArgs.size(); np++ ){
 						std::string subArg = expandedArgs.at( i );
 						if( subArg.find( "-" ) == 0 ){
