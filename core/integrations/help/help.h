@@ -29,8 +29,8 @@ static void help( const drea::core::App & app, std::string_view commandName )
 			std::string::size_type offset = 0;
 			bool anySubCmd = false;
 
-			app.commander().commands( [ &offset, &anySubCmd ](const Command & command ){
-				if( command.mHidden ){
+			app.commander().commands( [ &app, &offset, &anySubCmd ](const Command & command ){
+				if( !app.commander().isVisible( command ) ){
 					return;
 				}
 				offset = std::max<std::string::size_type>( offset, command.mName.size() + 2 );
@@ -41,8 +41,8 @@ static void help( const drea::core::App & app, std::string_view commandName )
 			if( anySubCmd ){
 				offset += 8;
 			}
-			app.commander().commands( [ offset ](const Command & command ){
-				if( command.mHidden ){
+			app.commander().commands( [ &app, offset ](const Command & command ){
+				if( !app.commander().isVisible( command ) ){
 					return;
 				}
 				if( command.mParentCommand.empty() ){
@@ -59,7 +59,7 @@ static void help( const drea::core::App & app, std::string_view commandName )
 
 			fmt::print( "\nUse \"{} COMMAND --help\" for more information about a command.\n", app.name() );
 		}else{
-			if( auto cmd = app.commander().find( commandName ) ){
+			if( auto cmd = app.commander().find( commandName ); cmd && app.commander().isVisible( *cmd ) ){
 				auto commands = utilities::string::split( commandName, "." );
 
 				fmt::print( "\nusage:");
@@ -82,7 +82,7 @@ static void help( const drea::core::App & app, std::string_view commandName )
 					bool anySubCmd = false;
 
 					for( const std::string & subCmdName: cmd->mSubcommand ){
-						if( auto subCmd = app.commander().find( std::string( commandName ) + "." + subCmdName ); subCmd && !subCmd->mHidden ){
+						if( auto subCmd = app.commander().find( std::string( commandName ) + "." + subCmdName ); subCmd && app.commander().isVisible( *subCmd ) ){
 							offset = std::max<std::string::size_type>( offset, subCmd->mName.size() + 2 );
 							if( !subCmd->mSubcommand.empty() ){
 								anySubCmd = true;
@@ -94,7 +94,7 @@ static void help( const drea::core::App & app, std::string_view commandName )
 					}
 					fmt::print( "\nCommands:\n");
 					for( const std::string & subCmdName: cmd->mSubcommand ){
-						if( auto subCmd = app.commander().find( std::string( commandName ) + "." + subCmdName ); subCmd && !subCmd->mHidden ){
+						if( auto subCmd = app.commander().find( std::string( commandName ) + "." + subCmdName ); subCmd && app.commander().isVisible( *subCmd ) ){
 							std::string::size_type cmdSize = 2 + subCmd->mName.size();
 
 							fmt::print( "  {}", subCmd->mName );
@@ -126,7 +126,10 @@ static void help( const drea::core::App & app, std::string_view commandName )
 				}
 				if( !cmd->mSubcommand.empty() ){
 					fmt::print( "\nUse \"{} {} COMMAND --help\" for more information about a command.\n", app.name(), utilities::string::join( commands, " " ));
-				}						
+				}
+				if( auto footer = app.helpFooter( commandName ); !footer.empty() ){
+					fmt::print( "\n{}\n", footer );
+				}
 			}
 		}
 	}
@@ -243,6 +246,10 @@ static void help( const drea::core::App & app )
 
 	// Commander
 	help( app, {} );
+
+	if( auto footer = app.helpFooter( {} ); !footer.empty() ){
+		fmt::print( "\n{}\n", footer );
+	}
 }
 
 }

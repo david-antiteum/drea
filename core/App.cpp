@@ -22,6 +22,7 @@ struct drea::core::App::Private
 	std::shared_ptr<spdlog::logger>		mLogger;
 	std::vector<std::string>			mArgs;
 	std::string							mDefinitions;
+	HelpFooterFn						mHelpFooter;
 };
 
 static drea::core::App * mInstanceApp = nullptr;
@@ -70,6 +71,8 @@ void _parseCmd( drea::core::App & app, const YAML::Node & cmdsNode, const std::s
 					}
 				}else if( key == "min-params" ){
 					command.mMinParams = cmdNode.second.as<int>();
+				}else if( key == "group" ){
+					command.mGroups.push_back( cmdNode.second.as<std::string>() );
 				}
 			}else if( cmdNode.second.IsSequence() ){
 				if( key == "global-options" || key == "local-options" ){
@@ -80,6 +83,12 @@ void _parseCmd( drea::core::App & app, const YAML::Node & cmdsNode, const std::s
 							}else{
 								command.mLocalParameters.push_back( optionNode.as<std::string>() );
 							}
+						}
+					}
+				}else if( key == "group" ){
+					for( auto groupNode: cmdNode.second ){
+						if( groupNode.IsScalar() ){
+							command.mGroups.push_back( groupNode.as<std::string>() );
 						}
 					}
 				}else if( key == "commands" ){
@@ -296,4 +305,17 @@ spdlog::logger & drea::core::App::logger() const
 std::vector<std::string> drea::core::App::args() const
 {
 	return d->mArgs;
+}
+
+void drea::core::App::setHelpFooter( drea::core::HelpFooterFn fn )
+{
+	d->mHelpFooter = std::move( fn );
+}
+
+std::string drea::core::App::helpFooter( std::string_view command ) const
+{
+	if( d->mHelpFooter ){
+		return d->mHelpFooter( *this, command );
+	}
+	return {};
 }

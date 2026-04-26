@@ -189,8 +189,8 @@ static void generateManPage( const drea::core::App & app, std::ostream & out )
 
 	if( !app.commander().empty() ){
 		out << ".SH COMMANDS\n";
-		app.commander().commands( [ &out ]( const Command & cmd ){
-			if( cmd.mHidden || !cmd.mParentCommand.empty() ){
+		app.commander().commands( [ &app, &out ]( const Command & cmd ){
+			if( !app.commander().isVisible( cmd ) || !cmd.mParentCommand.empty() ){
 				return;
 			}
 			out << ".TP\n";
@@ -206,15 +206,15 @@ static void generateManPage( const drea::core::App & app, std::ostream & out )
 
 		// Subcommands
 		bool anySub = false;
-		app.commander().commands( [ &anySub ]( const Command & cmd ){
-			if( !cmd.mHidden && !cmd.mParentCommand.empty() ){
+		app.commander().commands( [ &app, &anySub ]( const Command & cmd ){
+			if( app.commander().isVisible( cmd ) && !cmd.mParentCommand.empty() ){
 				anySub = true;
 			}
 		});
 		if( anySub ){
 			out << ".SH SUBCOMMANDS\n";
-			app.commander().commands( [ &out ]( const Command & cmd ){
-				if( cmd.mHidden || cmd.mParentCommand.empty() ){
+			app.commander().commands( [ &app, &out ]( const Command & cmd ){
+				if( !app.commander().isVisible( cmd ) || cmd.mParentCommand.empty() ){
 					return;
 				}
 				std::string path = cmd.mParentCommand + "." + cmd.mName;
@@ -243,7 +243,7 @@ static void generateManPage( const drea::core::App & app, std::string_view comma
 		return;
 	}
 	auto cmd = app.commander().find( commandName );
-	if( !cmd ){
+	if( !cmd || !app.commander().isVisible( *cmd ) ){
 		generateManPage( app, out );
 		return;
 	}
@@ -290,7 +290,7 @@ static void generateManPage( const drea::core::App & app, std::string_view comma
 		out << ".SH COMMANDS\n";
 		for( const auto & subName: cmd->mSubcommand ){
 			auto sub = app.commander().find( std::string( commandName ) + "." + subName );
-			if( !sub || sub->mHidden ){
+			if( !sub || !app.commander().isVisible( *sub ) ){
 				continue;
 			}
 			out << ".TP\n";

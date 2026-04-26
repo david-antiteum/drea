@@ -55,6 +55,26 @@ public:
 	*/
 	[[nodiscard]] jss::object_ptr<Command> find( std::string_view cmdName ) const;
 
+	/*! Set the list of groups currently enabled. A command is visible if it
+		declares no group, or any of its groups is enabled. Empty list (default)
+		means only commands without groups are visible.
+	*/
+	void setEnabledGroups( std::vector<std::string> groups );
+
+	/*! Currently enabled groups (as set via setEnabledGroups).
+	*/
+	[[nodiscard]] const std::vector<std::string> & enabledGroups() const;
+
+	/*! True if the command is visible: not flagged hidden, and either has no
+		groups declared or at least one of its groups is enabled.
+	*/
+	[[nodiscard]] bool isVisible( const Command & cmd ) const;
+
+	/*! Dotted name of the command parsed from argv (e.g. "cost.top"). Empty
+		when no command was given.
+	*/
+	[[nodiscard]] const std::string & requestedCommand() const;
+
 	/*! Report to the user that this is not a valid command because is either unknown or because requires a missing subcommand.
 		This method show a similar command if possible (Did you mean?).
 	*/

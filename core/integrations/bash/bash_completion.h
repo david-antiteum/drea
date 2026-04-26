@@ -19,8 +19,8 @@ static std::list<std::string> calculateAutoCompletion( const drea::core::App & a
 	std::list<std::string>	res;
 
 	if( app.commander().arguments().size() == 0 ){
-		app.commander().commands( [&res]( const Command & cmd ){
-			if( cmd.mParentCommand.empty() && !cmd.mHidden ){
+		app.commander().commands( [&app, &res]( const Command & cmd ){
+			if( cmd.mParentCommand.empty() && app.commander().isVisible( cmd ) ){
 				res.push_back( cmd.mName );
 			}
 		});
@@ -34,7 +34,7 @@ static std::list<std::string> calculateAutoCompletion( const drea::core::App & a
 			std::list<std::string>	possibleCommand;
 
 			app.commander().commands( [&exactCommand, &possibleCommand, &app]( const Command & cmd ){
-				if( cmd.mHidden ){
+				if( !app.commander().isVisible( cmd ) ){
 					return;
 				}
 				if( app.commander().arguments().at(0) == cmd.mName ){
@@ -72,16 +72,16 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 	out << "    cur=\"${COMP_WORDS[COMP_CWORD]}\"\n";
 	out << "    prev=\"${COMP_WORDS[COMP_CWORD-1]}\"\n";
 	out << "    opts=\"";
-	app.commander().commands( [&out]( const Command & cmd ){
-		if( !cmd.mHidden && cmd.mParentCommand.empty() ){
+	app.commander().commands( [&app, &out]( const Command & cmd ){
+		if( app.commander().isVisible( cmd ) && cmd.mParentCommand.empty() ){
 			out << " " << cmd.mName;
 		}
 	});
 	out << "\"\n";
 
 	out << "    case \"${prev}\" in\n";
-	app.commander().commands( [&out]( const Command & cmd ){
-		if( cmd.mHidden ){
+	app.commander().commands( [&app, &out]( const Command & cmd ){
+		if( !app.commander().isVisible( cmd ) ){
 			return;
 		}
 		out << "        " << cmd.mName << ")\n";

@@ -5,21 +5,26 @@ description: |
   Drea is available at https://github.com/david-antiteum/drea.
 
   There is no YAML flag for hiding commands. Hiding is always a runtime
-  decision: the application sets Command::mHidden = true after parse() based
-  on whatever context it has (build flags, env vars, CLI options, licenses,
-  feature toggles, etc).
+  decision: the application sets Command::mHidden = true based on whatever
+  context it has (build flags, env vars, CLI options, licenses, feature
+  toggles, etc). For caller-dependent gating (auth tier, role, license),
+  prefer the "group:" YAML key; see examples/groups.
 
   This sample defines three commands:
     - "ping":     always visible
-    - "debug":    declared in commands.yml, hidden at runtime unless --dev is set
-    - "internal": added programmatically, hidden at runtime unless --dev is set
+    - "debug":    declared in commands.yml, hidden unless --dev is set
+    - "internal": added programmatically, hidden unless --dev is set
 
-  Hidden commands still execute when invoked by name. Try:
+  Hidden commands are indistinguishable from typos: --help omits them,
+  completion omits them, and direct invocation produces the same
+  "Unknown command" error as a misspelled name.
+
+  Try:
     ./hidden                # lists only "ping"
     ./hidden --help         # same
     ./hidden --dev --help   # lists all three
-    ./hidden debug          # runs even when hidden
-    ./hidden internal       # runs even when hidden
+    ./hidden --dev debug    # runs (--dev unhides)
+    ./hidden debug          # "Unknown command" error
 
 options:
   - option: dev

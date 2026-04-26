@@ -26,10 +26,27 @@ struct drea::core::Commander::Private
 	std::vector<std::string>				mArguments;
 	std::vector<std::unique_ptr<Command>>	mCommands;
 	std::set<std::string>					mBuiltins;
+	std::vector<std::string>				mEnabledGroups;
 	App										& mApp;
 
 	explicit Private( App & app ) : mApp( app )
 	{
+	}
+
+	bool isVisible( const Command & cmd ) const
+	{
+		if( cmd.mHidden ){
+			return false;
+		}
+		if( cmd.mGroups.empty() ){
+			return true;
+		}
+		for( const auto & g: cmd.mGroups ){
+			if( std::find( mEnabledGroups.begin(), mEnabledGroups.end(), g ) != mEnabledGroups.end() ){
+				return true;
+			}
+		}
+		return false;
 	}
 
 	jss::object_ptr<Command> find( const std::string & parent, const std::string & cmdName ){
@@ -70,6 +87,21 @@ struct drea::core::Commander::Private
 					parent->mSubcommand.push_back( cmd->mName );
 				}else{
 					mApp.logger().error( "The command \"{}\" refers to the parent \"{}\" but it does not exists.", cmd->mName, cmd->mParentCommand );
+				}
+			}
+		}
+		// Group inheritance: a child with no declared groups inherits its
+		// parent's groups. Walk to a fixed point so multi-level chains
+		// resolve regardless of insertion order.
+		bool changed = true;
+		while( changed ){
+			changed = false;
+			for( const auto & cmd: mCommands ){
+				if( cmd->mGroups.empty() && !cmd->mParentCommand.empty() ){
+					if( auto parent = find( cmd->mParentCommand ); parent && !parent->mGroups.empty() ){
+						cmd->mGroups = parent->mGroups;
+						changed = true;
+					}
 				}
 			}
 		}
@@ -234,6 +266,15 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 
 void drea::core::Commander::run( std::function<void( std::string )> f )
 {
+	// Visibility gate: a command whose groups are not enabled (or that has
+	// been hidden) must be indistinguishable from a typo. This covers both
+	// `myapp gated --help` and direct invocation `myapp gated arg`.
+	if( !d->mCommand.empty() ){
+		if( auto cmd = find( d->mCommand ); cmd && !d->isVisible( *cmd ) ){
+			unknownCommand( d->mCommand );
+			return;
+		}
+	}
 	if( d->mApp.config().used( "version" )){
 		drea::core::integrations::Help::version( d->mApp );
 	}else if( d->mApp.config().used( "help" ) ){
@@ -281,14 +322,14 @@ void drea::core::Commander::unknownCommand( std::string_view command ) const
 {
 	if( command.empty() ){
 		d->mApp.logger().info( "A command is required." );
-	}else if( find( command ) ){
+	}else if( auto found = find( command ); found && d->isVisible( *found ) ){
 		d->mApp.logger().error( "The command \"{}\" requires a sub command. Try: {} {} --help", utilities::string::replace( command, ".", " " ), d->mApp.args().at( 0 ), utilities::string::replace( command, ".", " " ) );
 	}else{
 		size_t			bestDist = 0;
 		std::string		bestCmd;
 
 		for( const auto & cmd: d->mCommands ){
-			if( cmd->mParentCommand.empty() && !cmd->mHidden ){
+			if( cmd->mParentCommand.empty() && d->isVisible( *cmd ) ){
 				size_t	nd = levenshtein( command, cmd->mName );
 				if( bestCmd.empty() || nd < bestDist ){
 					bestDist = nd;
@@ -297,9 +338,9 @@ void drea::core::Commander::unknownCommand( std::string_view command ) const
 			}
 		}
 		if( bestCmd.empty() ){
-			d->mApp.logger().error( "Unknown command \"{}\"", command );
+			d->mApp.logger().error( "Unknown command \"{}\"", utilities::string::replace( command, ".", " " ) );
 		}else{
-			d->mApp.logger().error( "Unknown command \"{}\". Did you mean \"{}\"?", command, bestCmd );
+			d->mApp.logger().error( "Unknown command \"{}\". Did you mean \"{}\"?", utilities::string::replace( command, ".", " " ), bestCmd );
 		}
 	}
 }
@@ -320,6 +361,26 @@ void drea::core::Commander::wrongNumberOfArguments( std::string_view command ) c
 jss::object_ptr<drea::core::Command> drea::core::Commander::find( std::string_view cmdName ) const
 {
 	return d->find( cmdName );
+}
+
+void drea::core::Commander::setEnabledGroups( std::vector<std::string> groups )
+{
+	d->mEnabledGroups = std::move( groups );
+}
+
+const std::vector<std::string> & drea::core::Commander::enabledGroups() const
+{
+	return d->mEnabledGroups;
+}
+
+bool drea::core::Commander::isVisible( const drea::core::Command & cmd ) const
+{
+	return d->isVisible( cmd );
+}
+
+const std::string & drea::core::Commander::requestedCommand() const
+{
+	return d->mCommand;
 }
 
 bool drea::core::Commander::empty() const

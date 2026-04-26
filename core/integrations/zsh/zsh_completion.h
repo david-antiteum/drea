@@ -36,7 +36,7 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 	out << "    local cmd=\"$1\"\n";
 	out << "    case \"$cmd\" in\n";
 	app.commander().commands( [&out, &app]( const Command & cmd ){
-		if( cmd.mHidden ){
+		if( !app.commander().isVisible( cmd ) ){
 			return;
 		}
 		std::string path = cmd.mParentCommand.empty() ? cmd.mName : cmd.mParentCommand + "." + cmd.mName;
@@ -86,8 +86,8 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 	out << "_" << name << "() {\n";
 	out << "    local -a _top_commands\n";
 	out << "    _top_commands=(\n";
-	app.commander().commands( [&out]( const Command & cmd ){
-		if( cmd.mHidden || !cmd.mParentCommand.empty() ){
+	app.commander().commands( [&app, &out]( const Command & cmd ){
+		if( !app.commander().isVisible( cmd ) || !cmd.mParentCommand.empty() ){
 			return;
 		}
 		out << "        '" << escape( cmd.mName ) << ":" << escape( cmd.mDescription ) << "'\n";
@@ -110,8 +110,8 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 	out << "            while (( depth <= ${#words} )); do\n";
 	out << "                local candidate=\"${path} ${words[$depth]}\"\n";
 	out << "                local matched=0\n";
-	app.commander().commands( [&out]( const Command & cmd ){
-		if( cmd.mHidden || cmd.mParentCommand.empty() ){
+	app.commander().commands( [&app, &out]( const Command & cmd ){
+		if( !app.commander().isVisible( cmd ) || cmd.mParentCommand.empty() ){
 			return;
 		}
 		std::string display = cmd.mParentCommand + "." + cmd.mName;

@@ -1,0 +1,61 @@
+app: groups
+version: 0.1.0
+description: |
+  Sample showing how to gate commands behind groups and how to install a
+  dynamic help footer.
+
+  Each command may declare one group ("group: name") or several
+  ("group: [a, b]"). A command without a group is always visible. A command
+  with groups is visible only when at least one of its groups is enabled at
+  runtime, via Commander::setEnabledGroups.
+
+  When a command is not visible:
+    - it is omitted from --help, bash/zsh/fish completion, and "did you mean?"
+      suggestions;
+    - direct invocation produces the same "Unknown command ..." error as a
+      typo, so a probe is indistinguishable from a mistype.
+
+  Subcommands inherit their parent's groups when they declare none of their
+  own. Declaring a group on a subcommand overrides the parent's groups.
+
+  This example also installs a help footer that suggests "auth login" only to
+  anonymous callers, mirroring the ABO-334 discoverability hint.
+
+  Try:
+    ./groups --help                 # ping only, with anonymous footer
+    ./groups --tier readonly --help # adds "cost top" / "workflow send"
+    ./groups --tier operator --help # adds the operator-only command
+    ./groups cost top               # gated as readonly: refused unless --tier
+    ./groups co<TAB>                # bash completion only suggests visible
+
+options:
+  - option: tier
+    description: simulated staff tier (none|readonly|operator). Default none.
+    type: string
+    params-names: tier
+
+commands:
+  - command: ping
+    description: print "pong" (always visible)
+
+  - command: cost
+    description: cost commands (staff)
+    group: staff-readonly
+    commands:
+      - command: top
+        description: list top spenders this month
+      - command: pipeline-status
+        description: ingestion pipeline status
+
+  - command: workflow
+    description: workflow commands (staff)
+    group: staff-readonly
+    commands:
+      - command: send
+        description: kick off a workflow run
+      - command: list
+        description: list recent workflow runs
+
+  - command: rotate-keys
+    description: rotate API signing keys (operator only)
+    group: staff-operator

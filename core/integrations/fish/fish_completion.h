@@ -54,8 +54,8 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 
 	// Collect top-level command names for the "no subcommand yet" predicate.
 	std::string		topList;
-	app.commander().commands( [&topList]( const Command & cmd ){
-		if( cmd.mHidden || !cmd.mParentCommand.empty() ){
+	app.commander().commands( [&app, &topList]( const Command & cmd ){
+		if( !app.commander().isVisible( cmd ) || !cmd.mParentCommand.empty() ){
 			return;
 		}
 		if( !topList.empty() ){
@@ -65,8 +65,8 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 	});
 
 	// Top-level commands
-	app.commander().commands( [&out, &name, &topList]( const Command & cmd ){
-		if( cmd.mHidden || !cmd.mParentCommand.empty() ){
+	app.commander().commands( [&app, &out, &name, &topList]( const Command & cmd ){
+		if( !app.commander().isVisible( cmd ) || !cmd.mParentCommand.empty() ){
 			return;
 		}
 		out << "complete -c " << name
@@ -76,8 +76,8 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 	});
 
 	// Subcommands
-	app.commander().commands( [&out, &name]( const Command & cmd ){
-		if( cmd.mHidden || cmd.mParentCommand.empty() ){
+	app.commander().commands( [&app, &out, &name]( const Command & cmd ){
+		if( !app.commander().isVisible( cmd ) || cmd.mParentCommand.empty() ){
 			return;
 		}
 		std::string	parentPath = cmd.mParentCommand;
@@ -89,7 +89,7 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 
 	// Per-command options
 	app.commander().commands( [&out, &name, &app]( const Command & cmd ){
-		if( cmd.mHidden ){
+		if( !app.commander().isVisible( cmd ) ){
 			return;
 		}
 		std::string		fullPath = cmd.mParentCommand.empty() ? cmd.mName : cmd.mParentCommand + "." + cmd.mName;

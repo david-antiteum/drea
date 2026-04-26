@@ -18,6 +18,7 @@ struct DREA_CORE_API Command
 	int								mNbParams = 1;
 	int								mMinParams = -1;
 	bool							mHidden = false;
+	std::vector<std::string>		mGroups;
 	static const int				mUnlimitedParams = 0xfffffffa;
 
 	[[nodiscard]] int numberOfParams() const;
