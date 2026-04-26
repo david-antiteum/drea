@@ -109,7 +109,7 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 	out << "complete -F _" << app.name() << " " << app.name() << "\n";
 }
 
-static void generateAutoCompletion( const drea::core::App & app )
+[[maybe_unused]] static void generateAutoCompletion( const drea::core::App & app )
 {
 	std::ofstream completionFile;
 

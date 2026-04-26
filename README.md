@@ -1,31 +1,27 @@
 # Drea
 
-A C++ framework for CLI apps and services that includes support for:
+A C++17 framework for CLI apps and services. Declare commands and options once
+in YAML; Drea derives the rest.
 
-- Commands (and subcommands)
-- Options
-- Logging
+## Features
 
-Drea aims to give you maximum functionality with minimum ceremony. Declare your commands and options once; Drea derives the rest:
+- Commands and subcommands (with argument validation)
+- Options (typed, validated, with short forms)
+- Configuration from multiple sources (file, env, flags, AWS Secrets Manager)
+- Logging (spdlog-based, with optional Graylog sink)
+- `--help` rendering with a dynamic footer hook
+- Command groups for tier/role-based gating of help, completion, and execution
+- `man` page generation
+- Shell completion (`bash`, `zsh`, `fish`)
 
-- Help output
-- Shell integration: man pages and autocompletion
-- Configuration from multiple sources:
-  - files (TOML, YAML, JSON)
-  - environment variables
-  - command-line flags
-  - remote sources via `--config-source` (currently AWS Secrets Manager)
-- Input validation, including automatic argument-count checks and configuration files
+## A 30-second example
 
-## An example
-
-This example has a single command `this` and one option `reverse`. The configuration of the app is defined in a YAML file converted to a header file called `commands.yml.h` using the Unix utility `xxd` (Windows users: [Vim](https://www.vim.org/download.php) ships a copy).
+`commands.yml`:
 
 ```yaml
 app: say
 version: 0.0.1
-description: |
-  Prints the argument of the command \"this\" and quits.
+description: Prints the argument of the command "this" and quits.
 options:
   - option: reverse
     description: reverse string
@@ -37,15 +33,16 @@ commands:
       - reverse
 ```
 
+`main.cpp`:
+
 ```c++
 #include <drea/core/Core>
 #include <algorithm>
-
 #include "commands.yml.h"
 
 int main( int argc, char * argv[] )
 {
-    drea::core::App     app( argc, argv );
+    drea::core::App app( argc, argv );
 
     app.parse( std::string( commands_yml, commands_yml + commands_yml_len ) );
     app.commander().run( [ &app ]( const std::string & cmd ){
@@ -60,43 +57,17 @@ int main( int argc, char * argv[] )
 }
 ```
 
-An example of use:
-
 ```bash
-λ ./saythis this hello
+$ ./say this hello
 [2019-04-16 09:44:44.649] [say] [info] hello
+$ ./say this hello --reverse
+[2019-04-16 09:44:44.690] [say] [info] olleh
 ```
 
-Execute the example as `./saythis --help` to get help:
+## Build
 
-```text
-Prints the argument of the command "this" and quits.
-
-usage: say COMMAND [OPTIONS]
-
-Options:
-      --config-file file                  read configs from file <file>
-      --graylog-host schema://host:port   Send logs to a graylog server. Example: http://localhost:12201
-  -h, --help                              show help and quit
-      --log-file file                     log messages to the file <file>
-      --log-folder folder                 log messages to file say.log in <folder>
-      --log-nb-files number-of-log-files  <number-of-log-files> to keep. Default 10
-      --log-size size                     log <size> (in MB) for each log file. Default 10
-  -v, --verbose                           increase the logging level to debug
-  -V, --version                           print version information and quit
-
-Commands:
-  this  prints the argument
-
-Use "say COMMAND --help" for more information about a command.
-```
-
-Note that `--reverse` is not listed in the global help: options declared only as `local-options` of a command are shown only where they apply. Try `./saythis this --help` to see them.
-
-## How to Build
-
-Drea ships CMake presets (requires CMake >= 3.21 and Ninja). Point `VCPKG_ROOT`
-at your vcpkg checkout and pick a preset:
+Drea ships CMake presets (CMake >= 3.21 + Ninja). Point `VCPKG_ROOT` at your
+vcpkg checkout, then:
 
 ```bash
 cmake --preset debug
@@ -104,28 +75,21 @@ cmake --build --preset debug
 ctest --preset debug
 ```
 
-Available configure presets:
+Available presets: `debug`, `release`, `sdk`, `debug-system`, `release-system`,
+`sdk-system`. The `*-system` variants use system-installed dependencies
+instead of vcpkg.
 
-| Preset           | Build type      | Examples | Tests | Toolchain      |
-|------------------|-----------------|----------|-------|----------------|
-| `debug`          | Debug           | yes      | yes   | vcpkg          |
-| `release`        | RelWithDebInfo  | yes      | yes   | vcpkg          |
-| `sdk`            | Release         | no       | no    | vcpkg          |
-| `debug-system`   | Debug           | yes      | yes   | system libs    |
-| `release-system` | RelWithDebInfo  | yes      | yes   | system libs    |
-| `sdk-system`     | Release         | no       | no    | system libs    |
-
-Opt-in vcpkg features (add to the configure call):
+Opt-in vcpkg features:
 
 ```bash
 cmake --preset debug -DVCPKG_MANIFEST_FEATURES=toml        # TOML config files
 cmake --preset debug -DVCPKG_MANIFEST_FEATURES=aws         # AWS Secrets Manager
-cmake --preset debug -DVCPKG_MANIFEST_FEATURES="toml;aws"  # both
+cmake --preset debug -DVCPKG_MANIFEST_FEATURES="toml;aws"
 ```
 
-To enable the AWS Secrets Manager source in code, also pass `-DENABLE_AWS=ON`.
+To enable AWS Secrets Manager at runtime, pass `-DENABLE_AWS=ON`.
 
-If you prefer a bare configure (no preset), the usual form still works:
+Bare configure (no preset) also works:
 
 ```bash
 cmake -S . -B build
@@ -133,241 +97,39 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-## How to Use Drea
+## Use Drea in your project
 
-```CMake
+```cmake
 find_package(drea REQUIRED)
 target_link_libraries(main PRIVATE drea)
 ```
 
-## Commands
-
-Commands are the actions that your application can execute. A command can have subcommands, creating a hierarchy. When Drea invokes the run callback, it passes the full command path (for example, `container.ls`), so two subcommands under different parents can share the same name.
-
-### The anatomy of a command
-
-1. A command can have arguments and options. Example:
-
-```bash
-./say this hello --reverse
-```
-
-The command is `this`, with argument `hello` and option `reverse`.
-
-2. A command can take a fixed number of arguments, an unlimited number (`params: unlimited`), or a range where some are optional (see `min-params` below).
-
-3. A command can have subcommands. Example:
-
-```bash
-./myapp container ls
-```
-
-The command is `container` and the subcommand is `ls`. Drea will invoke the callback with the full path `container.ls`. It can be defined as:
-
-```yaml
-commands:
-  - command: container
-    description: Manage containers
-    commands:
-    - command: ls
-      description: List containers
-  - command: config
-    description: Manage configs
-    commands:
-    - command: ls
-      description: List configs
-```
-
-### Defining a command
-
-A command has the following information:
-
-- `command`: name, must be unique in a command path
-- `params-names`: names of the positional arguments, if any
-- `description`: the command description used by the help system
-- `local-options`: options that apply only to this command
-- `global-options`: options that apply to this command and its subcommands
-- `parent`: the name of the parent command (set automatically when nested under `commands:`)
-- `params`: number of positional arguments: `0`, `1`, ..., or `unlimited`
-- `min-params` (optional): minimum number of positional arguments when some are optional. If set, `params` is the maximum and `min-params` the minimum.
-
-When `run()` is invoked, Drea validates the argument count against `params` (and `min-params` if set) and reports an error without calling the callback if they do not match.
-
-### Hiding commands at runtime
-
-Set `Command::mHidden = true` to exclude a command from `--help`, bash autocompletion, and the "did you mean?" suggestions. Hidden commands still execute when invoked by name, so they are useful for engineering-only diagnostics, feature-flagged operations, role-gated commands, etc.
-
-Hiding is always a runtime decision (there is no YAML flag for it), so the decision can depend on environment, license, authenticated role, a CLI flag, or any other context known to the app:
-
-```c++
-if( !userIsAdmin ) {
-    if( auto cmd = app.commander().find( "debug" ) ) {
-        cmd->mHidden = true;
-    }
-}
-```
-
-Commands added programmatically can ship with `mHidden = true` from the start; use this for commands that are never declared in `commands.yml`. See `examples/hidden/` for a full sample, including a `--dev` flag that toggles hiding.
-
-Note: hiding applied after `parse()` only affects `--help` rendering and autocompletion. "Did you mean?" suggestions are emitted during `parse()`. To suppress hidden names from those errors too, set `mHidden` before calling `parse()` using a condition that does not depend on CLI flags.
-
-## Configuration
-
-Use configuration options to modify the behavior of commands and to set values for required parameters.
-
-### Evaluation order
-
-The order of evaluation, from lower to higher priority:
-
-- defaults
-- remote config sources (`--config-source`, see below)
-- config file
-- environment variables
-- command-line flags
-- explicit call to `Config::set`
-
-### Remote config sources
-
-Drea can load configuration from remote systems using the repeatable `--config-source <uri>` command-line flag. The payload is parsed as JSON and merged into the app's options (nested objects flatten into dotted keys).
-
-Supported schemes:
-
-- `aws://<region>/<secret-id>` — AWS Secrets Manager. Fetches the secret string using the local IAM principal (SDK default credential chain). Requires drea built with `-DENABLE_AWS=ON` and `aws-sdk-cpp[secretsmanager]` installed. An empty region (`aws:///<secret-id>`) falls back to the SDK default region resolution.
-
-Example:
-
-```bash
-./myapp --config-source aws://us-east-1/prod/myapp/config
-```
-
-The secret is expected to be a JSON document, for instance:
-
-```json
-{
-  "db": {
-    "host": "db.example.com",
-    "password": "s3cr3t"
-  }
-}
-```
-
-This populates `db.host` and `db.password` options. The flag is repeatable, so multiple secrets can be merged. See `examples/aws-secrets/` for a runnable sample.
-
-> The legacy `remote-config:` YAML block and `Config::addRemoteProvider` API have been removed. Migrate to `--config-source`.
-
-### Boolean negation
-
-Boolean options can be explicitly disabled from the command line by prefixing them with `--no-`. For example, if `dry-run` defaults to `true` (from a config file or a declared default), passing `--no-dry-run` on the command line overrides it to `false`. This works automatically for any option of type `bool`.
-
-### Sensitive options
-
-Mark an option as sensitive to hide its default value from `--help`. Useful for passwords, API tokens, or keys that are loaded from a config file or a remote source and would otherwise be printed in the help output.
-
-In `commands.yml`:
-
-```yaml
-options:
-  - option: db-password
-    description: Database password
-    type: string
-    sensitive: true
-```
-
-Or programmatically:
-
-```c++
-drea::core::Option pw;
-pw.mName = "db-password";
-pw.mType = typeid( std::string );
-pw.mSensitive = true;
-app.config().add( pw );
-```
-
-The option still parses and loads its value normally; only the help rendering is affected. In `--help`, the default appears as:
-
-```text
---db-password password  Database password. Default (hidden)
-```
-
-## Man pages
-
-Drea apps expose a built-in `man` command that prints a groff-formatted man page to standard output. Pipe it through `groff`/`mandoc` to preview, or install it under `/usr/local/share/man/man1/` (or `$MANPATH`):
-
-```bash
-./myapp man > myapp.1
-./myapp man | mandoc              # preview
-sudo install -m 0644 myapp.1 /usr/local/share/man/man1/
-man myapp
-```
-
-Pass a command name to get a per-command page. Nested subcommands use dot- or space-separated paths:
-
-```bash
-./myapp man container > myapp-container.1
-./myapp man "container ls" > myapp-container-ls.1
-```
-
-The page is derived from the same metadata used by `--help`: app name, version, description, commands, subcommands, and options. Hidden commands are omitted. The `man` command is only registered when the application does not already define one with the same name.
-
-## Shell integration
-
-Drea apps expose a built-in `completion` command that prints a completion script to standard output for `bash`, `zsh`, or `fish`:
-
-```bash
-./myapp completion bash
-./myapp completion zsh
-./myapp completion fish
-```
-
-Typical install:
-
-```bash
-# bash (per user)
-./myapp completion bash > ~/.local/share/bash-completion/completions/myapp
-
-# zsh (per user — ensure the directory is on $fpath before compinit)
-./myapp completion zsh > "${fpath[1]}/_myapp"
-
-# fish (per user)
-./myapp completion fish > ~/.config/fish/completions/myapp.fish
-```
-
-All three shells complete top-level commands, subcommands, and per-command options (including short forms where declared). Hidden commands are omitted. As with `man`, the `completion` command is skipped when the application already defines one.
-
-## Readings
-
-- [On formats](https://news.ycombinator.com/item?id=19653834)
-- [Terminology](https://pythonconquerstheuniverse.wordpress.com/2010/07/25/command-line-syntax-some-basic-concepts/): Command-line syntax: some basic concepts
-- [Man pages](https://liw.fi/manpages/)
-
-### Meta configs
-
-- [JSonnet](https://jsonnet.org/)
-- [Dhall](https://dhall-lang.org/)
-
-HN [discussion]( https://news.ycombinator.com/item?id=19656821 )
-
-### Libs
-
-- [Viper](https://github.com/spf13/viper): Viper is a complete configuration solution for Go applications including 12-Factor apps
-- [Cobra](https://github.com/spf13/cobra): Cobra is both a library for creating powerful modern CLI applications as well as a program to generate applications and command files.
-
-- [cpp_cli](https://github.com/TheLandfill/cpp_cli): This repository consists of a library designed to make parsing command line arguments for c++ easy and efficient and a few simple programs showing you how it works.
-- [CLI11](https://github.com/CLIUtils/CLI11): CLI11 is a command line parser for C++11 and beyond that provides a rich feature set with a simple and intuitive interface.
-
-- [Consul C++](https://github.com/oliora/ppconsul)
-
-## Quality Checks
-
-### Sonarqube
+## Documentation
+
+- [Commands](docs/commands.md) — anatomy, parameters, hierarchy, hiding, groups
+- [Configuration](docs/configuration.md) — options, sources, evaluation order, sensitive values
+- [Help and shell integration](docs/help-and-shell.md) — `--help`, dynamic footer, `man`, completion
+- [API reference](docs/api-reference.md) — `App`, `Commander`, `Config`, `Command`, `Option`
+- [Examples](docs/examples.md) — index of `examples/`
+
+## Quality
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=david-antiteum_drea&metric=alert_status)](https://sonarcloud.io/dashboard?id=david-antiteum_drea)
 
-1. Install `build-wrapper` and `sonar-scanner`, and make sure both are on your `PATH`.
-2. Set the `SONAR_TOKEN` environment variable.
-3. Reconfigure CMake so it picks up `sonar-scanner`. The `sonarqube` target always exists, but it only runs the scanner when `sonar-scanner` was found at configure time; otherwise it fails with a short message explaining what to install.
-4. Invoke the target:
+To run the SonarQube scan locally, install `build-wrapper` and `sonar-scanner`,
+set `SONAR_TOKEN`, reconfigure CMake (so it picks up `sonar-scanner`), and:
 
-```shell
+```bash
 cmake --build build --target sonarqube
 ```
+
+## Further reading
+
+- [Command-line syntax: some basic concepts](https://pythonconquerstheuniverse.wordpress.com/2010/07/25/command-line-syntax-some-basic-concepts/)
+- [Man pages](https://liw.fi/manpages/)
+- [On formats](https://news.ycombinator.com/item?id=19653834)
+
+Similar libraries: [Cobra](https://github.com/spf13/cobra) (Go),
+[Viper](https://github.com/spf13/viper) (Go),
+[CLI11](https://github.com/CLIUtils/CLI11),
+[cpp_cli](https://github.com/TheLandfill/cpp_cli).
