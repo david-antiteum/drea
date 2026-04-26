@@ -61,3 +61,60 @@ TEST_CASE( "Config --X followed by --no-X yields false", "[config]" )
 	REQUIRE( fx.app.config().used( "verbose" ) );
 	REQUIRE( fx.app.config().get<bool>( "verbose" ) == false );
 }
+
+TEST_CASE( "Config::remove erases an option from the registry", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "drop-me";
+	opt.mType = typeid( std::string );
+	fx.app.config().add( opt );
+
+	REQUIRE( fx.app.config().find( "drop-me" ) );
+
+	fx.app.config().remove( "drop-me" );
+
+	REQUIRE_FALSE( fx.app.config().find( "drop-me" ) );
+}
+
+TEST_CASE( "Config::remove also clears the used flag", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "drop-me";
+	opt.mType = typeid( bool );
+	opt.mNbParams = 0;
+	fx.app.config().add( opt );
+
+	fx.app.config().registerUse( "drop-me" );
+	REQUIRE( fx.app.config().used( "drop-me" ) );
+
+	fx.app.config().remove( "drop-me" );
+	REQUIRE_FALSE( fx.app.config().used( "drop-me" ) );
+}
+
+TEST_CASE( "Config::remove on unknown name is a no-op", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "kept";
+	fx.app.config().add( opt );
+
+	fx.app.config().remove( "missing" );
+
+	REQUIRE( fx.app.config().find( "kept" ) );
+}
+
+TEST_CASE( "Config::remove drops a default added by addDefaults", "[config]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	if( fx.app.config().find( "graylog-host" ) ){
+		fx.app.config().remove( "graylog-host" );
+		REQUIRE_FALSE( fx.app.config().find( "graylog-host" ) );
+	}else{
+		// Drea was built without ENABLE_REST_USE; nothing to remove.
+		SUCCEED();
+	}
+}

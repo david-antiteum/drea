@@ -336,6 +336,20 @@ drea::core::Config & drea::core::Config::addDefaults()
 	return *this;
 }
 
+void drea::core::Config::remove( std::string_view optionName )
+{
+	const std::string	name( optionName );
+	d->mOptions.erase(
+		std::remove_if( d->mOptions.begin(), d->mOptions.end(),
+			[&name]( const std::unique_ptr<Option> & opt ){
+				return opt->mName == name;
+			} ),
+		d->mOptions.end() );
+	d->mFlags.erase(
+		std::remove( d->mFlags.begin(), d->mFlags.end(), name ),
+		d->mFlags.end() );
+}
+
 bool drea::core::Config::empty() const
 {
 	return d->mOptions.empty();

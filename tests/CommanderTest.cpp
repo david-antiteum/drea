@@ -362,3 +362,63 @@ TEST_CASE( "user command named completion takes precedence over builtin", "[comm
 	REQUIRE( called );
 	REQUIRE( cap.str().find( "#!/usr/bin/env bash" ) == std::string::npos );
 }
+
+TEST_CASE( "Commander::remove erases a command", "[commander]" )
+{
+	AppFixture fx;
+	Command cmd;
+	cmd.mName = "drop-me";
+	fx.app.commander().add( cmd );
+
+	REQUIRE( fx.app.commander().find( "drop-me" ) );
+
+	fx.app.commander().remove( "drop-me" );
+
+	REQUIRE_FALSE( fx.app.commander().find( "drop-me" ) );
+}
+
+TEST_CASE( "Commander::remove on a parent erases descendants", "[commander]" )
+{
+	AppFixture fx;
+	Command parent;
+	parent.mName = "container";
+	fx.app.commander().add( parent );
+
+	Command sub;
+	sub.mName = "ls";
+	sub.mParentCommand = "container";
+	fx.app.commander().add( sub );
+
+	Command grand;
+	grand.mName = "all";
+	grand.mParentCommand = "container.ls";
+	fx.app.commander().add( grand );
+
+	fx.app.commander().remove( "container" );
+
+	REQUIRE_FALSE( fx.app.commander().find( "container" ) );
+	REQUIRE_FALSE( fx.app.commander().find( "container.ls" ) );
+	REQUIRE_FALSE( fx.app.commander().find( "container.ls.all" ) );
+}
+
+TEST_CASE( "Commander::remove can drop the man builtin", "[commander][builtins]" )
+{
+	BuiltinFixture fx;
+	REQUIRE( fx.app.commander().find( "man" ) );
+
+	fx.app.commander().remove( "man" );
+
+	REQUIRE_FALSE( fx.app.commander().find( "man" ) );
+}
+
+TEST_CASE( "Commander::remove on unknown name is a no-op", "[commander]" )
+{
+	AppFixture fx;
+	Command cmd;
+	cmd.mName = "kept";
+	fx.app.commander().add( cmd );
+
+	fx.app.commander().remove( "missing" );
+
+	REQUIRE( fx.app.commander().find( "kept" ) );
+}

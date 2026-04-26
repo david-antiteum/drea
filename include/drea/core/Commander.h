@@ -34,6 +34,13 @@ public:
 	*/
 	std::vector<jss::object_ptr<Command>> add( const std::vector<drea::core::Command> & cmds );
 
+	/*! Remove a command (and its descendants) from the registry by dotted
+		name. Useful to drop a builtin (`man`, `completion`) that the app does
+		not want to expose, or to retract a programmatically-added command.
+		Removing a parent removes all its subcommands.
+	*/
+	void remove( std::string_view cmdName );
+
 	/*! Use this method to be called with the command to execute.
 		Do it after configuring the app and parsing the options (\see App::parse)
 	*/

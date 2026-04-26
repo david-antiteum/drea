@@ -49,6 +49,17 @@ public:
 	*/
 	void add( const std::vector<Option> & options );
 
+	/*! Remove an option by name. Useful to drop a default that the app does
+		not want to expose (for example "graylog-host" when the app does not
+		support graylog logging, or "config-source" when it does not load
+		remote configuration).
+
+		The option is erased from the registry and from the "used" flag list.
+		Subsequent CLI flags referring to the removed option will be reported
+		as unknown.
+	*/
+	void remove( std::string_view optionName );
+
 	/*! Set the prefix for env variables for this app.
 
 		For example, if there is a config option called verbose and an app sets the prefix to CAL, then 

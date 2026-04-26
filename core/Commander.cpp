@@ -222,6 +222,32 @@ std::vector<jss::object_ptr<drea::core::Command>> drea::core::Commander::add( co
 	return res;
 }
 
+void drea::core::Commander::remove( std::string_view cmdName )
+{
+	const std::string	target( cmdName );
+	auto isDescendant = [&target]( const std::string & path ){
+		return path == target || ( path.size() > target.size()
+			&& path.compare( 0, target.size(), target ) == 0
+			&& path[target.size()] == '.' );
+	};
+	d->mCommands.erase(
+		std::remove_if( d->mCommands.begin(), d->mCommands.end(),
+			[&]( const std::unique_ptr<Command> & cmd ){
+				const std::string fullPath = cmd->mParentCommand.empty()
+					? cmd->mName
+					: cmd->mParentCommand + "." + cmd->mName;
+				return isDescendant( fullPath );
+			} ),
+		d->mCommands.end() );
+	d->mBuiltins.erase( target );
+	// The cached subcommand lists on parents may now reference removed
+	// children; rebuild them.
+	for( const auto & cmd: d->mCommands ){
+		cmd->mSubcommand.clear();
+	}
+	d->createHierarchy();
+}
+
 void drea::core::Commander::configureForAutocompletion( const std::vector<std::string> & args )
 {
 	d->createHierarchy();
