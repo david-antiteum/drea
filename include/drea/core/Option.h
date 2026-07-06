@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 #include <typeindex>
@@ -29,6 +30,10 @@ struct DREA_CORE_API Option
 	int							mNbParams = 1;
 	std::string					mShortVersion = "";
 	bool						mSensitive = false;
+	bool						mRequired = false;
+	std::optional<double>		mMin;
+	std::optional<double>		mMax;
+	bool						mPredefined = false;	//!< added by Config::addDefaults; shown under "Common options" in help
 	static const int			mUnlimitedParams = 0xfffffffa;
 
 	[[nodiscard]] int numberOfParams() const

@@ -19,6 +19,7 @@ struct DREA_CORE_API Command
 	int								mMinParams = -1;
 	bool							mHidden = false;
 	std::vector<std::string>		mGroups;
+	bool							mPredefined = false;	//!< added by Commander::addDefaults; shown under "Common commands" in help
 	static const int				mUnlimitedParams = 0xfffffffa;
 
 	[[nodiscard]] int numberOfParams() const;

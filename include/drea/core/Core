@@ -2,6 +2,7 @@
 
 #include "App.h"
 #include "Config.h"
+#include "ExitCode.h"
 #include "Commander.h"
 
 #include <spdlog/spdlog.h>

@@ -5,6 +5,41 @@ All notable changes to drea are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Declarative option validation: `required: true`, `min:` and `max:` keys in
+  the yml definitions. `App::parse` validates after source resolution, logs
+  every violation at `critical` and exits with `ExitCode::ConfigError` (78).
+  `--help`/`--version` still work when the config is invalid.
+  `Config::validate()` returns the messages without exiting.
+- `drea::core::ExitCode` (`include/drea/core/ExitCode.h`): sysexits-inspired
+  exit-code vocabulary (`Ok`, `UsageError`, `DependencyError`, `ConfigError`,
+  ...) shared by CLIs and services. Fatal yml-definition errors in `parse`
+  now exit with `ConfigError` instead of 1.
+- `drea::log::redacted()` (`include/drea/log/Redacted.h`): wrap values that
+  must not reach production logs; prints `[redacted]` unless the new
+  `log-redact` predefined option (default on) is disabled with
+  `--no-log-redact`. Zero allocation, works with any fmt-formattable value.
+- `drea::log::sanitizeCorrelationId()` (`include/drea/log/CorrelationId.h`):
+  clamp client-supplied correlation values (request ids, session ids) to
+  `[0-9A-Za-z._-]`, max 64 chars, else empty. Header-only, pure std.
+- Effective-config logging: new `--log-config` predefined option (default
+  off) makes `App::parse` emit one info line per set option with its
+  resolved value and source; sensitive values redacted. `Config::source()`
+  and `Config::logEffective()` expose the same data programmatically.
+- Per-option source tracking across the resolution order: `default`,
+  `config-source`, `config-file`, `environment`, `flag`, `code`.
+
+### Changed
+
+- `--help` now separates application items from drea's built-ins: options
+  from `Config::addDefaults()` are listed under *Common options* and the
+  `completion`/`man` commands under *Common commands*, after the app's own
+  *Options*/*Commands* sections. New `mPredefined` flag on `Option` and
+  `Command` drives the split.
+
 ## [0.33.0] — 2026-07-06
 
 ### Added

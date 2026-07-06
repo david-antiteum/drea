@@ -4,6 +4,7 @@
 #include "App.h"
 #include "Config.h"
 #include "Commander.h"
+#include <drea/core/ExitCode.h>
 
 #include "utilities/parser.h"
 #include <yaml-cpp/yaml.h>
@@ -137,6 +138,12 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 					option.mShortVersion = optionNode.second.as<std::string>();
 				}else if( key == "sensitive" ){
 					option.mSensitive = optionNode.second.as<bool>();
+				}else if( key == "required" ){
+					option.mRequired = optionNode.second.as<bool>();
+				}else if( key == "min" ){
+					option.mMin = optionNode.second.as<double>();
+				}else if( key == "max" ){
+					option.mMax = optionNode.second.as<double>();
 				}else if( key == "type" ){
 					if( const std::string & type = optionNode.second.as<std::string>(); type == "bool" ){
 						option.mType = typeid( bool );
@@ -149,7 +156,7 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 					}else{
 						// fatal, wrong type
 						app.logger().critical( "Wrong option type {} for {}", type, option.mName );
-						exit( 1 );
+						exit( drea::core::toInt( drea::core::ExitCode::ConfigError ) );
 					}
 					hasType = true;
 				}else if( key == "value" ){
@@ -157,7 +164,7 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 						if( hasType ){
 							if( std::string possibleValue = optionNode.second.as< std::string >(); possibleValue.empty() ){
 								app.logger().critical( "Empty value for option {}", option.mName );
-								exit( 1 );
+								exit( drea::core::toInt( drea::core::ExitCode::ConfigError ) );
 							}else{
 								if( option.mType == typeid( bool ) ){
 									option.mValues.push_back( optionNode.second.as< bool >() );
@@ -172,11 +179,11 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 						}else{
 							// fatal, wrong order
 							app.logger().critical( "Option value for {} requires the type to be declared", option.mName );
-							exit( 1 );
+							exit( drea::core::toInt( drea::core::ExitCode::ConfigError ) );
 						}
 					}catch(...){
 						app.logger().critical( "Option value for {} cannot be converted to its declared type", option.mName );
-						exit( 1 );
+						exit( drea::core::toInt( drea::core::ExitCode::ConfigError ) );
 					}
 				}
 			}else if( optionNode.second.IsSequence() ){
@@ -245,6 +252,19 @@ void drea::core::App::parse( const std::string & definitions )
 		configureInRunTime();
 		config().configure( args.first );
 		d->mLogger = config().setupLogger();
+		// --help and --version must work even when the config is invalid
+		if( !config().used( "help" ) && !config().used( "version" ) ){
+			if( const auto errors = config().validate(); !errors.empty() ){
+				for( const auto & error: errors ){
+					logger().critical( "{}", error );
+				}
+				d->mLogger->flush();
+				exit( toInt( ExitCode::ConfigError ) );
+			}
+			if( config().get<bool>( "log-config" ) ){
+				config().logEffective( logger() );
+			}
+		}
 		commander().configure( args.second );
 	}
 }

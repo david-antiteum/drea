@@ -422,3 +422,12 @@ TEST_CASE( "Commander::remove on unknown name is a no-op", "[commander]" )
 
 	REQUIRE( fx.app.commander().find( "kept" ) );
 }
+
+TEST_CASE( "Commander::addDefaults marks its commands as predefined", "[commander]" )
+{
+	BuiltinFixture fx;
+
+	REQUIRE( fx.app.commander().find( "completion" )->mPredefined );
+	REQUIRE( fx.app.commander().find( "man" )->mPredefined );
+	REQUIRE_FALSE( fx.app.commander().find( "hello" )->mPredefined );
+}

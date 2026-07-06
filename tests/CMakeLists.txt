@@ -11,6 +11,8 @@ set( SOURCES
 	ConfigTest.cpp
 	GroupsTest.cpp
 	LoggerTest.cpp
+	LogHelpersTest.cpp
+	ValidationTest.cpp
 )
 
 add_executable( ${PROJECT_NAME} ${SOURCES} )

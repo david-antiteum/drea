@@ -191,6 +191,10 @@ class Config {
     template<typename T> T get( std::string_view optionName ) const;
     template<typename T> std::vector<T> getAll( std::string_view optionName ) const;
 
+    std::vector<std::string> validate() const;
+    std::string source( std::string_view optionName ) const;
+    void logEffective( spdlog::logger & logger ) const;
+
     void reportUnknownArgument( const std::string & optionName ) const;
 };
 ```
@@ -210,6 +214,47 @@ reported as unknown. Typical use: drop a default option (e.g.
 before `configure` reads CLI flags. See
 [Configuration → Disabling default options](configuration.md#disabling-default-options).
 
+`validate` checks the declarative constraints (`required`, `min`, `max`) and
+returns one message per violation; `App::parse` runs it and exits with
+`ExitCode::ConfigError` on failure. `source` reports which source provided an
+option's value (`default`, `config-source`, `config-file`, `environment`,
+`flag`, `code`). `logEffective` emits one info line per set option with value
+and source; sensitive values are redacted. See
+[Configuration → Validation](configuration.md#validation).
+
+---
+
+## `ExitCode`
+
+`include/drea/core/ExitCode.h` — sysexits-inspired exit codes shared by CLIs
+and services so orchestrators and runbooks read one table:
+
+```cpp
+enum class ExitCode : int {
+    Ok = 0, GeneralError = 1, UsageError = 64, DataError = 65, NoInput = 66,
+    DependencyError = 69, InternalError = 70, OsError = 71, CantCreate = 73,
+    IoError = 74, TempFail = 75, Protocol = 76, NoPermission = 77,
+    ConfigError = 78
+};
+int toInt( ExitCode code );
+```
+
+---
+
+## `drea::log` helpers
+
+Header-only, under `include/drea/log/`:
+
+```cpp
+// Redacted.h — print [redacted] unless --no-log-redact
+app.logger().debug( "email {}", drea::log::redacted( email ) );
+bool drea::log::redactionEnabled();
+
+// CorrelationId.h — clamp client-supplied correlation values
+std::string drea::log::sanitizeCorrelationId( std::string_view value );
+bool drea::log::isValidCorrelationId( std::string_view value );
+```
+
 ---
 
 ## `Command`
@@ -226,6 +271,7 @@ struct Command {
     int                      mMinParams = -1;
     bool                     mHidden = false;
     std::vector<std::string> mGroups;
+    bool                     mPredefined = false;
     static const int         mUnlimitedParams = 0xfffffffa;
 
     int numberOfParams() const;
@@ -258,6 +304,10 @@ struct Option {
     int                         mNbParams = 1;
     std::string                 mShortVersion;
     bool                        mSensitive = false;
+    bool                        mRequired = false;
+    std::optional<double>       mMin;
+    std::optional<double>       mMax;
+    bool                        mPredefined = false;
     static const int            mUnlimitedParams = 0xfffffffa;
 
     int numberOfParams() const;

@@ -24,12 +24,12 @@ static void help( const drea::core::App & app, std::string_view commandName )
 		fmt::print( "This app has no commands\n" );
 	}else{
 		if( commandName.empty() ){
-			fmt::print( "Commands:\n" );
-
 			std::string::size_type offset = 0;
 			bool anySubCmd = false;
+			bool anyApp = false;
+			bool anyCommon = false;
 
-			app.commander().commands( [ &app, &offset, &anySubCmd ](const Command & command ){
+			app.commander().commands( [ &app, &offset, &anySubCmd, &anyApp, &anyCommon ](const Command & command ){
 				if( !app.commander().isVisible( command ) ){
 					return;
 				}
@@ -37,25 +37,43 @@ static void help( const drea::core::App & app, std::string_view commandName )
 				if( !command.mSubcommand.empty() ){
 					anySubCmd = true;
 				}
+				if( command.mParentCommand.empty() ){
+					( command.mPredefined ? anyCommon : anyApp ) = true;
+				}
 			});
 			if( anySubCmd ){
 				offset += 8;
 			}
-			app.commander().commands( [ &app, offset ](const Command & command ){
-				if( !app.commander().isVisible( command ) ){
-					return;
-				}
-				if( command.mParentCommand.empty() ){
-					std::string::size_type cmdSize = 2 + command.mName.size();
-					fmt::print( "  {}", command.mName );
-					if( !command.mSubcommand.empty() ){
-						fmt::print( " COMMAND" );
-						cmdSize += 8;
+			// application commands first, the predefined ones (completion, man)
+			// under their own header
+			auto printGroup = [ &app, offset ]( bool predefined ){
+				app.commander().commands( [ &app, offset, predefined ](const Command & command ){
+					if( !app.commander().isVisible( command ) || command.mPredefined != predefined ){
+						return;
 					}
-					fmt::print("{:>{}}", "", 2 + offset - cmdSize );
-					fmt::print( "{}\n", command.mDescription );
+					if( command.mParentCommand.empty() ){
+						std::string::size_type cmdSize = 2 + command.mName.size();
+						fmt::print( "  {}", command.mName );
+						if( !command.mSubcommand.empty() ){
+							fmt::print( " COMMAND" );
+							cmdSize += 8;
+						}
+						fmt::print("{:>{}}", "", 2 + offset - cmdSize );
+						fmt::print( "{}\n", command.mDescription );
+					}
+				});
+			};
+			if( anyApp ){
+				fmt::print( "Commands:\n" );
+				printGroup( false );
+			}
+			if( anyCommon ){
+				if( anyApp ){
+					fmt::print( "\n" );
 				}
-			});
+				fmt::print( "Common commands:\n" );
+				printGroup( true );
+			}
 
 			fmt::print( "\nUse \"{} COMMAND --help\" for more information about a command.\n", app.name() );
 		}else{
@@ -172,7 +190,8 @@ static void help( const drea::core::App & app )
 {
 	std::string::size_type 	offset = 0;
 	bool					anyShort = false;
-	bool					anyLine = false;
+	bool					anyLineApp = false;
+	bool					anyLineCommon = false;
 	bool					anyFile = false;
 
 	// Options exclusively used as local-options on specific commands — hide from global help
@@ -203,7 +222,7 @@ static void help( const drea::core::App & app )
 	}
 	fmt::print(" [OPTIONS]\n\n", app.name() );
 
-	app.config().options( [ &offset, &anyShort, &anyLine, &anyFile, &localOnlyOptions ](const Option & option){
+	app.config().options( [ &offset, &anyShort, &anyLineApp, &anyLineCommon, &anyFile, &localOnlyOptions ](const Option & option){
 		if( localOnlyOptions.find( option.mName ) != localOnlyOptions.end() ){
 			return;
 		}
@@ -215,7 +234,7 @@ static void help( const drea::core::App & app )
 			optionOffset += 1 + option.mParamName.size();
 		}
 		if( option.helpInLine() ){
-			anyLine = true;
+			( option.mPredefined ? anyLineCommon : anyLineApp ) = true;
 		}
 		if( option.helpInFileOnly() ){
 			anyFile = true;
@@ -225,11 +244,22 @@ static void help( const drea::core::App & app )
 	if( anyShort ){
 		offset += 4;
 	}
-	// Config
-	if( anyLine ){
+	// Config: application options first, the predefined drea set under its own header
+	if( anyLineApp ){
 		fmt::print( "Options:\n" );
 		app.config().options( [ offset, anyShort, &localOnlyOptions ](const Option & option){
-			if( option.helpInLine() && localOnlyOptions.find( option.mName ) == localOnlyOptions.end() ){
+			if( option.helpInLine() && !option.mPredefined && localOnlyOptions.find( option.mName ) == localOnlyOptions.end() ){
+				helpOption( option, offset, anyShort );
+			}
+		});
+	}
+	if( anyLineCommon ){
+		if( anyLineApp ){
+			fmt::print( "\n" );
+		}
+		fmt::print( "Common options:\n" );
+		app.config().options( [ offset, anyShort, &localOnlyOptions ](const Option & option){
+			if( option.helpInLine() && option.mPredefined && localOnlyOptions.find( option.mName ) == localOnlyOptions.end() ){
 				helpOption( option, offset, anyShort );
 			}
 		});

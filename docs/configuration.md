@@ -39,6 +39,8 @@ Fields:
 | `values`       | Default values (sequence) |
 | `scope`        | `both` (default), `line`, `file`, `none` — where the option is shown in help |
 | `sensitive`    | If true, the default is hidden in `--help` |
+| `required`     | If true, `parse()` fails when no source provides a value |
+| `min` / `max`  | Numeric bounds, validated after source resolution |
 
 `bool` options take no value by default — their presence on the CLI flips
 them to true. They can be explicitly disabled with `--no-<name>` (see
@@ -196,6 +198,54 @@ In help output:
 
 Useful for secrets loaded from a config file or `--config-source`.
 
+## Validation
+
+Options can declare constraints in the yml definition:
+
+```yaml
+options:
+  - option: pool-id
+    description: cognito pool
+    params-names: id
+    type: string
+    required: true
+
+  - option: port
+    description: listen port
+    params-names: n
+    type: int
+    min: 1
+    max: 65535
+    value: 8080
+```
+
+`App::parse` validates after all sources are resolved (defaults, remote
+sources, config file, env, flags): `required` fails when no source provided a
+value; `min`/`max` bound each value of numeric options. On failure every
+violation is logged at `critical` and the process exits with
+`drea::core::ExitCode::ConfigError` (78, sysexits `EX_CONFIG`). `--help` and
+`--version` still work when the config is invalid.
+
+`Config::validate()` returns the violation messages without exiting, for apps
+that want to handle them differently. `drea::core::ExitCode`
+(`include/drea/core/ExitCode.h`) provides the shared exit-code vocabulary
+(`Ok`, `ConfigError`, `DependencyError`, ...).
+
+## Effective config
+
+With `--log-config`, `App::parse` emits one `info` line per option with its
+resolved value and the source that provided it (`default`, `config-source`,
+`config-file`, `environment`, `flag` or `code`):
+
+```
+config: port=8080 (from config-file)
+config: db-password=[redacted] (from environment)
+```
+
+Sensitive options print `[redacted]` (unless `--no-log-redact`).
+`Config::source(name)` exposes the same information programmatically. Off by
+default; services typically turn it on in their standard options fragment.
+
 ## Logging
 
 `Config::addDefaults()` registers the logging options and `App::parse` builds
@@ -208,6 +258,27 @@ the logger from them:
   `warn`; `off` disables level-based flushing. Independent of the flush
   level, sinks are flushed every 3 seconds.
 - `-v` / `--verbose` — one occurrence enables `debug`, two or more `trace`.
+- `--log-redact` (default on) — values wrapped in `drea::log::redacted()`
+  print as `[redacted]`. Dev turns it off with `--no-log-redact`. Read once
+  at startup and frozen.
+- `--log-config` (default off) — dump the effective configuration after
+  parsing (see *Effective config* above).
+
+Two header-only helpers under `include/drea/log/` keep client-controlled and
+personal data out of production logs:
+
+```cpp
+#include <drea/log/Redacted.h>
+#include <drea/log/CorrelationId.h>
+
+app.logger().debug( "user email {}", drea::log::redacted( email ) );
+const std::string requestId = drea::log::sanitizeCorrelationId( inboundId );
+```
+
+`redacted()` wraps any value (strings, numbers) with zero allocation.
+`sanitizeCorrelationId()` clamps client-supplied correlation values to
+`[0-9A-Za-z._-]`, max 64 chars, and returns empty for anything else — so a
+hostile client cannot inject log fields or ANSI escapes.
 
 The console sink prints human-readable text. The file sink writes structured
 JSON lines instead, one object per record:

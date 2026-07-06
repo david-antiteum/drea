@@ -11,6 +11,10 @@
 #include "Export.h"
 #include "Option.h"
 
+namespace spdlog {
+	class logger;
+}
+
 namespace drea::core {
 
 class App;
@@ -131,6 +135,30 @@ public:
 		}
 		return std::vector<T>{};
 	}
+
+	/*! Check the declarative constraints of all options (`required`, `min`,
+		`max` in commands.yml) against their resolved values. Returns one
+		message per violation; empty means the config is valid.
+
+		App::parse runs this after source resolution and exits with
+		ExitCode::ConfigError on failure (unless --help or --version was
+		requested).
+	*/
+	[[nodiscard]] std::vector<std::string> validate() const;
+
+	/*! Which source provided the current value of an option: "default",
+		"config-source", "config-file", "environment", "flag" or "code"
+		(Config::set after parsing).
+	*/
+	[[nodiscard]] std::string source( std::string_view optionName ) const;
+
+	/*! Emit one info line per option with its resolved value and source.
+		Sensitive values are redacted (unless --no-log-redact). Options that
+		were never set are skipped.
+
+		App::parse calls this automatically when --log-config is on.
+	*/
+	void logEffective( spdlog::logger & logger ) const;
 
 	void reportUnknownArgument( const std::string & optionName ) const;
 

@@ -2,6 +2,7 @@
 #include <vector>
 #include <optional>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <stdlib.h>
 #include <fstream>
@@ -41,6 +42,7 @@ namespace std {
 #include "integrations/json/json_reader.h"
 #include "integrations/toml/toml_reader.h"
 #include "integrations/logs/json_formatter.h"
+#include <drea/log/Redacted.h>
 
 #ifdef ENABLE_REST_USE
 	#include "integrations/graylog/graylog_sink.h"
@@ -82,6 +84,9 @@ struct drea::core::Config::Private
 	std::vector<std::string>				mFlags;
 	std::vector<std::unique_ptr<Option>>	mOptions;
 	std::string								mEnvPrefix;
+	// which stage of Config::configure provided the current value, per option
+	std::map<std::string, std::string>		mSources;
+	std::string								mCurrentSource = "default";
 	App										& mApp;
 
 	explicit Private( App & app ) : mApp( app )
@@ -117,6 +122,7 @@ struct drea::core::Config::Private
 
 			if( val.index() > 0 ){
 				option->mValues.push_back( val );
+				mSources[ option->mName ] = mCurrentSource;
 			}else{
 				exit( -1 );
 			}
@@ -281,6 +287,7 @@ void drea::core::Config::setDefaultConfigFile( const std::string & filePath )
 	add({
 		"config-file", "file", "read configs from file <file>", {}, typeid( std::string )
 	});
+	find( "config-file" )->mPredefined = true;
 	if( !filePath.empty() ){
 		d->mDefaultConfigFile = filePath;
 		set( "config-file", filePath );
@@ -321,6 +328,12 @@ drea::core::Config & drea::core::Config::addDefaults()
 		{
 			"log-flush-level", "level", "flush log sinks on messages of <level> (trace, debug, info, warn, err, critical, off) or above", {std::string("warn")}, typeid( std::string )
 		},
+		{
+			"log-redact", "", "redact values wrapped in drea::log::redacted(); use --no-log-redact to see them", {true}, typeid( bool )
+		},
+		{
+			"log-config", "", "log the effective configuration (value and source per option) after parsing", {false}, typeid( bool )
+		},
 #ifdef ENABLE_REST_USE
 		{
 			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
@@ -336,6 +349,19 @@ drea::core::Config & drea::core::Config::addDefaults()
 	find( "help" )->mNbParams = 0;
 	find( "version" )->mShortVersion = "V";
 	find( "version" )->mNbParams = 0;
+
+	for( const char * name: {
+		"verbose", "help", "version", "config-source", "config-file",
+		"log-file", "log-folder", "log-size", "log-nb-files",
+		"log-flush-level", "log-redact", "log-config"
+#ifdef ENABLE_REST_USE
+		, "graylog-host"
+#endif
+	} ){
+		if( auto option = find( name ) ){
+			option->mPredefined = true;
+		}
+	}
 
 	return *this;
 }
@@ -405,15 +431,19 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 	for( const auto & option: d->mOptions ){
 		if( !option->mValues.empty() ){
 			registerUse( option->mName );
+			d->mSources[ option->mName ] = "default";
 		}
 	}
 	// Remote config sources: --config-source <uri> (repeatable).
+	d->mCurrentSource = "config-source";
 	d->readConfigSources( args );
 
 	// Read the config file
+	d->mCurrentSource = "config-file";
 	d->readConfig( args );
 
 	// Env vars
+	d->mCurrentSource = "environment";
 	if( !d->mEnvPrefix.empty() ){
 		for( const auto & option: d->mOptions ){
 			std::string		env = drea::core::getenv( d->mEnvPrefix, option->mName );
@@ -421,10 +451,13 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 				registerUse( option->mName );
 				if( !option->mParamName.empty() ){
 					set( option->mName, env );
+				}else{
+					d->mSources[ option->mName ] = d->mCurrentSource;
 				}
 			}
 		}
 	}
+	d->mCurrentSource = "flag";
 
 	// What defaults we have?
 	std::set<jss::object_ptr<drea::core::Option>> optionsWithDefault;
@@ -451,6 +484,7 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 
 			if( auto option = d->find( arg ) ){
 				registerUse( arg );
+				d->mSources[ option->mName ] = "flag";
 				if( optionsWithDefault.count( option ) > 0 ){
 					// override default. Clean value and keep values from user
 					option->mValues.clear();
@@ -482,6 +516,7 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 				std::string boolName = arg.substr( 3 );
 				if( auto boolOpt = d->find( boolName ); boolOpt && boolOpt->mType == typeid( bool ) ){
 					registerUse( boolName );
+					d->mSources[ boolOpt->mName ] = "flag";
 					boolOpt->mValues.clear();
 					boolOpt->mValues.push_back( false );
 					optionsWithDefault.erase( boolOpt );
@@ -493,6 +528,8 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 			}
 		}
 	}
+	// values set by the app after configure (Config::set) come from code
+	d->mCurrentSource = "code";
 }
 
 bool drea::core::Config::used( const std::string & optionName ) const
@@ -589,7 +626,74 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 	spdlog::register_logger( res );
 	spdlog::flush_every( std::chrono::seconds( 3 ) );
 
+	// read once at startup and frozen: config is immutable per house rules.
+	// Without the option (addDefaults not used) redaction stays on.
+	if( find( "log-redact" ) ){
+		drea::log::detail::setRedactionEnabled( get<bool>( "log-redact" ) );
+	}
+
 	return res;
+}
+
+std::vector<std::string> drea::core::Config::validate() const
+{
+	std::vector<std::string>	errors;
+
+	for( const auto & option: d->mOptions ){
+		if( option->mRequired && option->mValues.empty() ){
+			errors.push_back( fmt::format( "Missing required option --{}", option->mName ) );
+		}
+		if( option->mMin || option->mMax ){
+			for( const auto & value: option->mValues ){
+				std::optional<double>	num;
+
+				if( std::holds_alternative<int>( value ) ){
+					num = std::get<int>( value );
+				}else if( std::holds_alternative<double>( value ) ){
+					num = std::get<double>( value );
+				}
+				if( num ){
+					if( option->mMin && *num < *option->mMin ){
+						errors.push_back( fmt::format( "Option --{} value {} is below the minimum {}", option->mName, *num, *option->mMin ) );
+					}
+					if( option->mMax && *num > *option->mMax ){
+						errors.push_back( fmt::format( "Option --{} value {} is above the maximum {}", option->mName, *num, *option->mMax ) );
+					}
+				}
+			}
+		}
+	}
+	return errors;
+}
+
+std::string drea::core::Config::source( std::string_view optionName ) const
+{
+	if( auto it = d->mSources.find( std::string( optionName ) ); it != d->mSources.end() ){
+		return it->second;
+	}
+	return "default";
+}
+
+void drea::core::Config::logEffective( spdlog::logger & logger ) const
+{
+	for( const auto & option: d->mOptions ){
+		if( option->mValues.empty() && !used( option->mName ) ){
+			continue;
+		}
+		std::string		value;
+
+		if( option->mSensitive && drea::log::redactionEnabled() ){
+			value = "[redacted]";
+		}else{
+			for( const auto & optionValue: option->mValues ){
+				if( !value.empty() ){
+					value += ", ";
+				}
+				value += option->toString( optionValue );
+			}
+		}
+		logger.info( "config: {}={} (from {})", option->mName, value, source( option->mName ) );
+	}
 }
 
 void drea::core::Config::reportUnknownArgument( const std::string & optionName ) const

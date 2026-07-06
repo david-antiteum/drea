@@ -210,6 +210,23 @@ TEST_CASE( "Config::remove on unknown name is a no-op", "[config]" )
 	REQUIRE( fx.app.config().find( "kept" ) );
 }
 
+TEST_CASE( "addDefaults marks its options as predefined", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "color";
+	opt.mParamName = "mode";
+	opt.mType = typeid( std::string );
+	fx.app.config().add( opt );
+
+	fx.app.config().addDefaults();
+
+	REQUIRE( fx.app.config().find( "verbose" )->mPredefined );
+	REQUIRE( fx.app.config().find( "log-file" )->mPredefined );
+	REQUIRE( fx.app.config().find( "config-file" )->mPredefined );
+	REQUIRE_FALSE( fx.app.config().find( "color" )->mPredefined );
+}
+
 TEST_CASE( "Config::remove drops a default added by addDefaults", "[config]" )
 {
 	AppFixture fx;

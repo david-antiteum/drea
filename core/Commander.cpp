@@ -160,6 +160,7 @@ drea::core::Commander & drea::core::Commander::addDefaults()
 		cmd.mParamName = "shell";
 		cmd.mNbParams = 1;
 		cmd.mMinParams = 0;
+		cmd.mPredefined = true;
 		add( cmd );
 		d->mBuiltins.insert( "completion" );
 	}
@@ -170,6 +171,7 @@ drea::core::Commander & drea::core::Commander::addDefaults()
 		cmd.mParamName = "command";
 		cmd.mNbParams = 1;
 		cmd.mMinParams = 0;
+		cmd.mPredefined = true;
 		add( cmd );
 		d->mBuiltins.insert( "man" );
 	}
