@@ -10,6 +10,7 @@ set( SOURCES
 	CommanderTest.cpp
 	ConfigTest.cpp
 	GroupsTest.cpp
+	LoggerTest.cpp
 )
 
 add_executable( ${PROJECT_NAME} ${SOURCES} )
@@ -19,7 +20,8 @@ set_target_properties( ${PROJECT_NAME} PROPERTIES
 )
 drea_set_rpath( ${PROJECT_NAME} )
 
-target_include_directories( ${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR} )
+# core/ so tests can exercise internal pieces (json_lines_formatter)
+target_include_directories( ${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../core )
 target_link_libraries( ${PROJECT_NAME}
 	PRIVATE
 		Catch2::Catch2WithMain

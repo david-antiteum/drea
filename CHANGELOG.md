@@ -5,6 +5,24 @@ All notable changes to drea are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `--log-flush-level <level>` predefined option (default `warn`): flush log
+  sinks on messages at or above that level. `off` disables level-based
+  flushing; unknown values fall back to `warn` with a warning.
+- The rotating file sink (`--log-file` / `--log-folder`) now writes JSON
+  lines (`timestamp` ISO 8601 with offset, `level`, `logger`, `msg`, with
+  proper JSON escaping) while the console keeps the human-readable text
+  format.
+
+### Fixed
+
+- Loggers built by `Config::setupLogger()` had no flush policy: with
+  `--log-folder` the log file stayed empty until process exit. Now they
+  flush on `warn` (configurable) and every 3 seconds.
+
 ## [0.32.0] — 2026-04-26
 
 ### Added

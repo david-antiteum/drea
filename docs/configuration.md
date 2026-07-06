@@ -196,6 +196,29 @@ In help output:
 
 Useful for secrets loaded from a config file or `--config-source`.
 
+## Logging
+
+`Config::addDefaults()` registers the logging options and `App::parse` builds
+the logger from them:
+
+- `--log-file <file>` / `--log-folder <folder>` — add a rotating file sink
+  (`--log-size` MB per file, `--log-nb-files` files kept).
+- `--log-flush-level <level>` — flush sinks on messages at or above `<level>`
+  (`trace`, `debug`, `info`, `warn`, `err`, `critical`, `off`). Default
+  `warn`; `off` disables level-based flushing. Independent of the flush
+  level, sinks are flushed every 3 seconds.
+- `-v` / `--verbose` — one occurrence enables `debug`, two or more `trace`.
+
+The console sink prints human-readable text. The file sink writes structured
+JSON lines instead, one object per record:
+
+```json
+{"timestamp":"2026-07-06T12:34:56.789+02:00","level":"info","logger":"myapp","msg":"listening on :8080"}
+```
+
+The message is JSON-escaped, so embedded quotes and newlines do not corrupt
+the stream.
+
 ## Option scope
 
 `scope` controls where an option appears in `--help`:

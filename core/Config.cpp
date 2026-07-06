@@ -40,6 +40,7 @@ namespace std {
 #include "integrations/yaml/yaml_reader.h"
 #include "integrations/json/json_reader.h"
 #include "integrations/toml/toml_reader.h"
+#include "integrations/logs/json_formatter.h"
 
 #ifdef ENABLE_REST_USE
 	#include "integrations/graylog/graylog_sink.h"
@@ -317,6 +318,9 @@ drea::core::Config & drea::core::Config::addDefaults()
 		{
 			"log-nb-files", "number-of-log-files", "<number-of-log-files> to keep", {10}, typeid( int )
 		},
+		{
+			"log-flush-level", "level", "flush log sinks on messages of <level> (trace, debug, info, warn, err, critical, off) or above", {std::string("warn")}, typeid( std::string )
+		},
 #ifdef ENABLE_REST_USE
 		{
 			"graylog-host", "schema://host:port", "Send logs to a graylog server. Example: http://localhost:12201", {}, typeid( std::string )
@@ -543,7 +547,12 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 		int max_files = get<int>( "log-nb-files" );
 
 		try{
-			sinks.push_back( std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, max_size, max_files ) );
+			auto fileSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>( logFile, max_size, max_files );
+
+			// structured logs to file, human text to console: the JSON formatter
+			// goes on this sink only
+			fileSink->set_formatter( std::make_unique<integrations::logs::json_lines_formatter>() );
+			sinks.push_back( fileSink );
 		}catch( spdlog::spdlog_ex & se ){
 			fmt::print( "Cannot use log file {}: {}\n", logFile, se.what() );
 		}catch( std::exception & e ){
@@ -561,6 +570,25 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 	}else if( intensity( "verbose" ) > 1 ){
 		res->set_level( spdlog::level::trace );
 	}
+
+	auto flushLevel = spdlog::level::warn;
+
+	if( std::string flushName = get<std::string>( "log-flush-level" ); !flushName.empty() ){
+		if( auto parsed = spdlog::level::from_str( flushName ); parsed != spdlog::level::off && flushName != "off" ){
+			flushLevel = parsed;
+		}else if( flushName == "off" ){
+			flushLevel = spdlog::level::off;
+		}else{
+			spdlog::warn( "Unknown log-flush-level \"{}\", using \"warn\"", flushName );
+		}
+	}
+	res->flush_on( flushLevel );
+
+	// flush_every only reaches loggers held by the registry
+	spdlog::drop( res->name() );
+	spdlog::register_logger( res );
+	spdlog::flush_every( std::chrono::seconds( 3 ) );
+
 	return res;
 }
 
