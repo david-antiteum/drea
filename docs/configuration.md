@@ -290,6 +290,22 @@ JSON lines instead, one object per record:
 The message is JSON-escaped, so embedded quotes and newlines do not corrupt
 the stream.
 
+Per-call structured fields (`drea::log::Logger`, see the API reference) show
+up in both outputs — as extra top-level JSON attributes in the file and as
+`[key:value]` blocks on the console:
+
+```
+[2026-07-14 10:22:31.045] [myapp] [info] [session:abc-123] License installed
+```
+
+```json
+{"timestamp":"...","level":"info","logger":"myapp","session":"abc-123","msg":"License installed"}
+```
+
+Lines without fields are unchanged. The console pattern is spdlog's default
+plus the field blocks; both formatters read the fields on the calling
+thread, which is why drea's loggers are — and must stay — synchronous.
+
 ## Option scope
 
 `scope` controls where an option appears in `--help`:

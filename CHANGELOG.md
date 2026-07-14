@@ -5,6 +5,24 @@ All notable changes to drea are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Per-call structured log fields: `drea::log::Logger` + `drea::log::Field`
+  (`include/drea/log/Logger.h`). Wrap the spdlog logger once and pass fields
+  per call — `logger.info( { "session", id }, "..." )`. Fields are emitted
+  as top-level attributes in the JSON file log and as `[key:value]` blocks
+  on the console; lines without fields are unchanged. Values compose with
+  `drea::log::redacted()`. Transported through `spdlog::mdc`, so entries put
+  there directly (request-scoped context) appear in both outputs too.
+
+### Changed
+
+- `Config::setupLogger` sets an explicit console pattern (spdlog's default
+  plus the structured-field blocks). Loggers must stay synchronous: an async
+  logger would format on a backend thread and silently drop all fields.
+
 ## [0.34.0] — 2026-07-06
 
 ### Added

@@ -253,7 +253,21 @@ bool drea::log::redactionEnabled();
 // CorrelationId.h — clamp client-supplied correlation values
 std::string drea::log::sanitizeCorrelationId( std::string_view value );
 bool drea::log::isValidCorrelationId( std::string_view value );
+
+// Logger.h — per-call structured fields
+drea::log::Logger logger( *app.logger() );
+logger.info( "plain" );                                   // passthrough
+logger.info( { "session", sessionId }, "one field" );
+logger.info( { { "session", sessionId }, { "user", u } }, "two fields" );
+logger.raw().flush();                                     // escape hatch
 ```
+
+`Field{ key, value }` accepts any fmt-formattable value and composes with
+`redacted()`. Fields become top-level attributes in the JSON file log
+(`"session":"abc-123"`) and `[session:abc-123]` blocks on the console.
+Empty-value fields are skipped. Each level (`trace` … `critical`) has the
+three overloads shown. Only for synchronous loggers (all loggers built by
+`Config::setupLogger` are).
 
 ---
 
