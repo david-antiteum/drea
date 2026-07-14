@@ -6,6 +6,7 @@
 #include <drea/log/Redacted.h>
 
 #include <integrations/logs/json_formatter.h>
+#include <integrations/logs/text_fields_formatter.h>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/mdc.h>
@@ -134,6 +135,47 @@ TEST_CASE( "JSON formatter reports the level name", "[logger]" )
 {
 	REQUIRE( format( spdlog::level::err, "x" ).find( "\"level\":\"error\"" ) != std::string::npos );
 	REQUIRE( format( spdlog::level::debug, "x" ).find( "\"level\":\"debug\"" ) != std::string::npos );
+}
+
+namespace {
+
+// same log_msg through the console pattern (with %* fields flag) and
+// through spdlog's default pattern
+std::pair<std::string, std::string> formatConsole( const std::string & payload )
+{
+	spdlog::details::log_msg	msg( "test", spdlog::level::info, payload );
+	spdlog::pattern_formatter	withFields;
+	spdlog::pattern_formatter	byDefault;
+	spdlog::memory_buf_t		fieldsDest;
+	spdlog::memory_buf_t		defaultDest;
+
+	withFields.add_flag<drea::core::integrations::logs::text_fields_flag>( '*' ).set_pattern( "[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %*%v" );
+	withFields.format( msg, fieldsDest );
+	byDefault.format( msg, defaultDest );
+	return { std::string( fieldsDest.data(), fieldsDest.size() ), std::string( defaultDest.data(), defaultDest.size() ) };
+}
+
+}
+
+TEST_CASE( "console pattern renders fields as [key:value] blocks", "[logger]" )
+{
+	spdlog::mdc::clear();
+	spdlog::mdc::put( "session", "abc-123" );
+	spdlog::mdc::put( "user", "dave" );
+
+	const auto [line, unused] = formatConsole( "hello" );
+
+	spdlog::mdc::clear();
+	REQUIRE( line.find( "[session:abc-123][user:dave] hello" ) != std::string::npos );
+}
+
+TEST_CASE( "console pattern with empty MDC matches spdlog's default output", "[logger]" )
+{
+	spdlog::mdc::clear();
+
+	const auto [line, defaultLine] = formatConsole( "hello" );
+
+	REQUIRE( line == defaultLine );
 }
 
 TEST_CASE( "Logger wrapper emits per-call fields in the JSON output", "[logger]" )

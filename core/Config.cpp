@@ -42,6 +42,7 @@ namespace std {
 #include "integrations/json/json_reader.h"
 #include "integrations/toml/toml_reader.h"
 #include "integrations/logs/json_formatter.h"
+#include "integrations/logs/text_fields_formatter.h"
 #include <drea/log/Redacted.h>
 
 #ifdef ENABLE_REST_USE
@@ -571,7 +572,18 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 	std::vector<spdlog::sink_ptr> 		sinks;
 	std::string							logFile = get<std::string>( "log-file" );
 
-	sinks.push_back( std::make_shared<spdlog::sinks::stdout_color_sink_mt>() );
+	// Both formatters read spdlog::mdc at format time, on the calling thread.
+	// NEVER switch this function to spdlog::async_logger: formatting would
+	// move to a backend thread and every MDC read would silently return an
+	// empty map, dropping all structured fields.
+	auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+	auto consoleFormatter = std::make_unique<spdlog::pattern_formatter>();
+
+	// spdlog's default pattern plus %*: structured fields as [key:value]
+	// blocks, nothing when there are none
+	consoleFormatter->add_flag<integrations::logs::text_fields_flag>( '*' ).set_pattern( "[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %*%v" );
+	consoleSink->set_formatter( std::move( consoleFormatter ) );
+	sinks.push_back( consoleSink );
 	if( logFile.empty() ){
 		std::string						logFolder = get<std::string>( "log-folder" );
 		
