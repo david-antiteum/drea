@@ -5,7 +5,7 @@ All notable changes to drea are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.36.0] — 2026-07-14
 
 ### Added
 
