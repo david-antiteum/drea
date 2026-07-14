@@ -2,14 +2,18 @@
 
 #include <drea/core/App.h>
 #include <drea/core/Config.h>
+#include <drea/log/Logger.h>
+#include <drea/log/Redacted.h>
 
 #include <integrations/logs/json_formatter.h>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/mdc.h>
+#include <spdlog/sinks/ostream_sink.h>
 
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <string>
 
 using drea::core::App;
@@ -33,6 +37,22 @@ std::string format( spdlog::level::level_enum level, const std::string & payload
 	formatter.format( msg, dest );
 	return std::string( dest.data(), dest.size() );
 }
+
+// spdlog logger writing JSON lines into a string, wrapped by drea::log::Logger
+struct CapturedLogger {
+	std::ostringstream     out;
+	spdlog::logger         raw;
+	drea::log::Logger      logger;
+
+	CapturedLogger()
+		: raw( "test", std::make_shared<spdlog::sinks::ostream_sink_st>( out ) )
+		, logger( raw )
+	{
+		raw.set_formatter( std::make_unique<json_lines_formatter>() );
+	}
+
+	std::string text() { return out.str(); }
+};
 
 }
 
@@ -114,6 +134,97 @@ TEST_CASE( "JSON formatter reports the level name", "[logger]" )
 {
 	REQUIRE( format( spdlog::level::err, "x" ).find( "\"level\":\"error\"" ) != std::string::npos );
 	REQUIRE( format( spdlog::level::debug, "x" ).find( "\"level\":\"debug\"" ) != std::string::npos );
+}
+
+TEST_CASE( "Logger wrapper emits per-call fields in the JSON output", "[logger]" )
+{
+	CapturedLogger cap;
+
+	spdlog::mdc::clear();
+	cap.logger.info( { "session", "abc-123" }, "hello {}", 42 );
+
+	REQUIRE( cap.text().find( "\"session\":\"abc-123\",\"msg\":\"hello 42\"" ) != std::string::npos );
+	REQUIRE( spdlog::mdc::get_context().empty() );
+}
+
+TEST_CASE( "Logger wrapper accepts multiple fields", "[logger]" )
+{
+	CapturedLogger cap;
+
+	spdlog::mdc::clear();
+	cap.logger.warn( { { "session", "abc-123" }, { "user", "dave" } }, "hello" );
+
+	REQUIRE( cap.text().find( "\"session\":\"abc-123\",\"user\":\"dave\",\"msg\":\"hello\"" ) != std::string::npos );
+	REQUIRE( spdlog::mdc::get_context().empty() );
+}
+
+TEST_CASE( "Logger wrapper skips fields with an empty value", "[logger]" )
+{
+	CapturedLogger cap;
+
+	spdlog::mdc::clear();
+	cap.logger.info( { "session", "" }, "hello" );
+
+	REQUIRE( cap.text().find( "\"session\"" ) == std::string::npos );
+	REQUIRE( cap.text().find( "\"msg\":\"hello\"" ) != std::string::npos );
+	REQUIRE( spdlog::mdc::get_context().empty() );
+}
+
+TEST_CASE( "Logger wrapper leaves MDC untouched on a disabled level", "[logger]" )
+{
+	CapturedLogger cap;
+
+	cap.raw.set_level( spdlog::level::warn );
+	spdlog::mdc::clear();
+	spdlog::mdc::put( "outer", "kept" );
+
+	cap.logger.debug( { "session", "abc-123" }, "hidden" );
+
+	REQUIRE( cap.text().empty() );
+	REQUIRE( spdlog::mdc::get( "outer" ) == "kept" );
+	REQUIRE( spdlog::mdc::get_context().size() == 1 );
+	spdlog::mdc::clear();
+}
+
+TEST_CASE( "Logger wrapper overwrites a colliding MDC key and removes it after", "[logger]" )
+{
+	CapturedLogger cap;
+
+	spdlog::mdc::clear();
+	spdlog::mdc::put( "session", "outer" );
+
+	cap.logger.info( { "session", "inner" }, "hello" );
+
+	REQUIRE( cap.text().find( "\"session\":\"inner\"" ) != std::string::npos );
+	// removed, not restored to "outer"
+	REQUIRE( spdlog::mdc::get( "session" ).empty() );
+	spdlog::mdc::clear();
+}
+
+TEST_CASE( "Field composes with redacted()", "[logger]" )
+{
+	CapturedLogger cap;
+
+	drea::log::detail::setRedactionEnabled( true );
+	spdlog::mdc::clear();
+	cap.logger.info( { "email", drea::log::redacted( "dave@example.com" ) }, "hello" );
+
+	REQUIRE( cap.text().find( "\"email\":\"[redacted]\"" ) != std::string::npos );
+	REQUIRE( cap.text().find( "dave@example.com" ) == std::string::npos );
+}
+
+TEST_CASE( "Logger wrapper passthrough matches the raw logger output", "[logger]" )
+{
+	CapturedLogger viaWrapper;
+	CapturedLogger viaRaw;
+
+	spdlog::mdc::clear();
+	viaWrapper.logger.info( "hello {}", 42 );
+	viaRaw.raw.info( "hello {}", 42 );
+
+	const auto tail = []( const std::string & line ){ return line.substr( line.find( "\",\"level\"" ) ); };
+
+	REQUIRE( tail( viaWrapper.text() ) == tail( viaRaw.text() ) );
 }
 
 TEST_CASE( "setupLogger flushes on warn by default", "[logger]" )
