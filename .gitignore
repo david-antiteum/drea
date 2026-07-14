@@ -41,3 +41,6 @@ build*
 
 # vcpkg
 vcpkg_installed/
+
+# local development plans
+docs/plans/
