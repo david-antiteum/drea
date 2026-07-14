@@ -6,6 +6,7 @@
 #include <integrations/logs/json_formatter.h>
 
 #include <spdlog/spdlog.h>
+#include <spdlog/mdc.h>
 
 #include <filesystem>
 #include <fstream>
@@ -61,6 +62,52 @@ TEST_CASE( "JSON formatter escapes quotes, backslashes and control characters", 
 	const std::string line = format( spdlog::level::warn, "a \"b\" c:\\d\ne\tf\x01g" );
 
 	REQUIRE( line.find( "\"msg\":\"a \\\"b\\\" c:\\\\d\\ne\\tf\\u0001g\"" ) != std::string::npos );
+}
+
+TEST_CASE( "JSON formatter emits MDC entries as top-level fields", "[logger]" )
+{
+	spdlog::mdc::clear();
+	spdlog::mdc::put( "session", "abc-123" );
+	spdlog::mdc::put( "user", "dave" );
+
+	const std::string line = format( spdlog::level::info, "hello" );
+
+	spdlog::mdc::clear();
+	REQUIRE( line.find( "\"logger\":\"test\",\"session\":\"abc-123\",\"user\":\"dave\",\"msg\":\"hello\"" ) != std::string::npos );
+}
+
+TEST_CASE( "JSON formatter escapes MDC keys and values", "[logger]" )
+{
+	spdlog::mdc::clear();
+	spdlog::mdc::put( "we\"ird", "a\\b\nc" );
+
+	const std::string line = format( spdlog::level::info, "x" );
+
+	spdlog::mdc::clear();
+	REQUIRE( line.find( "\"we\\\"ird\":\"a\\\\b\\nc\"" ) != std::string::npos );
+}
+
+TEST_CASE( "JSON formatter skips reserved MDC keys", "[logger]" )
+{
+	spdlog::mdc::clear();
+	spdlog::mdc::put( "level", "hacked" );
+	spdlog::mdc::put( "msg", "hacked" );
+	spdlog::mdc::put( "ok", "kept" );
+
+	const std::string line = format( spdlog::level::info, "hello" );
+
+	spdlog::mdc::clear();
+	REQUIRE( line.find( "hacked" ) == std::string::npos );
+	REQUIRE( line.find( "\"ok\":\"kept\"" ) != std::string::npos );
+}
+
+TEST_CASE( "JSON formatter output is unchanged with an empty MDC", "[logger]" )
+{
+	spdlog::mdc::clear();
+
+	const std::string line = format( spdlog::level::info, "hello" );
+
+	REQUIRE( line.find( "\"logger\":\"test\",\"msg\":\"hello\"" ) != std::string::npos );
 }
 
 TEST_CASE( "JSON formatter reports the level name", "[logger]" )

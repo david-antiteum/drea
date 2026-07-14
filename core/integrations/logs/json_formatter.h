@@ -4,6 +4,7 @@
 #include <spdlog/details/log_msg.h>
 #include <spdlog/details/os.h>
 #include <spdlog/fmt/fmt.h>
+#include <spdlog/mdc.h>
 
 #include <chrono>
 #include <ctime>
@@ -19,6 +20,10 @@ namespace drea::core::integrations::logs {
 // A real formatter (not a set_pattern string) so that the message payload can
 // be JSON-escaped: embedded quotes, backslashes and control characters do not
 // corrupt the stream.
+//
+// Entries in spdlog::mdc (thread-local) are emitted as extra top-level string
+// fields between "logger" and "msg". This only works with synchronous loggers:
+// formatting must run on the thread that populated the MDC.
 class json_lines_formatter : public spdlog::formatter
 {
 public:
@@ -30,7 +35,18 @@ public:
 		appendEscaped( dest, spdlog::level::to_string_view( msg.level ) );
 		appendLiteral( dest, "\",\"logger\":\"" );
 		appendEscaped( dest, msg.logger_name );
-		appendLiteral( dest, "\",\"msg\":\"" );
+		appendLiteral( dest, "\"" );
+		for( const auto & [key, value] : spdlog::mdc::get_context() ){
+			if( isReservedKey( key ) ){
+				continue;
+			}
+			appendLiteral( dest, ",\"" );
+			appendEscaped( dest, key );
+			appendLiteral( dest, "\":\"" );
+			appendEscaped( dest, value );
+			appendLiteral( dest, "\"" );
+		}
+		appendLiteral( dest, ",\"msg\":\"" );
 		appendEscaped( dest, msg.payload );
 		appendLiteral( dest, "\"}" );
 		appendLiteral( dest, spdlog::details::os::default_eol );
@@ -42,6 +58,13 @@ public:
 	}
 
 private:
+	// Keys come from code (string literals), so this is a belt-and-braces
+	// guard against emitting a field twice, not validation.
+	static bool isReservedKey( std::string_view key )
+	{
+		return key == "timestamp" || key == "level" || key == "logger" || key == "msg";
+	}
+
 	static void appendLiteral( spdlog::memory_buf_t & dest, std::string_view text )
 	{
 		dest.append( text.data(), text.data() + text.size() );
