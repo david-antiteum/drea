@@ -43,6 +43,7 @@ namespace std {
 #include "integrations/toml/toml_reader.h"
 #include "integrations/logs/json_formatter.h"
 #include "integrations/logs/text_fields_formatter.h"
+#include <drea/log/Logger.h>
 #include <drea/log/Redacted.h>
 
 #ifdef ENABLE_REST_USE
@@ -686,7 +687,7 @@ std::string drea::core::Config::source( std::string_view optionName ) const
 	return "default";
 }
 
-void drea::core::Config::logEffective( spdlog::logger & logger ) const
+void drea::core::Config::logEffective( drea::log::Logger & logger ) const
 {
 	for( const auto & option: d->mOptions ){
 		if( option->mValues.empty() && !used( option->mName ) ){

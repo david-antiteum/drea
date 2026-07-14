@@ -21,6 +21,7 @@ struct drea::core::App::Private
 	Config								mConfig;
 	Commander							mCommander;
 	std::shared_ptr<spdlog::logger>		mLogger;
+	drea::log::Logger					mLog{ *spdlog::default_logger() };
 	std::vector<std::string>			mArgs;
 	std::string							mDefinitions;
 	HelpFooterFn						mHelpFooter;
@@ -252,6 +253,7 @@ void drea::core::App::parse( const std::string & definitions )
 		configureInRunTime();
 		config().configure( args.first );
 		d->mLogger = config().setupLogger();
+		d->mLog.reset( *d->mLogger );
 		// --help and --version must work even when the config is invalid
 		if( !config().used( "help" ) && !config().used( "version" ) ){
 			if( const auto errors = config().validate(); !errors.empty() ){
@@ -314,12 +316,15 @@ drea::core::Commander & drea::core::App::commander() const
 	return d->mCommander;
 }
 
-spdlog::logger & drea::core::App::logger() const
+drea::log::Logger & drea::core::App::logger() const
 {
-	if( d->mLogger ){
-		return *d->mLogger;
+	// once parse has installed the configured logger this is a pure read,
+	// safe for concurrent callers; before that (single-threaded startup)
+	// follow the spdlog default logger, which the user may still swap
+	if( !d->mLogger ){
+		d->mLog.reset( *spdlog::default_logger() );
 	}
-	return *spdlog::default_logger();
+	return d->mLog;
 }
 
 std::vector<std::string> drea::core::App::args() const

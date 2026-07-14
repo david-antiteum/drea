@@ -200,6 +200,33 @@ TEST_CASE( "Logger wrapper accepts multiple fields", "[logger]" )
 	REQUIRE( spdlog::mdc::get_context().empty() );
 }
 
+TEST_CASE( "Logger wrapper logs at a runtime-chosen level with fields", "[logger]" )
+{
+	CapturedLogger cap;
+
+	spdlog::mdc::clear();
+	cap.logger.log( spdlog::level::err, { "session", "abc-123" }, "dynamic {}", 1 );
+	cap.logger.log( spdlog::level::warn, { { "session", "abc-123" }, { "user", "dave" } }, "multi" );
+	cap.logger.log( spdlog::level::info, "plain" );
+
+	REQUIRE( cap.text().find( "\"level\":\"error\"" ) != std::string::npos );
+	REQUIRE( cap.text().find( "\"session\":\"abc-123\",\"msg\":\"dynamic 1\"" ) != std::string::npos );
+	REQUIRE( cap.text().find( "\"level\":\"warning\"" ) != std::string::npos );
+	REQUIRE( cap.text().find( "\"session\":\"abc-123\",\"user\":\"dave\",\"msg\":\"multi\"" ) != std::string::npos );
+	REQUIRE( cap.text().find( "\"msg\":\"plain\"" ) != std::string::npos );
+	REQUIRE( spdlog::mdc::get_context().empty() );
+}
+
+TEST_CASE( "Logger wrapper should_log follows the underlying level", "[logger]" )
+{
+	CapturedLogger cap;
+
+	cap.raw.set_level( spdlog::level::warn );
+
+	REQUIRE_FALSE( cap.logger.should_log( spdlog::level::info ) );
+	REQUIRE( cap.logger.should_log( spdlog::level::err ) );
+}
+
 TEST_CASE( "Logger wrapper skips fields with an empty value", "[logger]" )
 {
 	CapturedLogger cap;
@@ -269,6 +296,19 @@ TEST_CASE( "Logger wrapper passthrough matches the raw logger output", "[logger]
 	REQUIRE( tail( viaWrapper.text() ) == tail( viaRaw.text() ) );
 }
 
+TEST_CASE( "App::logger retargets from the default logger to the configured one", "[logger]" )
+{
+	AppFixture fx;
+
+	REQUIRE( &fx.app.logger().raw() == spdlog::default_logger().get() );
+	REQUIRE( &fx.app.logger() == &fx.app.logger() );
+
+	fx.app.parse( "app: logger-retarget-test\n" );
+
+	REQUIRE( &fx.app.logger().raw() != spdlog::default_logger().get() );
+	REQUIRE( fx.app.logger().raw().name() == fx.app.name() );
+}
+
 TEST_CASE( "setupLogger flushes on warn by default", "[logger]" )
 {
 	AppFixture fx;
@@ -323,8 +363,9 @@ TEST_CASE( "file sink writes JSON lines", "[logger]" )
 	fx.app.config().configure( { "--log-file", logFile.string() } );
 
 	auto logger = fx.app.config().setupLogger();
-	logger->info( "json goes to the file" );
-	logger->flush();
+	drea::log::Logger wrapped( *logger );
+	wrapped.info( "json goes to the file" );
+	wrapped.flush();
 
 	std::ifstream	in( logFile );
 	std::string		line;

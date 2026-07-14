@@ -49,45 +49,58 @@ class Logger
 {
 public:
 	explicit Logger( spdlog::logger & logger )
-		: mLogger( logger )
+		: mLogger( &logger )
 	{
+	}
+
+	//! retarget the wrapper, e.g. once Config::setupLogger has built the real logger
+	void reset( spdlog::logger & logger ) noexcept
+	{
+		mLogger = &logger;
 	}
 
 	// passthrough — call sites without fields behave exactly like spdlog
 	template<typename... Args>
 	void trace( fmt::format_string<Args...> fmt, Args &&... args )
 	{
-		mLogger.trace( fmt, std::forward<Args>( args )... );
+		mLogger->trace( fmt, std::forward<Args>( args )... );
 	}
 
 	template<typename... Args>
 	void debug( fmt::format_string<Args...> fmt, Args &&... args )
 	{
-		mLogger.debug( fmt, std::forward<Args>( args )... );
+		mLogger->debug( fmt, std::forward<Args>( args )... );
 	}
 
 	template<typename... Args>
 	void info( fmt::format_string<Args...> fmt, Args &&... args )
 	{
-		mLogger.info( fmt, std::forward<Args>( args )... );
+		mLogger->info( fmt, std::forward<Args>( args )... );
 	}
 
 	template<typename... Args>
 	void warn( fmt::format_string<Args...> fmt, Args &&... args )
 	{
-		mLogger.warn( fmt, std::forward<Args>( args )... );
+		mLogger->warn( fmt, std::forward<Args>( args )... );
 	}
 
 	template<typename... Args>
 	void error( fmt::format_string<Args...> fmt, Args &&... args )
 	{
-		mLogger.error( fmt, std::forward<Args>( args )... );
+		mLogger->error( fmt, std::forward<Args>( args )... );
 	}
 
 	template<typename... Args>
 	void critical( fmt::format_string<Args...> fmt, Args &&... args )
 	{
-		mLogger.critical( fmt, std::forward<Args>( args )... );
+		mLogger->critical( fmt, std::forward<Args>( args )... );
+	}
+
+	// runtime-chosen level: log( level, "...", ... )
+	template<typename... Args>
+	void log( spdlog::level::level_enum lvl, fmt::format_string<Args...> fmt, Args &&... args )
+	{
+		mLogger->log( lvl, fmt, std::forward<Args>( args )... );
 	}
 
 	// single field: info( { "session", id }, "...", ... )
@@ -127,6 +140,12 @@ public:
 		logFields( spdlog::level::critical, &field, &field + 1, fmt, std::forward<Args>( args )... );
 	}
 
+	template<typename... Args>
+	void log( spdlog::level::level_enum lvl, Field field, fmt::format_string<Args...> fmt, Args &&... args )
+	{
+		logFields( lvl, &field, &field + 1, fmt, std::forward<Args>( args )... );
+	}
+
 	// multiple: info( { { "session", id }, { "user", u } }, "...", ... )
 	template<typename... Args>
 	void trace( std::initializer_list<Field> fields, fmt::format_string<Args...> fmt, Args &&... args )
@@ -164,10 +183,28 @@ public:
 		logFields( spdlog::level::critical, fields.begin(), fields.end(), fmt, std::forward<Args>( args )... );
 	}
 
-	//! escape hatch for sinks, level, flush, ...
+	template<typename... Args>
+	void log( spdlog::level::level_enum lvl, std::initializer_list<Field> fields, fmt::format_string<Args...> fmt, Args &&... args )
+	{
+		logFields( lvl, fields.begin(), fields.end(), fmt, std::forward<Args>( args )... );
+	}
+
+	//! guard expensive log-argument computation
+	[[nodiscard]] bool should_log( spdlog::level::level_enum lvl ) const
+	{
+		return mLogger->should_log( lvl );
+	}
+
+	//! flush the underlying logger's sinks
+	void flush()
+	{
+		mLogger->flush();
+	}
+
+	//! escape hatch for sinks, level, ...
 	spdlog::logger & raw() noexcept
 	{
-		return mLogger;
+		return *mLogger;
 	}
 
 private:
@@ -190,7 +227,7 @@ private:
 	template<typename... Args>
 	void logFields( spdlog::level::level_enum lvl, const Field * begin, const Field * end, fmt::format_string<Args...> fmt, Args &&... args )
 	{
-		if( !mLogger.should_log( lvl ) ){
+		if( !mLogger->should_log( lvl ) ){
 			return;
 		}
 
@@ -203,10 +240,10 @@ private:
 				spdlog::mdc::put( it->key, it->value );
 			}
 		}
-		mLogger.log( lvl, fmt, std::forward<Args>( args )... );
+		mLogger->log( lvl, fmt, std::forward<Args>( args )... );
 	}
 
-	spdlog::logger & mLogger;
+	spdlog::logger * mLogger;
 };
 
 }

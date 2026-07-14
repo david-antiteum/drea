@@ -7,10 +7,7 @@
 #include <vector>
 
 #include "Export.h"
-
-namespace spdlog {
-	class logger;
-}
+#include <drea/log/Logger.h>
 
 namespace drea::core {
 
@@ -56,9 +53,10 @@ public:
 	*/
 	[[nodiscard]] Commander & commander() const;
 
-	/*! Logger
+	/*! Logger with per-call structured fields (\see drea::log::Logger).
+		Use logger().raw() for spdlog-specific calls: levels, sinks, ...
 	*/
-	[[nodiscard]] spdlog::logger & logger() const;
+	[[nodiscard]] drea::log::Logger & logger() const;
 
 	/*! After configuring the app, call this method to parse options for all
 		the selected sources.

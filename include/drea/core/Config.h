@@ -15,6 +15,10 @@ namespace spdlog {
 	class logger;
 }
 
+namespace drea::log {
+	class Logger;
+}
+
 namespace drea::core {
 
 class App;
@@ -158,7 +162,7 @@ public:
 
 		App::parse calls this automatically when --log-config is on.
 	*/
-	void logEffective( spdlog::logger & logger ) const;
+	void logEffective( drea::log::Logger & logger ) const;
 
 	void reportUnknownArgument( const std::string & optionName ) const;
 

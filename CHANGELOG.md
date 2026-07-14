@@ -5,6 +5,27 @@ All notable changes to drea are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `drea::log::Logger` gains call-site passthroughs: `log( level, ... )` with
+  the same plain/one-field/multi-field overloads as the named levels (so a
+  runtime-chosen severity keeps its structured fields), `should_log( level )`
+  to guard expensive argument computation, and `flush()`.
+
+### Changed
+
+- **Breaking:** `App::logger()` returns `drea::log::Logger &` (the
+  structured-fields wrapper) instead of `spdlog::logger &`, so
+  `app.logger().debug( { "session", id }, "..." )` works directly.
+  `Config::logEffective` takes the wrapper too. Plain level calls
+  (`logger().info( "..." )` etc.) and `flush()` compile unchanged; other
+  spdlog-specific calls (levels, sinks) move to `logger().raw()`. The
+  returned wrapper
+  always targets the current logger: the spdlog default one before
+  `App::parse`, the configured one after.
+
 ## [0.35.0] — 2026-07-14
 
 ### Added

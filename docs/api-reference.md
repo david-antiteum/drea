@@ -254,12 +254,15 @@ bool drea::log::redactionEnabled();
 std::string drea::log::sanitizeCorrelationId( std::string_view value );
 bool drea::log::isValidCorrelationId( std::string_view value );
 
-// Logger.h — per-call structured fields
-drea::log::Logger logger( *app.logger() );
+// Logger.h — per-call structured fields; App::logger() returns this wrapper
+auto & logger = app.logger();
 logger.info( "plain" );                                   // passthrough
 logger.info( { "session", sessionId }, "one field" );
 logger.info( { { "session", sessionId }, { "user", u } }, "two fields" );
-logger.raw().flush();                                     // escape hatch
+logger.log( severity, { "session", sessionId }, "runtime-chosen level" );
+if( logger.should_log( spdlog::level::debug ) ){ /* expensive args */ }
+logger.flush();
+logger.raw().set_level( spdlog::level::debug );           // escape hatch
 ```
 
 `Field{ key, value }` accepts any fmt-formattable value and composes with
