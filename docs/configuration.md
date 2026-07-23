@@ -138,6 +138,19 @@ options:
 MYAPP_workers=8 ./myapp ...
 ```
 
+Option names may contain characters that are not valid in shell variable
+names (for example `config-file` or `db.host`). For those options, Drea also
+looks up a variable where every character outside `[A-Za-z0-9_]` is replaced
+by `_`:
+
+```bash
+MYAPP_config_file=/etc/config.json ./myapp ...   # option: config-file
+MYAPP_db_host=localhost ./myapp ...              # option: db.host
+```
+
+The exact spelling (`MYAPP_config-file`) is still checked first, for
+environments that can set such names (for example `env` or `execve`).
+
 ## Remote config sources
 
 Drea can load configuration from remote systems via the repeatable

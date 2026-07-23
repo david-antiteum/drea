@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <stdlib.h>
+#include <cctype>
 #include <fstream>
 
 #if defined(__cpp_lib_filesystem)
@@ -59,22 +60,43 @@ namespace std {
 
 namespace drea::core {
 
-static std::string getenv( const std::string & prefix, const std::string & name )
+static std::string getenvByName( const std::string & varName )
 {
 	std::string		res;
 	char			*env_p = nullptr;
 #ifdef WIN32
 	size_t 	sz = 0;
-	if( _dupenv_s( &env_p, &sz, (prefix + "_" + name).c_str() ) == 0 && env_p ){
+	if( _dupenv_s( &env_p, &sz, varName.c_str() ) == 0 && env_p ){
 		res = env_p;
 	}
 	free( env_p );
 #else
-	env_p = ::getenv( (prefix + "_" + name).c_str() );
+	env_p = ::getenv( varName.c_str() );
 	if( env_p != nullptr ){
 		res = env_p;
 	}
 #endif
+	return res;
+}
+
+static std::string getenv( const std::string & prefix, const std::string & name )
+{
+	std::string		res = getenvByName( prefix + "_" + name );
+
+	if( res.empty() ){
+		// option names may contain characters that are invalid in shell variable
+		// names (e.g. "config-file", "db.host"): map them to '_'
+		std::string		sanitized = name;
+
+		for( char & c: sanitized ){
+			if( !std::isalnum( static_cast<unsigned char>( c ) ) && c != '_' ){
+				c = '_';
+			}
+		}
+		if( sanitized != name ){
+			res = getenvByName( prefix + "_" + sanitized );
+		}
+	}
 	return res;
 }
 

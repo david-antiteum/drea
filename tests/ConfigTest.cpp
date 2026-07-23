@@ -240,3 +240,78 @@ TEST_CASE( "Config::remove drops a default added by addDefaults", "[config]" )
 		SUCCEED();
 	}
 }
+
+namespace {
+
+void setEnvVar( const char * name, const char * value )
+{
+#ifdef WIN32
+	_putenv_s( name, value );
+#else
+	setenv( name, value, 1 );
+#endif
+}
+
+void unsetEnvVar( const char * name )
+{
+#ifdef WIN32
+	_putenv_s( name, "" );
+#else
+	unsetenv( name );
+#endif
+}
+
+}
+
+TEST_CASE( "Config reads env var with '-' in option name mapped to '_'", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "config-file";
+	opt.mParamName = "path";
+	opt.mType = typeid( std::string );
+	fx.app.config().add( opt );
+	fx.app.config().setEnvPrefix( "DREATEST" );
+
+	setEnvVar( "DREATEST_config_file", "/etc/config.json" );
+	fx.app.config().configure( {} );
+	unsetEnvVar( "DREATEST_config_file" );
+
+	REQUIRE( fx.app.config().used( "config-file" ) );
+	REQUIRE( fx.app.config().get<std::string>( "config-file" ) == "/etc/config.json" );
+	REQUIRE( fx.app.config().source( "config-file" ) == "environment" );
+}
+
+TEST_CASE( "Config reads env var with '.' in option name mapped to '_'", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "db.host";
+	opt.mParamName = "host";
+	opt.mType = typeid( std::string );
+	fx.app.config().add( opt );
+	fx.app.config().setEnvPrefix( "DREATEST" );
+
+	setEnvVar( "DREATEST_db_host", "localhost" );
+	fx.app.config().configure( {} );
+	unsetEnvVar( "DREATEST_db_host" );
+
+	REQUIRE( fx.app.config().get<std::string>( "db.host" ) == "localhost" );
+}
+
+TEST_CASE( "Config still reads env var matching option name exactly", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "workers";
+	opt.mParamName = "count";
+	opt.mType = typeid( int );
+	fx.app.config().add( opt );
+	fx.app.config().setEnvPrefix( "DREATEST" );
+
+	setEnvVar( "DREATEST_workers", "8" );
+	fx.app.config().configure( {} );
+	unsetEnvVar( "DREATEST_workers" );
+
+	REQUIRE( fx.app.config().get<int>( "workers" ) == 8 );
+}
