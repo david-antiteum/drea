@@ -733,3 +733,140 @@ TEST_CASE( "findings reports constraints that cannot act", "[findings]" )
 		REQUIRE( hasFinding( fx.app.config().findings(), "bad_definition", "mode" ) );
 	}
 }
+
+namespace {
+
+void setEnvVar( const char * name, const char * value )
+{
+#ifdef WIN32
+	_putenv_s( name, value );
+#else
+	setenv( name, value, 1 );
+#endif
+}
+
+void unsetEnvVar( const char * name )
+{
+#ifdef WIN32
+	_putenv_s( name, "" );
+#else
+	unsetenv( name );
+#endif
+}
+
+}
+
+TEST_CASE( "bool options read their value from the environment", "[config][findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "round";
+	opt.mType = typeid( bool );
+	opt.mNbParams = 0;
+	fx.app.config().add( opt );
+	fx.app.config().setEnvPrefix( "DREAVAL" );
+
+	SECTION( "a true value enables the flag" ){
+		setEnvVar( "DREAVAL_round", "true" );
+		fx.app.config().configure( {} );
+		unsetEnvVar( "DREAVAL_round" );
+
+		REQUIRE( fx.app.config().used( "round" ) );
+		REQUIRE( fx.app.config().get<bool>( "round" ) == true );
+		REQUIRE( fx.app.config().source( "round" ) == "environment" );
+	}
+	SECTION( "a false value stays false and used" ){
+		setEnvVar( "DREAVAL_round", "no" );
+		fx.app.config().configure( {} );
+		unsetEnvVar( "DREAVAL_round" );
+
+		REQUIRE( fx.app.config().used( "round" ) );
+		REQUIRE( fx.app.config().get<bool>( "round" ) == false );
+	}
+	SECTION( "garbage is a parse error, not false" ){
+		setEnvVar( "DREAVAL_round", "banana" );
+		fx.app.config().configure( {} );
+		unsetEnvVar( "DREAVAL_round" );
+
+		const auto findings = fx.app.config().findings();
+		const auto * finding = getFinding( findings, "parse_error", "round" );
+		REQUIRE( finding );
+		REQUIRE( finding->mSource == "environment" );
+	}
+}
+
+TEST_CASE( "an env var for a command-line-only option is reported", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "force";
+	opt.mParamName = "mode";
+	opt.mType = typeid( std::string );
+	opt.mScope = Option::Scope::Line;
+	fx.app.config().add( opt );
+	fx.app.config().setEnvPrefix( "DREAVAL" );
+
+	setEnvVar( "DREAVAL_force", "always" );
+	fx.app.config().configure( {} );
+	unsetEnvVar( "DREAVAL_force" );
+
+	// the variable is ignored...
+	REQUIRE_FALSE( fx.app.config().used( "force" ) );
+	// ...but reported
+	const auto findings = fx.app.config().findings();
+	const auto * finding = getFinding( findings, "wrong_scope", "force" );
+	REQUIRE( finding );
+	REQUIRE( finding->mSource == "environment" );
+}
+
+TEST_CASE( "an env var under the prefix matching no option is reported", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "port";
+	opt.mParamName = "n";
+	opt.mType = typeid( int );
+	fx.app.config().add( opt );
+	fx.app.config().setEnvPrefix( "DREAVAL" );
+
+	setEnvVar( "DREAVAL_prot", "80" );
+	setEnvVar( "DREAVAL_port", "8080" );
+	fx.app.config().configure( {} );
+	unsetEnvVar( "DREAVAL_prot" );
+	unsetEnvVar( "DREAVAL_port" );
+
+	const auto findings = fx.app.config().findings();
+	const auto * finding = getFinding( findings, "unknown_key", "DREAVAL_prot" );
+	REQUIRE( finding );
+	REQUIRE( finding->mSource == "environment" );
+	// the matching spelling is not reported
+	REQUIRE_FALSE( hasFinding( findings, "unknown_key", "DREAVAL_port" ) );
+	REQUIRE( fx.app.config().get<int>( "port" ) == 8080 );
+	// unknown env vars stay non-fatal in App::parse
+	REQUIRE( fx.app.config().validate().empty() );
+}
+
+TEST_CASE( "--config-file is repeatable and later files win", "[config]" )
+{
+	AppFixture fx;
+	Option port;
+	port.mName = "port";
+	port.mParamName = "n";
+	port.mType = typeid( int );
+	fx.app.config().add( port );
+	Option host;
+	host.mName = "host";
+	host.mParamName = "h";
+	host.mType = typeid( std::string );
+	fx.app.config().add( host );
+	fx.app.config().setDefaultConfigFile( {} );
+
+	const std::string first = writeTempFile( "drea-validate-first.yaml", "port: 80\nhost: alpha\n" );
+	const std::string second = writeTempFile( "drea-validate-second.yaml", "port: 90\n" );
+
+	fx.app.config().configure( { "--config-file", first, "--config-file", second } );
+
+	REQUIRE( fx.app.config().get<int>( "port" ) == 90 );
+	REQUIRE( fx.app.config().get<std::string>( "host" ) == "alpha" );
+	REQUIRE( fx.app.config().source( "port" ) == "config-file" );
+}

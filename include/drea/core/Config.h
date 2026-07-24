@@ -179,9 +179,10 @@ public:
 	*/
 	[[nodiscard]] std::vector<Finding> findings() const;
 
-	/*! The default values an option declared before source resolution
-		replaced them (Config::configure snapshots them). Empty if the option
-		had no default or configure has not run.
+	/*! The default values an option declared, regardless of what source
+		resolution later put in its values (Config::configure snapshots
+		them; before it runs, the current values are the declared defaults).
+		Empty if the option declares no default.
 	*/
 	[[nodiscard]] std::vector<OptionValue> declaredDefault( std::string_view optionName ) const;
 

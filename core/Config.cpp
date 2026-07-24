@@ -4,9 +4,18 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <stdlib.h>
 #include <cctype>
 #include <fstream>
+
+// the full environment, for reporting variables under the app prefix that
+// match no option
+#ifdef __APPLE__
+	#include <crt_externs.h>
+#elif !defined( WIN32 )
+	extern char ** environ;
+#endif
 
 #if defined(__cpp_lib_filesystem)
 #   define INCLUDE_STD_FILESYSTEM_EXPERIMENTAL 0
@@ -81,6 +90,31 @@ static std::string getenvByName( const std::string & varName )
 	return res;
 }
 
+static char ** environmentEntries()
+{
+#ifdef __APPLE__
+	return *_NSGetEnviron();
+#elif defined( WIN32 )
+	return _environ;
+#else
+	return environ;
+#endif
+}
+
+//! Same mapping as the env lookup below: chars invalid in shell variable
+//! names become '_'
+static std::string sanitizedEnvName( const std::string & name )
+{
+	std::string		sanitized = name;
+
+	for( char & c: sanitized ){
+		if( !std::isalnum( static_cast<unsigned char>( c ) ) && c != '_' ){
+			c = '_';
+		}
+	}
+	return sanitized;
+}
+
 static std::string getenv( const std::string & prefix, const std::string & name )
 {
 	std::string		res = getenvByName( prefix + "_" + name );
@@ -88,13 +122,8 @@ static std::string getenv( const std::string & prefix, const std::string & name 
 	if( res.empty() ){
 		// option names may contain characters that are invalid in shell variable
 		// names (e.g. "config-file", "db.host"): map them to '_'
-		std::string		sanitized = name;
+		std::string		sanitized = sanitizedEnvName( name );
 
-		for( char & c: sanitized ){
-			if( !std::isalnum( static_cast<unsigned char>( c ) ) && c != '_' ){
-				c = '_';
-			}
-		}
 		if( sanitized != name ){
 			res = getenvByName( prefix + "_" + sanitized );
 		}
@@ -260,15 +289,19 @@ struct drea::core::Config::Private
 
 	void readConfig( const std::vector<std::string> & args )
 	{
-		std::string configFileName = mDefaultConfigFile;
+		// --config-file is repeatable: files are merged in order, later wins
+		// (same rule as --config-source). Any flag overrides the default file.
+		std::vector<std::string>	configFileNames;
 
 		for( int i = 0; i < int(args.size())-1; i++ ){
 			if( std::string( args.at( i ) ) == "--config-file" ){
-				configFileName = args.at( i+1 );
-				break;
+				configFileNames.push_back( args.at( i+1 ) );
 			}
 		}
-		if( !configFileName.empty() ){
+		if( configFileNames.empty() && !mDefaultConfigFile.empty() ){
+			configFileNames.push_back( mDefaultConfigFile );
+		}
+		for( const std::string & configFileName: configFileNames ){
 			mActiveConfigFile = configFileName;
 			auto [fileData, extension] = readFile( configFileName );
 			if( !fileData.empty() ){
@@ -546,18 +579,65 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 	d->mCurrentSource = "environment";
 	if( !d->mEnvPrefix.empty() ){
 		for( const auto & option: d->mOptions ){
-			if( option->mScope == Option::Scope::Line || option->mScope == Option::Scope::None ){
+			std::string		env = drea::core::getenv( d->mEnvPrefix, option->mName );
+
+			if( env.empty() ){
 				continue;
 			}
-			std::string		env = drea::core::getenv( d->mEnvPrefix, option->mName );
-			if( !env.empty() ){
-				registerUse( option->mName );
-				if( !option->mParamName.empty() ){
-					set( option->mName, env );
-				}else{
-					d->mSources[ option->mName ] = d->mCurrentSource;
-				}
+			if( option->mScope == Option::Scope::Line || option->mScope == Option::Scope::None ){
+				// present in the environment, but the scope forbids reading
+				// it: report instead of silently ignoring the variable
+				const std::string message = fmt::format( "Option --{} has scope {} and is not read from the environment; the variable is ignored",
+					option->mName, option->scopeName() );
+
+				d->mFindings.push_back( { option->mName, d->mCurrentSource, "wrong_scope", message } );
+				spdlog::warn( "{}", message );
+				continue;
 			}
+			registerUse( option->mName );
+			if( !option->mParamName.empty() ){
+				set( option->mName, env );
+			}else if( option->mType == typeid( bool ) ){
+				// flags carry a value in the environment ("true", "no", ...):
+				// parse it instead of only marking the option as used
+				d->set( option->mName, env );
+			}else{
+				d->mSources[ option->mName ] = d->mCurrentSource;
+			}
+		}
+		// variables under the prefix that match no option, in any accepted
+		// spelling (exact, sanitized, uppercase)
+		std::set<std::string>	knownNames;
+
+		for( const auto & option: d->mOptions ){
+			const std::string sanitized = sanitizedEnvName( option->mName );
+			std::string upper = sanitized;
+
+			for( char & c: upper ){
+				c = static_cast<char>( std::toupper( static_cast<unsigned char>( c ) ) );
+			}
+			knownNames.insert( option->mName );
+			knownNames.insert( sanitized );
+			knownNames.insert( upper );
+		}
+		const std::string prefix = d->mEnvPrefix + "_";
+
+		for( char ** entry = environmentEntries(); entry != nullptr && *entry != nullptr; ++entry ){
+			const std::string	variable( *entry );
+
+			if( variable.compare( 0, prefix.size(), prefix ) != 0 ){
+				continue;
+			}
+			const std::string	name = variable.substr( 0, variable.find( '=' ) );
+			const std::string	suffix = name.substr( prefix.size() );
+
+			if( suffix.empty() || knownNames.count( suffix ) > 0 ){
+				continue;
+			}
+			const std::string message = fmt::format( "The environment variable {} matches no option", name );
+
+			d->mFindings.push_back( { name, d->mCurrentSource, "unknown_key", message } );
+			spdlog::warn( "{}", message );
 		}
 	}
 	d->mCurrentSource = "flag";
@@ -858,6 +938,13 @@ std::vector<drea::core::OptionValue> drea::core::Config::declaredDefault( std::s
 {
 	if( const auto it = d->mDeclaredDefaults.find( std::string( optionName ) ); it != d->mDeclaredDefaults.end() ){
 		return it->second;
+	}
+	// before Config::configure runs (no snapshot yet and no source
+	// registered) the option values still hold the declared defaults
+	if( source( optionName ) == "default" ){
+		if( auto option = find( optionName ) ){
+			return option->mValues;
+		}
 	}
 	return {};
 }

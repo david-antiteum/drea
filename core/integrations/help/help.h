@@ -13,12 +13,12 @@
 
 namespace drea::core::integrations::Help {
 
-static void version( const drea::core::App & app )
+inline void version( const drea::core::App & app )
 {
 	fmt::print( "{} version {}\n", app.name(), app.version() );
 }
 
-static void help( const drea::core::App & app, std::string_view commandName )
+inline void help( const drea::core::App & app, std::string_view commandName )
 {
 	if( app.commander().empty() ){
 		fmt::print( "This app has no commands\n" );
@@ -159,20 +159,7 @@ static void help( const drea::core::App & app, std::string_view commandName )
 	}
 }
 
-//! The default an option declares, regardless of what source resolution
-//! later put in mValues. Before Config::configure runs (no snapshot yet and
-//! no source registered) mValues still holds the declared defaults.
-inline std::vector<OptionValue> declaredDefault( const drea::core::App & app, const Option & option )
-{
-	std::vector<OptionValue>	defaults = app.config().declaredDefault( option.mName );
-
-	if( defaults.empty() && app.config().source( option.mName ) == "default" ){
-		defaults = option.mValues;
-	}
-	return defaults;
-}
-
-static void helpOption( const drea::core::App & app, const Option & option, std::string::size_type offset, bool anyShort )
+inline void helpOption( const drea::core::App & app, const Option & option, std::string::size_type offset, bool anyShort )
 {
 	std::string::size_type paramsSize = 2 + 2 + option.mName.size();
 
@@ -200,7 +187,7 @@ static void helpOption( const drea::core::App & app, const Option & option, std:
 	}
 	// the declared default and the resolved value are different facts: a
 	// flag, env var or config file may have replaced the default by now
-	if( const auto defaults = declaredDefault( app, option ); !defaults.empty() ){
+	if( const auto defaults = app.config().declaredDefault( option.mName ); !defaults.empty() ){
 		if( option.mSensitive ){
 			fmt::print( ". Default (hidden)" );
 		}else{
@@ -223,7 +210,7 @@ static void helpOption( const drea::core::App & app, const Option & option, std:
 	fmt::print( "\n" );
 }
 
-static void help( const drea::core::App & app )
+inline void help( const drea::core::App & app )
 {
 	std::string::size_type 	offset = 0;
 	bool					anyShort = false;
