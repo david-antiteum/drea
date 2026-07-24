@@ -296,7 +296,7 @@ void drea::core::App::parse( const std::string & definitions )
 				d->mLogger->flush();
 				exit( toInt( ExitCode::ConfigError ) );
 			}
-			if( config().get<bool>( "log-config" ) ){
+			if( config().get<bool>( "log-effective-config" ) ){
 				config().logEffective( logger() );
 			}
 		}

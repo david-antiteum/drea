@@ -191,11 +191,19 @@ public:
 	*/
 	[[nodiscard]] std::string source( std::string_view optionName ) const;
 
-	/*! Emit one info line per option with its resolved value and source.
-		Sensitive values are redacted (unless --no-log-redact). Options that
-		were never set are skipped.
+	/*! True when a real source (flag, environment, config file, remote
+		source, code) set the option to exactly its declared default: the
+		setting is redundant. False for values that only come from the
+		default, differ from it, or have no declared default to match.
+	*/
+	[[nodiscard]] bool redundant( std::string_view optionName ) const;
 
-		App::parse calls this automatically when --log-config is on.
+	/*! Emit one info line per option with its resolved value and source,
+		flagging redundant settings (\see Config::redundant). Sensitive
+		values are redacted (unless --no-log-redact). Options that were
+		never set are skipped.
+
+		App::parse calls this automatically when --log-effective-config is on.
 	*/
 	void logEffective( drea::log::Logger & logger ) const;
 

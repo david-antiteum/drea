@@ -9,6 +9,13 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `--validate` reports the *effective configuration* next to the findings:
+  every option that ended up with a value, its source, the declared default,
+  and a redundant marker when a real source supplied exactly the default.
+  Human mode prints `port=8080 (from config-file, matches default)`; JSON
+  gains a required `effective` array. `Config::redundant(name)` exposes the
+  check programmatically.
+
 - `--validate` (with `--json` for machine output): load the configuration
   from every source, check it, report **all** the problems and quit without
   running any command. Findings carry the option, the offending source, a
@@ -45,6 +52,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unreadable one stays a logged error (and a `--validate` finding).
 - `.yml` config files are read directly as YAML instead of going through
   format autodetection.
+- **Breaking:** the `--log-config` predefined option is renamed to
+  `--log-effective-config` — it dumps the effective configuration, and the
+  old name read as "configure the log" next to `--log-file`/`--log-size`.
+  It now flags redundant settings too (`..., matches default`). Env var:
+  `<PREFIX>_log_effective_config`.
 - `log-flush-level` declares `choices` (`trace`, `debug`, `info`, `warn`,
   `err`, `critical`, `off`): an unknown level now fails validation
   (`bad_choice`, `ExitCode::ConfigError`) instead of silently falling back

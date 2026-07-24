@@ -280,8 +280,21 @@ and quits without running any command.
 ./myapp --config-file prod.yml --validate
 ```
 
+Besides the problems, the report includes the *effective configuration*:
+every option that ended up with a value, the value, the source that won,
+the declared default when there is one, and whether the setting is
+*redundant* — a real source supplying exactly the declared default:
+
+```
+myapp: the configuration is valid
+Effective configuration:
+  port=8080 (from config-file, matches default)
+  color=always (from flag)
+  log-flush-level=warn (from default)
+```
+
 The human summary goes to `stderr`, keeping `stdout` clean for machine
-output. With `--json`, structured findings go to `stdout`:
+output. With `--json`, the structured report goes to `stdout`:
 
 ```json
 {
@@ -296,6 +309,10 @@ output. With `--json`, structured findings go to `stdout`:
       "code": "out_of_range",
       "message": "Option --port value 70000 is above the maximum 65535"
     }
+  ],
+  "effective": [
+    { "option": "port", "value": [70000], "default": [8080], "source": "config-file" },
+    { "option": "color", "value": ["auto"], "default": ["auto"], "redundant": true, "source": "flag" }
   ]
 }
 ```
@@ -349,18 +366,22 @@ option declared before source resolution replaced it), next to
 
 ## Effective config
 
-With `--log-config`, `App::parse` emits one `info` line per option with its
-resolved value and the source that provided it (`default`, `config-source`,
-`config-file`, `environment`, `flag` or `code`):
+With `--log-effective-config`, `App::parse` emits one `info` line per option
+with its resolved value and the source that provided it (`default`,
+`config-source`, `config-file`, `environment`, `flag` or `code`), flagging
+redundant settings — a real source supplying exactly the declared default:
 
 ```
-config: port=8080 (from config-file)
+config: port=8080 (from config-file, matches default)
 config: db-password=[redacted] (from environment)
 ```
 
 Sensitive options print `[redacted]` (unless `--no-log-redact`).
-`Config::source(name)` exposes the same information programmatically. Off by
-default; services typically turn it on in their standard options fragment.
+`Config::source(name)` and `Config::redundant(name)` expose the same
+information programmatically. Off by default; services typically turn it on
+in their standard options fragment. For a one-shot look at the same facts
+without running the app, use `--validate` (see above) — `--log-effective-config`
+is its into-the-logs sibling for long-running services.
 
 ## Logging
 
@@ -377,7 +398,7 @@ the logger from them:
 - `--log-redact` (default on) — values wrapped in `drea::log::redacted()`
   print as `[redacted]`. Dev turns it off with `--no-log-redact`. Read once
   at startup and frozen.
-- `--log-config` (default off) — dump the effective configuration after
+- `--log-effective-config` (default off) — dump the effective configuration after
   parsing (see *Effective config* above).
 
 Two header-only helpers under `include/drea/log/` keep client-controlled and

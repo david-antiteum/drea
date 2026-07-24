@@ -402,7 +402,7 @@ drea::core::Config & drea::core::Config::addDefaults()
 			"log-redact", "", "redact values wrapped in drea::log::redacted(); use --no-log-redact to see them", {true}, typeid( bool )
 		},
 		{
-			"log-config", "", "log the effective configuration (value and source per option) after parsing", {false}, typeid( bool )
+			"log-effective-config", "", "log the effective configuration (value and source per option) after parsing", {false}, typeid( bool )
 		},
 #ifdef ENABLE_REST_USE
 		{
@@ -430,7 +430,7 @@ drea::core::Config & drea::core::Config::addDefaults()
 		"verbose", "help", "version", "describe", "validate", "json",
 		"config-source", "config-file",
 		"log-file", "log-folder", "log-size", "log-nb-files",
-		"log-flush-level", "log-redact", "log-config"
+		"log-flush-level", "log-redact", "log-effective-config"
 #ifdef ENABLE_REST_USE
 		, "graylog-host"
 #endif
@@ -847,6 +847,19 @@ std::string drea::core::Config::source( std::string_view optionName ) const
 	return "default";
 }
 
+bool drea::core::Config::redundant( std::string_view optionName ) const
+{
+	if( source( optionName ) == "default" ){
+		return false;
+	}
+	if( auto option = find( optionName ) ){
+		const auto defaults = declaredDefault( optionName );
+
+		return !defaults.empty() && option->mValues == defaults;
+	}
+	return false;
+}
+
 void drea::core::Config::logEffective( drea::log::Logger & logger ) const
 {
 	for( const auto & option: d->mOptions ){
@@ -865,7 +878,8 @@ void drea::core::Config::logEffective( drea::log::Logger & logger ) const
 				value += option->toString( optionValue );
 			}
 		}
-		logger.info( "config: {}={} (from {})", option->mName, value, source( option->mName ) );
+		logger.info( "config: {}={} (from {}{})", option->mName, value, source( option->mName ),
+			redundant( option->mName ) ? ", matches default" : "" );
 	}
 }
 

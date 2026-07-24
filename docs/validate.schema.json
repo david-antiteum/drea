@@ -4,7 +4,7 @@
   "title": "drea-validate/1",
   "description": "Machine readable configuration check of a drea CLI app, as printed by --validate --json",
   "type": "object",
-  "required": [ "schema", "app", "version", "valid", "findings" ],
+  "required": [ "schema", "app", "version", "valid", "findings", "effective" ],
   "additionalProperties": false,
   "properties": {
     "schema": { "const": "drea-validate/1" },
@@ -14,6 +14,11 @@
     "findings": {
       "type": "array",
       "items": { "$ref": "#/$defs/finding" }
+    },
+    "effective": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/effective" },
+      "description": "The resolved configuration: one entry per option that ended up with a value (or was used); unset options are omitted"
     }
   },
   "$defs": {
@@ -43,6 +48,30 @@
           "description": "Stable machine code; exit codes group them as 66 file_error, 78 unknown_key/missing_required/wrong_scope/unknown_option_ref/disabled_group, 65 the rest"
         },
         "message": { "type": "string", "description": "Human readable message. Values of sensitive options are masked as [redacted]" }
+      }
+    },
+    "effective": {
+      "type": "object",
+      "required": [ "option", "value", "source" ],
+      "additionalProperties": false,
+      "properties": {
+        "option": { "type": "string" },
+        "value": {
+          "description": "Resolved values as an array, except for sensitive options where it is the string [redacted]",
+          "oneOf": [
+            { "type": "array", "items": { "type": [ "boolean", "number", "string" ] } },
+            { "const": "[redacted]" }
+          ]
+        },
+        "default": {
+          "description": "The declared default; present only when the option declares one (masked for sensitive options)",
+          "oneOf": [
+            { "type": "array", "items": { "type": [ "boolean", "number", "string" ] } },
+            { "const": "[redacted]" }
+          ]
+        },
+        "redundant": { "const": true, "description": "Present when a real source set the option to exactly its declared default" },
+        "source": { "enum": [ "default", "config-source", "config-file", "environment", "flag", "code" ] }
       }
     }
   }

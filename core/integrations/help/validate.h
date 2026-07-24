@@ -15,8 +15,10 @@ namespace drea::core::integrations::Help {
 /*! Runtime counterpart of describe: --describe emits the static command and
 	option tree, --validate checks the configuration resolved from every
 	source (defaults, remote sources, config file, environment, flags) and
-	reports the problems. Human output goes to stderr, machine output
-	(--json) to stdout. \see docs/configuration.md
+	reports the problems plus the effective values, their sources and
+	redundant settings (a real source supplying exactly the declared
+	default). Human output goes to stderr, machine output (--json) to
+	stdout. \see docs/configuration.md
 */
 
 //! Exit code for a set of findings: Ok when empty; NoInput when a config
@@ -68,7 +70,44 @@ inline int validateConfig( const App & app, bool json, std::ostream & out, std::
 			out << fmt::format( "      \"message\": {}\n", detail::jsonQuoted( finding.mMessage ) );
 			out << "    }";
 		}
-		out << ( first ? "]\n" : "\n  ]\n" );
+		out << ( first ? "],\n" : "\n  ],\n" );
+		out << "  \"effective\": [";
+		bool	firstEffective = true;
+		app.config().options( [ &app, &out, &firstEffective ]( const Option & option ){
+			if( option.mValues.empty() && !app.config().used( option.mName ) ){
+				return;
+			}
+			auto valueList = [ &out, &option ]( const std::vector<OptionValue> & values ){
+				if( option.mSensitive ){
+					out << "\"[redacted]\"";
+				}else{
+					out << "[";
+					bool	firstValue = true;
+					for( const auto & value: values ){
+						out << fmt::format( "{}{}", firstValue ? "" : ", ", detail::valueLiteral( option, value ) );
+						firstValue = false;
+					}
+					out << "]";
+				}
+			};
+			out << fmt::format( "{}\n    {{\n", firstEffective ? "" : "," );
+			firstEffective = false;
+			out << fmt::format( "      \"option\": {},\n", detail::jsonQuoted( option.mName ) );
+			out << "      \"value\": ";
+			valueList( option.mValues );
+			out << ",\n";
+			if( const auto defaults = app.config().declaredDefault( option.mName ); !defaults.empty() ){
+				out << "      \"default\": ";
+				valueList( defaults );
+				out << ",\n";
+			}
+			if( app.config().redundant( option.mName ) ){
+				out << "      \"redundant\": true,\n";
+			}
+			out << fmt::format( "      \"source\": {}\n", detail::jsonQuoted( app.config().source( option.mName ) ) );
+			out << "    }";
+		});
+		out << ( firstEffective ? "]\n" : "\n  ]\n" );
 		out << "}\n";
 	}else{
 		if( findings.empty() ){
@@ -83,6 +122,26 @@ inline int validateConfig( const App & app, bool json, std::ostream & out, std::
 				}
 			}
 		}
+		err << "Effective configuration:\n";
+		app.config().options( [ &app, &err ]( const Option & option ){
+			if( option.mValues.empty() && !app.config().used( option.mName ) ){
+				return;
+			}
+			std::string		value;
+
+			if( option.mSensitive ){
+				value = "[redacted]";
+			}else{
+				for( const auto & optionValue: option.mValues ){
+					if( !value.empty() ){
+						value += ", ";
+					}
+					value += option.toString( optionValue );
+				}
+			}
+			err << fmt::format( "  {}={} (from {}{})\n", option.mName, value, app.config().source( option.mName ),
+				app.config().redundant( option.mName ) ? ", matches default" : "" );
+		});
 	}
 	return toInt( validateExitCode( findings ) );
 }

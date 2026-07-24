@@ -576,3 +576,82 @@ TEST_CASE( "log-flush-level rejects values outside its choices", "[validate]" )
 		REQUIRE_FALSE( fx.app.config().validate().empty() );
 	}
 }
+
+TEST_CASE( "redundant detects a real source supplying the declared default", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "port";
+	opt.mParamName = "n";
+	opt.mType = typeid( int );
+	opt.mValues = { 8080 };
+	fx.app.config().add( opt );
+
+	SECTION( "value only from the default is not redundant" ){
+		fx.app.config().configure( {} );
+		REQUIRE_FALSE( fx.app.config().redundant( "port" ) );
+	}
+	SECTION( "a flag repeating the default is redundant" ){
+		fx.app.config().configure( { "--port", "8080" } );
+		REQUIRE( fx.app.config().source( "port" ) == "flag" );
+		REQUIRE( fx.app.config().redundant( "port" ) );
+	}
+	SECTION( "a flag with a different value is not redundant" ){
+		fx.app.config().configure( { "--port", "9090" } );
+		REQUIRE_FALSE( fx.app.config().redundant( "port" ) );
+	}
+}
+
+TEST_CASE( "validateConfig reports the effective configuration", "[validate-cli]" )
+{
+	AppFixture fx;
+	fx.app.setName( "myapp" );
+	Option port;
+	port.mName = "port";
+	port.mParamName = "n";
+	port.mType = typeid( int );
+	port.mValues = { 8080 };
+	fx.app.config().add( port );
+	Option secret;
+	secret.mName = "api-key";
+	secret.mParamName = "key";
+	secret.mType = typeid( std::string );
+	secret.mSensitive = true;
+	fx.app.config().add( secret );
+
+	fx.app.config().configure( { "--port", "8080", "--api-key", "s3cr3t" } );
+
+	SECTION( "in JSON" ){
+		std::ostringstream out, err;
+		const int code = drea::core::integrations::Help::validateConfig( fx.app, true, out, err );
+		REQUIRE( code == drea::core::toInt( drea::core::ExitCode::Ok ) );
+		const std::string json = out.str();
+		REQUIRE( json.find( "\"effective\": [" ) != std::string::npos );
+		REQUIRE( json.find( "\"option\": \"port\"" ) != std::string::npos );
+		REQUIRE( json.find( "\"value\": [8080]" ) != std::string::npos );
+		REQUIRE( json.find( "\"default\": [8080]" ) != std::string::npos );
+		REQUIRE( json.find( "\"redundant\": true" ) != std::string::npos );
+		REQUIRE( json.find( "\"source\": \"flag\"" ) != std::string::npos );
+		REQUIRE( json.find( "\"value\": \"[redacted]\"" ) != std::string::npos );
+		REQUIRE( json.find( "s3cr3t" ) == std::string::npos );
+	}
+	SECTION( "in the human summary" ){
+		std::ostringstream out, err;
+		drea::core::integrations::Help::validateConfig( fx.app, false, out, err );
+		const std::string text = err.str();
+		REQUIRE( text.find( "Effective configuration:" ) != std::string::npos );
+		REQUIRE( text.find( "port=8080 (from flag, matches default)" ) != std::string::npos );
+		REQUIRE( text.find( "api-key=[redacted] (from flag)" ) != std::string::npos );
+		REQUIRE( text.find( "s3cr3t" ) == std::string::npos );
+		REQUIRE( out.str().empty() );
+	}
+}
+
+TEST_CASE( "addDefaults registers log-effective-config, not log-config", "[config]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	REQUIRE( fx.app.config().find( "log-effective-config" ) );
+	REQUIRE_FALSE( fx.app.config().find( "log-config" ) );
+}
