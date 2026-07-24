@@ -30,9 +30,10 @@ description: |
 
 options:
   - option: tier
-    description: simulated staff tier (none|readonly|operator)
+    description: simulated staff tier
     type: string
     params-names: tier
+    choices: [ none, readonly, operator ]
 
 commands:
   - command: ping
