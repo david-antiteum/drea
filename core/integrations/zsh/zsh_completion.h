@@ -10,7 +10,7 @@
 namespace drea::core::integrations::Zsh {
 
 // Escape single quotes for zsh single-quoted strings: ' -> '\''
-static std::string escape( std::string_view s )
+inline std::string escape( std::string_view s )
 {
 	std::string	res;
 	res.reserve( s.size() );
@@ -24,7 +24,7 @@ static std::string escape( std::string_view s )
 	return res;
 }
 
-static void generateAutoCompletion( const drea::core::App & app, std::ostream & out )
+inline void generateAutoCompletion( const drea::core::App & app, std::ostream & out )
 {
 	const std::string	name = app.name();
 
@@ -54,9 +54,22 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 			if( !opt ){
 				return;
 			}
+			// options with choices complete their values: the action is the
+			// literal word list, e.g. (none readonly operator)
+			std::string	action;
+			if( !opt->mChoices.empty() ){
+				action = "(";
+				for( const auto & choice: opt->mChoices ){
+					if( action.size() > 1 ){
+						action += ' ';
+					}
+					action += choice;
+				}
+				action += ")";
+			}
 			out << " \\\n                '--" << escape( opt->mName );
 			if( !opt->mParamName.empty() ){
-				out << "=[" << escape( opt->mDescription ) << "]:" << escape( opt->mParamName ) << ":";
+				out << "=[" << escape( opt->mDescription ) << "]:" << escape( opt->mParamName ) << ":" << escape( action );
 			}else{
 				out << "[" << escape( opt->mDescription ) << "]";
 			}
@@ -64,7 +77,7 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 			if( !opt->mShortVersion.empty() ){
 				out << " \\\n                '-" << escape( opt->mShortVersion );
 				if( !opt->mParamName.empty() ){
-					out << "[" << escape( opt->mDescription ) << "]:" << escape( opt->mParamName ) << ":";
+					out << "[" << escape( opt->mDescription ) << "]:" << escape( opt->mParamName ) << ":" << escape( action );
 				}else{
 					out << "[" << escape( opt->mDescription ) << "]";
 				}

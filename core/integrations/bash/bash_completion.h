@@ -14,7 +14,7 @@
 
 namespace drea::core::integrations::Bash {
 
-static std::list<std::string> calculateAutoCompletion( const drea::core::App & app )
+inline std::list<std::string> calculateAutoCompletion( const drea::core::App & app )
 {
 	std::list<std::string>	res;
 
@@ -62,7 +62,7 @@ static std::list<std::string> calculateAutoCompletion( const drea::core::App & a
 }
 
 // as seem in https://debian-administration.org/article/317/An_introduction_to_bash_completion_part_2
-static void generateAutoCompletion( const drea::core::App & app, std::ostream & out )
+inline void generateAutoCompletion( const drea::core::App & app, std::ostream & out )
 {
 	out << "#!/usr/bin/env bash\n";
 	out << "_" << app.name() << "()\n";
@@ -80,6 +80,24 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 	out << "\"\n";
 
 	out << "    case \"${prev}\" in\n";
+	// options with a closed value set (choices) complete their values
+	app.config().options( [&out]( const Option & option ){
+		if( option.mChoices.empty() ){
+			return;
+		}
+		out << "        --" << option.mName;
+		if( !option.mShortVersion.empty() ){
+			out << "|-" << option.mShortVersion;
+		}
+		out << ")\n";
+		out << "            COMPREPLY=( $(compgen -W \"";
+		for( const auto & choice: option.mChoices ){
+			out << " " << choice;
+		}
+		out << "\" -- ${cur}) )\n";
+		out << "            return 0\n";
+		out << "            ;;\n";
+	});
 	app.commander().commands( [&app, &out]( const Command & cmd ){
 		if( !app.commander().isVisible( cmd ) ){
 			return;
@@ -109,7 +127,7 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 	out << "complete -F _" << app.name() << " " << app.name() << "\n";
 }
 
-[[maybe_unused]] static void generateAutoCompletion( const drea::core::App & app )
+inline void generateAutoCompletion( const drea::core::App & app )
 {
 	std::ofstream completionFile;
 

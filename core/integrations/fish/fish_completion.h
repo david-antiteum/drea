@@ -10,7 +10,7 @@
 namespace drea::core::integrations::Fish {
 
 // Escape for fish single-quoted strings: ' and \ only.
-static std::string escape( std::string_view s )
+inline std::string escape( std::string_view s )
 {
 	std::string	res;
 	res.reserve( s.size() );
@@ -24,7 +24,7 @@ static std::string escape( std::string_view s )
 }
 
 // Build a seen-subcommands predicate like __fish_seen_subcommand_from a b c
-static std::string seenPredicate( const std::string & path )
+inline std::string seenPredicate( const std::string & path )
 {
 	std::string		res = "__fish_seen_subcommand_from";
 	std::string		word;
@@ -46,7 +46,7 @@ static std::string seenPredicate( const std::string & path )
 	return res;
 }
 
-static void generateAutoCompletion( const drea::core::App & app, std::ostream & out )
+inline void generateAutoCompletion( const drea::core::App & app, std::ostream & out )
 {
 	const std::string	name = app.name();
 
@@ -106,7 +106,18 @@ static void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 				out << " -s " << opt->mShortVersion;
 			}
 			if( !opt->mParamName.empty() ){
-				out << " -r";
+				if( opt->mChoices.empty() ){
+					out << " -r";
+				}else{
+					// -x = requires a value, no file completion: offer the choices
+					out << " -x -a '";
+					bool first = true;
+					for( const auto & choice: opt->mChoices ){
+						out << ( first ? "" : " " ) << escape( choice );
+						first = false;
+					}
+					out << "'";
+				}
 			}
 			out << " -d '" << escape( opt->mDescription ) << "'\n";
 		};

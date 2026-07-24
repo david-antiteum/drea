@@ -6,6 +6,11 @@
 #include <drea/core/Config.h>
 #include <drea/core/Option.h>
 
+#include "integrations/bash/bash_completion.h"
+#include "integrations/fish/fish_completion.h"
+#include "integrations/man/man.h"
+#include "integrations/zsh/zsh_completion.h"
+
 #include <algorithm>
 #include <iostream>
 #include <sstream>
@@ -669,4 +674,57 @@ TEST_CASE( "--describe reports the declared default, not the resolved value", "[
 	const std::string out = cap.str();
 	REQUIRE( out.find( "\"default\": [0.5]" ) != std::string::npos );
 	REQUIRE( out.find( "0.9" ) == std::string::npos );
+}
+
+TEST_CASE( "completion scripts offer the values of options with choices", "[commander][completion]" )
+{
+	BuiltinFixture fx;
+
+	drea::core::Option tier;
+	tier.mName = "tier";
+	tier.mParamName = "tier";
+	tier.mType = typeid( std::string );
+	tier.mChoices = { "none", "readonly", "operator" };
+	fx.app.config().add( tier );
+	// attach to a command so zsh/fish emit it
+	fx.app.commander().find( "hello" )->mGlobalParameters = { "tier" };
+
+	fx.app.config().configure( {} );
+	fx.app.commander().configure( {} );
+
+	std::ostringstream bash, zsh, fish;
+	drea::core::integrations::Bash::generateAutoCompletion( fx.app, bash );
+	drea::core::integrations::Zsh::generateAutoCompletion( fx.app, zsh );
+	drea::core::integrations::Fish::generateAutoCompletion( fx.app, fish );
+
+	REQUIRE( bash.str().find( "--tier)" ) != std::string::npos );
+	REQUIRE( bash.str().find( "none readonly operator" ) != std::string::npos );
+	REQUIRE( zsh.str().find( "(none readonly operator)" ) != std::string::npos );
+	REQUIRE( fish.str().find( "-x -a 'none readonly operator'" ) != std::string::npos );
+}
+
+TEST_CASE( "man pages render choices, defaults and required", "[commander][man]" )
+{
+	BuiltinFixture fx;
+
+	drea::core::Option tier;
+	tier.mName = "tier";
+	tier.mParamName = "tier";
+	tier.mType = typeid( std::string );
+	tier.mChoices = { "none", "readonly", "operator" };
+	tier.mValues = { std::string( "none" ) };
+	tier.mRequired = true;
+	fx.app.config().add( tier );
+
+	fx.app.config().configure( { "--tier", "operator" } );
+	fx.app.commander().configure( {} );
+
+	std::ostringstream man;
+	drea::core::integrations::Man::generateManPage( fx.app, man );
+
+	const std::string page = man.str();
+	REQUIRE( page.find( "One of: none, readonly, operator" ) != std::string::npos );
+	// the declared default, not the value the flag resolved to
+	REQUIRE( page.find( "Default none" ) != std::string::npos );
+	REQUIRE( page.find( "Required" ) != std::string::npos );
 }

@@ -15,7 +15,7 @@ namespace drea::core::integrations::Man {
 // Escape a string for inclusion in a groff man page.
 // - leading dots become zero-width + dot so they are not treated as commands
 // - backslashes are doubled
-static std::string escape( std::string_view s )
+inline std::string escape( std::string_view s )
 {
 	std::string	res;
 	res.reserve( s.size() );
@@ -33,7 +33,7 @@ static std::string escape( std::string_view s )
 }
 
 // Escape but also guard a leading dot on a fresh line.
-static std::string escapeBody( std::string_view s )
+inline std::string escapeBody( std::string_view s )
 {
 	std::string		res;
 	bool			atLineStart = true;
@@ -51,7 +51,7 @@ static std::string escapeBody( std::string_view s )
 	return res;
 }
 
-static std::string today()
+inline std::string today()
 {
 	std::time_t 	t = std::time( nullptr );
 	std::tm			tm{};
@@ -65,27 +65,66 @@ static std::string today()
 	return std::string( buf );
 }
 
-static void writeOptionsSection( const drea::core::App & app, std::ostream & out,
+// The computed facts help also renders: choices, declared default, required.
+// Deprecation is appended to the description by the caller.
+inline std::string optionFacts( const drea::core::App & app, const drea::core::Option & opt )
+{
+	std::string	res;
+
+	if( !opt.mChoices.empty() ){
+		res += "One of: " + utilities::string::join( opt.mChoices, ", " ) + ". ";
+	}
+	if( const auto defaults = app.config().declaredDefault( opt.mName ); !defaults.empty() ){
+		if( opt.mSensitive ){
+			res += "Default (hidden). ";
+		}else{
+			res += "Default";
+			for( const auto & value: defaults ){
+				res += " " + opt.toString( value );
+			}
+			res += ". ";
+		}
+	}
+	if( opt.mRequired ){
+		res += "Required. ";
+	}
+	if( !res.empty() ){
+		res.pop_back();
+	}
+	return res;
+}
+
+inline void writeOption( const drea::core::App & app, std::ostream & out, const drea::core::Option & opt )
+{
+	out << ".TP\n";
+	out << "\\fB";
+	if( !opt.mShortVersion.empty() ){
+		out << "\\-" << escape( opt.mShortVersion ) << "\\fR, \\fB";
+	}
+	out << "\\-\\-" << escape( opt.mName ) << "\\fR";
+	if( !opt.mParamName.empty() ){
+		out << " \\fI" << escape( opt.mParamName ) << "\\fR";
+	}
+	out << "\n";
+	if( !opt.mDescription.empty() ){
+		out << escapeBody( opt.mDescription );
+		if( opt.mDeprecated ){
+			out << " (deprecated)";
+		}
+		out << "\n";
+	}
+	if( const std::string facts = optionFacts( app, opt ); !facts.empty() ){
+		out << ".br\n" << escapeBody( facts ) << "\n";
+	}
+}
+
+inline void writeOptionsSection( const drea::core::App & app, std::ostream & out,
                                  const std::vector<std::string> & local,
                                  const std::vector<std::string> & global )
 {
 	auto emit = [&out, &app]( const std::string & optName ){
-		auto opt = app.config().find( optName );
-		if( !opt ){
-			return;
-		}
-		out << ".TP\n";
-		out << "\\fB";
-		if( !opt->mShortVersion.empty() ){
-			out << "\\-" << escape( opt->mShortVersion ) << "\\fR, \\fB";
-		}
-		out << "\\-\\-" << escape( opt->mName ) << "\\fR";
-		if( !opt->mParamName.empty() ){
-			out << " \\fI" << escape( opt->mParamName ) << "\\fR";
-		}
-		out << "\n";
-		if( !opt->mDescription.empty() ){
-			out << escapeBody( opt->mDescription ) << "\n";
+		if( auto opt = app.config().find( optName ) ){
+			writeOption( app, out, *opt );
 		}
 	};
 	if( !local.empty() ){
@@ -103,7 +142,7 @@ static void writeOptionsSection( const drea::core::App & app, std::ostream & out
 }
 
 // Top-level man page (section 1).
-static void generateManPage( const drea::core::App & app, std::ostream & out )
+inline void generateManPage( const drea::core::App & app, std::ostream & out )
 {
 	const std::string	name = app.name();
 	const std::string	upper = [ &name ]{
@@ -167,23 +206,11 @@ static void generateManPage( const drea::core::App & app, std::ostream & out )
 	});
 	if( anyLine ){
 		out << ".SH OPTIONS\n";
-		app.config().options( [ &out, &localOnly ]( const Option & opt ){
+		app.config().options( [ &app, &out, &localOnly ]( const Option & opt ){
 			if( !opt.helpInLine() || localOnly.count( opt.mName ) ){
 				return;
 			}
-			out << ".TP\n";
-			out << "\\fB";
-			if( !opt.mShortVersion.empty() ){
-				out << "\\-" << escape( opt.mShortVersion ) << "\\fR, \\fB";
-			}
-			out << "\\-\\-" << escape( opt.mName ) << "\\fR";
-			if( !opt.mParamName.empty() ){
-				out << " \\fI" << escape( opt.mParamName ) << "\\fR";
-			}
-			out << "\n";
-			if( !opt.mDescription.empty() ){
-				out << escapeBody( opt.mDescription ) << "\n";
-			}
+			writeOption( app, out, opt );
 		});
 	}
 
@@ -236,7 +263,7 @@ static void generateManPage( const drea::core::App & app, std::ostream & out )
 
 // Per-command man page (section 1). Falls back to top-level if commandName is empty
 // or unknown.
-static void generateManPage( const drea::core::App & app, std::string_view commandName, std::ostream & out )
+inline void generateManPage( const drea::core::App & app, std::string_view commandName, std::ostream & out )
 {
 	if( commandName.empty() ){
 		generateManPage( app, out );
