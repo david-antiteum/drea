@@ -57,6 +57,8 @@ namespace std {
 
 #include "Config.h"
 #include "App.h"
+#include "Commander.h"
+#include <drea/core/Command.h>
 
 namespace drea::core {
 
@@ -95,6 +97,17 @@ static std::string getenv( const std::string & prefix, const std::string & name 
 		}
 		if( sanitized != name ){
 			res = getenvByName( prefix + "_" + sanitized );
+		}
+		if( res.empty() ){
+			// also accept the conventional all-uppercase spelling
+			std::string		upper = sanitized;
+
+			for( char & c: upper ){
+				c = static_cast<char>( std::toupper( static_cast<unsigned char>( c ) ) );
+			}
+			if( upper != sanitized ){
+				res = getenvByName( prefix + "_" + upper );
+			}
 		}
 	}
 	return res;
@@ -324,13 +337,16 @@ drea::core::Config & drea::core::Config::addDefaults()
 
 	add({
 		{
-			"verbose", "", "increase the logging level to debug"
+			"verbose", "", "increase the logging level to debug", {}, typeid( bool )
 		},
 		{
-			"help", "", "show help and quit"
+			"help", "", "show help and quit", {}, typeid( bool )
 		},
 		{
-			"version", "", "print version information and quit"
+			"version", "", "print version information and quit", {}, typeid( bool )
+		},
+		{
+			"describe", "", "print the app description (commands, options and limits) as JSON and quit", {}, typeid( bool )
 		},
 		{
 			"config-source", "uri", "read configs from a remote source. Can be repeated. "
@@ -373,9 +389,10 @@ drea::core::Config & drea::core::Config::addDefaults()
 	find( "help" )->mNbParams = 0;
 	find( "version" )->mShortVersion = "V";
 	find( "version" )->mNbParams = 0;
+	find( "describe" )->mNbParams = 0;
 
 	for( const char * name: {
-		"verbose", "help", "version", "config-source", "config-file",
+		"verbose", "help", "version", "describe", "config-source", "config-file",
 		"log-file", "log-folder", "log-size", "log-nb-files",
 		"log-flush-level", "log-redact", "log-config"
 #ifdef ENABLE_REST_USE
@@ -433,6 +450,11 @@ void drea::core::Config::setEnvPrefix( const std::string & value )
 	d->mEnvPrefix = value;
 }
 
+const std::string & drea::core::Config::envPrefix() const
+{
+	return d->mEnvPrefix;
+}
+
 jss::object_ptr<drea::core::Option> drea::core::Config::find( std::string_view optionName ) const
 {
 	return d->find( optionName );
@@ -466,10 +488,14 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 	d->mCurrentSource = "config-file";
 	d->readConfig( args );
 
-	// Env vars
+	// Env vars. The environment belongs to the config sources: options scoped
+	// to the command line only (or to no user source at all) don't read it.
 	d->mCurrentSource = "environment";
 	if( !d->mEnvPrefix.empty() ){
 		for( const auto & option: d->mOptions ){
+			if( option->mScope == Option::Scope::Line || option->mScope == Option::Scope::None ){
+				continue;
+			}
 			std::string		env = drea::core::getenv( d->mEnvPrefix, option->mName );
 			if( !env.empty() ){
 				registerUse( option->mName );
@@ -678,6 +704,13 @@ std::vector<std::string> drea::core::Config::validate() const
 		if( option->mRequired && option->mValues.empty() ){
 			errors.push_back( fmt::format( "Missing required option --{}", option->mName ) );
 		}
+		if( !option->mChoices.empty() ){
+			for( const auto & value: option->mValues ){
+				if( const std::string asText = option->toString( value ); std::find( option->mChoices.begin(), option->mChoices.end(), asText ) == option->mChoices.end() ){
+					errors.push_back( fmt::format( "Option --{} value {} is not one of: {}", option->mName, asText, boost::algorithm::join( option->mChoices, ", " ) ) );
+				}
+			}
+		}
 		if( option->mMin || option->mMax ){
 			for( const auto & value: option->mValues ){
 				std::optional<double>	num;
@@ -698,6 +731,16 @@ std::vector<std::string> drea::core::Config::validate() const
 			}
 		}
 	}
+	// every option a command references must exist
+	d->mApp.commander().commands( [ this, &errors ]( const Command & command ){
+		for( const auto * list: { &command.mLocalParameters, &command.mGlobalParameters } ){
+			for( const auto & optionName: *list ){
+				if( !find( optionName ) ){
+					errors.push_back( fmt::format( "Command \"{}\" references unknown option \"{}\"", command.mName, optionName ) );
+				}
+			}
+		}
+	});
 	return errors;
 }
 

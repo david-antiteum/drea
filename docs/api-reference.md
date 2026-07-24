@@ -176,6 +176,7 @@ class Config {
     void remove( std::string_view optionName );
 
     void setEnvPrefix( const std::string & value );
+    const std::string & envPrefix() const;
 
     bool empty() const;
     void options( std::function<void(const Option&)> f ) const;
@@ -288,6 +289,8 @@ struct Command {
     int                      mMinParams = -1;
     bool                     mHidden = false;
     std::vector<std::string> mGroups;
+    std::vector<std::string> mExamples;
+    bool                     mDeprecated = false;
     bool                     mPredefined = false;
     static const int         mUnlimitedParams = 0xfffffffa;
 
@@ -324,6 +327,8 @@ struct Option {
     bool                        mRequired = false;
     std::optional<double>       mMin;
     std::optional<double>       mMax;
+    std::vector<std::string>    mChoices;
+    bool                        mDeprecated = false;
     bool                        mPredefined = false;
     static const int            mUnlimitedParams = 0xfffffffa;
 

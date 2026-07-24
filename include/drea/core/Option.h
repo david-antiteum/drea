@@ -33,6 +33,8 @@ struct DREA_CORE_API Option
 	bool						mRequired = false;
 	std::optional<double>		mMin;
 	std::optional<double>		mMax;
+	std::vector<std::string>	mChoices = {};	//!< closed set of legal values (compared against Option::toString); empty = unrestricted
+	bool						mDeprecated = false;	//!< kept working but discouraged; flagged in help and describe
 	bool						mPredefined = false;	//!< added by Config::addDefaults; shown under "Common options" in help
 	static const int			mUnlimitedParams = 0xfffffffa;
 

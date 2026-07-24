@@ -73,6 +73,8 @@ void _parseCmd( drea::core::App & app, const YAML::Node & cmdsNode, const std::s
 					}
 				}else if( key == "min-params" ){
 					command.mMinParams = cmdNode.second.as<int>();
+				}else if( key == "deprecated" ){
+					command.mDeprecated = cmdNode.second.as<bool>();
 				}else if( key == "group" ){
 					command.mGroups.push_back( cmdNode.second.as<std::string>() );
 				}
@@ -91,6 +93,12 @@ void _parseCmd( drea::core::App & app, const YAML::Node & cmdsNode, const std::s
 					for( auto groupNode: cmdNode.second ){
 						if( groupNode.IsScalar() ){
 							command.mGroups.push_back( groupNode.as<std::string>() );
+						}
+					}
+				}else if( key == "examples" ){
+					for( auto exampleNode: cmdNode.second ){
+						if( exampleNode.IsScalar() ){
+							command.mExamples.push_back( exampleNode.as<std::string>() );
 						}
 					}
 				}else if( key == "commands" ){
@@ -141,6 +149,8 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 					option.mSensitive = optionNode.second.as<bool>();
 				}else if( key == "required" ){
 					option.mRequired = optionNode.second.as<bool>();
+				}else if( key == "deprecated" ){
+					option.mDeprecated = optionNode.second.as<bool>();
 				}else if( key == "min" ){
 					option.mMin = optionNode.second.as<double>();
 				}else if( key == "max" ){
@@ -192,6 +202,12 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 					for( auto valueNode: optionNode.second ){
 						if( valueNode.IsScalar() ){
 							option.mValues.push_back( valueNode.as<std::string>() );
+						}
+					}
+				}else if( key == "choices" ){
+					for( auto choiceNode: optionNode.second ){
+						if( choiceNode.IsScalar() ){
+							option.mChoices.push_back( choiceNode.as<std::string>() );
 						}
 					}
 				}
@@ -254,8 +270,8 @@ void drea::core::App::parse( const std::string & definitions )
 		config().configure( args.first );
 		d->mLogger = config().setupLogger();
 		d->mLog.reset( *d->mLogger );
-		// --help and --version must work even when the config is invalid
-		if( !config().used( "help" ) && !config().used( "version" ) ){
+		// --help, --version and --describe must work even when the config is invalid
+		if( !config().used( "help" ) && !config().used( "version" ) && !config().used( "describe" ) ){
 			if( const auto errors = config().validate(); !errors.empty() ){
 				for( const auto & error: errors ){
 					logger().critical( "{}", error );

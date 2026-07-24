@@ -41,6 +41,8 @@ Fields:
 | `local-options`  | no       | Option names that apply only to this command |
 | `global-options` | no       | Option names that apply to this command and its subcommands |
 | `group`          | no       | One or more groups gating visibility (see *Command groups* below) |
+| `examples`       | no       | Worked invocations, shown in per-command `--help` and in `--describe` |
+| `deprecated`     | no       | If true, flagged as deprecated in `--help` and `--describe` |
 | `commands`       | no       | Nested subcommands |
 
 `parent` is set automatically when commands are nested under `commands:`.

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/david-antiteum/drea/master/docs/describe.schema.json",
+  "title": "drea-describe/1",
+  "description": "Machine readable description of a drea CLI app, as printed by --describe",
+  "type": "object",
+  "required": [ "schema", "app", "version", "description", "usage", "conventions", "options", "commands" ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "drea-describe/1" },
+    "app": { "type": "string" },
+    "version": { "type": "string" },
+    "description": { "type": "string" },
+    "usage": { "type": "string" },
+    "conventions": {
+      "type": "object",
+      "description": "Fixed explanatory strings plus the closed value sets used by this schema",
+      "properties": {
+        "option-types": { "type": "array", "items": { "type": "string" } },
+        "option-scopes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "env-prefix": {
+      "type": "string",
+      "description": "Present only when the app reads options from environment variables"
+    },
+    "options": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/option" }
+    },
+    "commands": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/command" }
+    }
+  },
+  "$defs": {
+    "option": {
+      "type": "object",
+      "required": [ "name", "description", "type", "nb-params", "scope", "required", "sensitive" ],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "description": "Pass on the command line as --name" },
+        "short": { "type": "string", "description": "Single letter alternative: -x" },
+        "description": { "type": "string" },
+        "type": { "enum": [ "bool", "int", "double", "string" ] },
+        "param-name": { "type": "string", "description": "Display name of the option's value(s); absent for flags" },
+        "nb-params": {
+          "description": "Fixed number of values the option takes per use",
+          "oneOf": [ { "type": "integer", "minimum": 0 }, { "const": "unlimited" } ]
+        },
+        "min": { "type": "number", "description": "Lower bound for numeric values" },
+        "max": { "type": "number", "description": "Upper bound for numeric values" },
+        "choices": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Closed set of legal values; absent means unrestricted"
+        },
+        "default": {
+          "description": "Always an array of values, except for sensitive options where it is the string [redacted]",
+          "oneOf": [
+            { "type": "array", "items": { "type": [ "boolean", "number", "string" ] } },
+            { "const": "[redacted]" }
+          ]
+        },
+        "env": { "type": "string", "description": "Exact environment variable name; present only when an env prefix is set and the option's scope permits config sources" },
+        "scope": { "enum": [ "both", "command-line", "config-file", "none" ] },
+        "deprecated": { "const": true, "description": "Present only when the option is deprecated" },
+        "required": { "type": "boolean" },
+        "sensitive": { "type": "boolean" }
+      }
+    },
+    "command": {
+      "type": "object",
+      "required": [ "name", "description", "min-params", "max-params", "local-options", "global-options" ],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "description": "The word typed on the command line; nested commands follow their parents: app cmd subcmd" },
+        "description": { "type": "string" },
+        "params-names": { "type": "string", "description": "Display names of the positional params" },
+        "min-params": { "type": "integer", "minimum": 0 },
+        "max-params": {
+          "oneOf": [ { "type": "integer", "minimum": 0 }, { "const": "unlimited" } ]
+        },
+        "local-options": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Option names (see top-level options) valid only for this command"
+        },
+        "global-options": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Option names valid for this command and its subcommands"
+        },
+        "groups": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Groups gating this command; present only when the command is group-gated"
+        },
+        "examples": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Worked invocations; present only when the command declares them"
+        },
+        "deprecated": { "const": true, "description": "Present only when the command is deprecated" },
+        "commands": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/command" },
+          "description": "Subcommands; absent for leaf commands"
+        }
+      }
+    }
+  }
+}

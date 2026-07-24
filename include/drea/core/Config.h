@@ -75,6 +75,10 @@ public:
 	*/
 	void setEnvPrefix( const std::string & value );
 
+	/*! The prefix for env variables for this app. Empty if not set.
+	*/
+	[[nodiscard]] const std::string & envPrefix() const;
+
 	/*! Any option?
 	*/
 	[[nodiscard]] bool empty() const;

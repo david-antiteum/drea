@@ -14,6 +14,7 @@
 #include "Config.h"
 
 #include "integrations/help/help.h"
+#include "integrations/help/describe.h"
 #include "integrations/bash/bash_completion.h"
 #include "integrations/zsh/zsh_completion.h"
 #include "integrations/fish/fish_completion.h"
@@ -311,6 +312,8 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 		}else{
 			drea::core::integrations::Help::help( d->mApp, d->mCommand );
 		}
+	}else if( d->mApp.config().used( "describe" ) ){
+		drea::core::integrations::Help::describe( d->mApp, std::cout );
 	}else if( d->mCommand == "autocomplete" ){
 		for( auto var: drea::core::integrations::Bash::calculateAutoCompletion( d->mApp )){
 			fmt::print( "{}\n", var );

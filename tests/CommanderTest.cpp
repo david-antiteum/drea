@@ -6,6 +6,7 @@
 #include <drea/core/Config.h>
 #include <drea/core/Option.h>
 
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 
@@ -430,4 +431,220 @@ TEST_CASE( "Commander::addDefaults marks its commands as predefined", "[commande
 	REQUIRE( fx.app.commander().find( "completion" )->mPredefined );
 	REQUIRE( fx.app.commander().find( "man" )->mPredefined );
 	REQUIRE_FALSE( fx.app.commander().find( "hello" )->mPredefined );
+}
+
+TEST_CASE( "--describe prints the app description as JSON", "[commander][describe]" )
+{
+	BuiltinFixture fx;
+	fx.app.config().configure( { "--describe" } );
+	fx.app.commander().configure( {} );
+
+	CoutCapture cap;
+	bool called = false;
+	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
+	REQUIRE_FALSE( called );
+
+	const std::string out = cap.str();
+	REQUIRE( out.find( "\"schema\": \"drea-describe/1\"" ) != std::string::npos );
+	REQUIRE( out.find( "\"app\": \"myapp\"" ) != std::string::npos );
+	REQUIRE( out.find( "\"version\": \"1.2.3\"" ) != std::string::npos );
+	REQUIRE( out.find( "\"name\": \"hello\"" ) != std::string::npos );
+	REQUIRE( out.find( "\"local-options\": [\"loud\"]" ) != std::string::npos );
+	REQUIRE( out.find( "\"name\": \"describe\"" ) != std::string::npos );
+	REQUIRE( out.find( "\"type\": \"bool\"" ) != std::string::npos );
+	REQUIRE( out.find( "\"usage\": \"myapp COMMAND [SUBCOMMAND ...] [PARAMS] [OPTIONS]\"" ) != std::string::npos );
+	REQUIRE( out.find( "\"conventions\": {" ) != std::string::npos );
+	REQUIRE( out.find( "--no-name disables" ) != std::string::npos );
+	REQUIRE( out.find( "\"predefined\":" ) == std::string::npos );
+	// crude structural check: balanced braces and brackets
+	REQUIRE( std::count( out.begin(), out.end(), '{' ) == std::count( out.begin(), out.end(), '}' ) );
+	REQUIRE( std::count( out.begin(), out.end(), '[' ) == std::count( out.begin(), out.end(), ']' ) );
+}
+
+TEST_CASE( "--describe includes limits, defaults and env var names", "[commander][describe]" )
+{
+	BuiltinFixture fx;
+
+	drea::core::Option threshold;
+	threshold.mName = "threshold";
+	threshold.mParamName = "value";
+	threshold.mType = typeid( double );
+	threshold.mValues = { 0.5 };
+	threshold.mMin = 0.0;
+	threshold.mMax = 1.0;
+	fx.app.config().add( threshold );
+
+	drea::core::Option secret;
+	secret.mName = "api-key";
+	secret.mParamName = "key";
+	secret.mType = typeid( std::string );
+	secret.mValues = { std::string( "s3cr3t" ) };
+	secret.mSensitive = true;
+	fx.app.config().add( secret );
+
+	fx.app.config().setEnvPrefix( "MYAPP" );
+	fx.app.config().configure( { "--describe" } );
+	fx.app.commander().configure( {} );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	const std::string out = cap.str();
+	REQUIRE( out.find( "\"min\": 0" ) != std::string::npos );
+	REQUIRE( out.find( "\"max\": 1" ) != std::string::npos );
+	REQUIRE( out.find( "\"default\": [0.5]" ) != std::string::npos );
+	REQUIRE( out.find( "\"env\": \"MYAPP_api_key\"" ) != std::string::npos );
+	REQUIRE( out.find( "\"default\": \"[redacted]\"" ) != std::string::npos );
+	REQUIRE( out.find( "s3cr3t" ) == std::string::npos );
+}
+
+TEST_CASE( "--describe omits hidden commands", "[commander][describe]" )
+{
+	BuiltinFixture fx;
+
+	Command ghost;
+	ghost.mName = "ghost";
+	ghost.mDescription = "internal";
+	ghost.mHidden = true;
+	fx.app.commander().add( ghost );
+
+	fx.app.config().configure( { "--describe" } );
+	fx.app.commander().configure( {} );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	REQUIRE( cap.str().find( "\"ghost\"" ) == std::string::npos );
+}
+
+TEST_CASE( "--describe nests subcommands as JSON objects", "[commander][describe]" )
+{
+	BuiltinFixture fx;
+
+	Command box;
+	box.mName = "box";
+	box.mDescription = "box things";
+	fx.app.commander().add( box );
+
+	Command open;
+	open.mName = "open";
+	open.mParentCommand = "box";
+	open.mDescription = "open the box";
+	fx.app.commander().add( open );
+
+	fx.app.config().configure( { "--describe" } );
+	fx.app.commander().configure( {} );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	const std::string out = cap.str();
+	const auto boxPos = out.find( "\"name\": \"box\"" );
+	const auto openPos = out.find( "\"name\": \"open\"" );
+	REQUIRE( boxPos != std::string::npos );
+	REQUIRE( openPos != std::string::npos );
+	// the subcommand object comes nested after its parent, inside a
+	// "commands" array, and the flat-list linking fields are gone
+	REQUIRE( openPos > boxPos );
+	const auto nestedArrayPos = out.find( "\"commands\": [", boxPos );
+	REQUIRE( nestedArrayPos != std::string::npos );
+	REQUIRE( nestedArrayPos < openPos );
+	REQUIRE( out.find( "\"full-name\":" ) == std::string::npos );
+	REQUIRE( out.find( "\"parent\":" ) == std::string::npos );
+	REQUIRE( out.find( "\"subcommands\":" ) == std::string::npos );
+}
+
+TEST_CASE( "--describe lists choices and machine readable value sets", "[commander][describe]" )
+{
+	BuiltinFixture fx;
+
+	drea::core::Option color;
+	color.mName = "color";
+	color.mParamName = "mode";
+	color.mType = typeid( std::string );
+	color.mChoices = { "auto", "always", "never" };
+	fx.app.config().add( color );
+
+	fx.app.config().configure( { "--describe" } );
+	fx.app.commander().configure( {} );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	const std::string out = cap.str();
+	REQUIRE( out.find( "\"choices\": [\"auto\", \"always\", \"never\"]" ) != std::string::npos );
+	REQUIRE( out.find( "\"option-types\": [\"bool\", \"int\", \"double\", \"string\"]" ) != std::string::npos );
+	REQUIRE( out.find( "\"option-scopes\": [\"both\", \"command-line\", \"config-file\", \"none\"]" ) != std::string::npos );
+	REQUIRE( out.find( "\"env-derivation\":" ) != std::string::npos );
+}
+
+TEST_CASE( "--describe lists the groups of a visible gated command", "[commander][describe]" )
+{
+	BuiltinFixture fx;
+
+	Command gated;
+	gated.mName = "beta-tools";
+	gated.mDescription = "beta features";
+	gated.mGroups = { "beta" };
+	fx.app.commander().add( gated );
+	fx.app.commander().setEnabledGroups( { "beta" } );
+
+	fx.app.config().configure( { "--describe" } );
+	fx.app.commander().configure( {} );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	const std::string out = cap.str();
+	REQUIRE( out.find( "\"name\": \"beta-tools\"" ) != std::string::npos );
+	REQUIRE( out.find( "\"groups\": [\"beta\"]" ) != std::string::npos );
+}
+
+TEST_CASE( "--describe omits env for command-line scoped options and marks deprecated", "[commander][describe]" )
+{
+	BuiltinFixture fx;
+
+	drea::core::Option cliOnly;
+	cliOnly.mName = "burst";
+	cliOnly.mDescription = "one shot tuning";
+	cliOnly.mParamName = "n";
+	cliOnly.mType = typeid( int );
+	cliOnly.mScope = drea::core::Option::Scope::Line;
+	cliOnly.mDeprecated = true;
+	fx.app.config().add( cliOnly );
+
+	fx.app.config().setEnvPrefix( "MYAPP" );
+	fx.app.config().configure( { "--describe" } );
+	fx.app.commander().configure( {} );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	const std::string out = cap.str();
+	REQUIRE( out.find( "\"env\": \"MYAPP_burst\"" ) == std::string::npos );
+	REQUIRE( out.find( "\"env\": \"MYAPP_loud\"" ) != std::string::npos );
+	const auto burstPos = out.find( "\"name\": \"burst\"" );
+	REQUIRE( burstPos != std::string::npos );
+	REQUIRE( out.find( "\"deprecated\": true", burstPos ) != std::string::npos );
+}
+
+TEST_CASE( "--describe lists command examples", "[commander][describe]" )
+{
+	BuiltinFixture fx;
+
+	Command copy;
+	copy.mName = "copy";
+	copy.mDescription = "copy a file";
+	copy.mParamName = "src dst";
+	copy.mNbParams = 2;
+	copy.mExamples = { "myapp copy in.txt out.txt" };
+	fx.app.commander().add( copy );
+
+	fx.app.config().configure( { "--describe" } );
+	fx.app.commander().configure( {} );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	REQUIRE( cap.str().find( "\"examples\": [\"myapp copy in.txt out.txt\"]" ) != std::string::npos );
 }

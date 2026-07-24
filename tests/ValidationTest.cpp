@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <drea/core/App.h>
+#include <drea/core/Command.h>
+#include <drea/core/Commander.h>
 #include <drea/core/Config.h>
 #include <drea/core/Option.h>
 
@@ -183,4 +185,53 @@ TEST_CASE( "config sources are tracked per option", "[config-source]" )
 
 	fx.app.config().set( "size", "9" );
 	REQUIRE( fx.app.config().source( "size" ) == "code" );
+}
+
+TEST_CASE( "validate flags a value outside choices", "[validate]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "color";
+	opt.mParamName = "mode";
+	opt.mType = typeid( std::string );
+	opt.mChoices = { "auto", "always", "never" };
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--color", "sometimes" } );
+
+	const auto errors = fx.app.config().validate();
+	REQUIRE( errors.size() == 1 );
+	REQUIRE( errors.front().find( "sometimes" ) != std::string::npos );
+	REQUIRE( errors.front().find( "auto, always, never" ) != std::string::npos );
+}
+
+TEST_CASE( "validate passes a value inside choices", "[validate]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "color";
+	opt.mParamName = "mode";
+	opt.mType = typeid( std::string );
+	opt.mChoices = { "auto", "always", "never" };
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--color", "never" } );
+
+	REQUIRE( fx.app.config().validate().empty() );
+}
+
+TEST_CASE( "validate flags a command referencing an unknown option", "[validate]" )
+{
+	AppFixture fx;
+	drea::core::Command cmd;
+	cmd.mName = "start";
+	cmd.mLocalParameters = { "does-not-exist" };
+	fx.app.commander().add( cmd );
+
+	fx.app.config().configure( {} );
+
+	const auto errors = fx.app.config().validate();
+	REQUIRE( errors.size() == 1 );
+	REQUIRE( errors.front().find( "start" ) != std::string::npos );
+	REQUIRE( errors.front().find( "does-not-exist" ) != std::string::npos );
 }

@@ -93,7 +93,7 @@ static void help( const drea::core::App & app, std::string_view commandName )
 				}
 				fmt::print( "\n\n" );
 
-				fmt::print( "{}\n", cmd->mDescription );
+				fmt::print( "{}{}\n", cmd->mDescription, cmd->mDeprecated ? " (deprecated)" : "" );
 
 				if( !cmd->mSubcommand.empty() ){
 					std::string::size_type offset = 0;
@@ -142,6 +142,12 @@ static void help( const drea::core::App & app, std::string_view commandName )
 						}
 					}
 				}
+				if( !cmd->mExamples.empty() ){
+					fmt::print( "\nExamples:\n" );
+					for( const std::string & example: cmd->mExamples ){
+						fmt::print( "  {}\n", example );
+					}
+				}
 				if( !cmd->mSubcommand.empty() ){
 					fmt::print( "\nUse \"{} {} COMMAND --help\" for more information about a command.\n", app.name(), utilities::string::join( commands, " " ));
 				}
@@ -173,6 +179,12 @@ static void helpOption( const Option & option, std::string::size_type offset, bo
 	}
 	fmt::print("{:>{}}", "", 2 + offset - paramsSize );
 	fmt::print( "{}", option.mDescription );
+	if( option.mDeprecated ){
+		fmt::print( " (deprecated)" );
+	}
+	if( !option.mChoices.empty() ){
+		fmt::print( ". One of: {}", utilities::string::join( option.mChoices, ", " ) );
+	}
 	if( option.mValues.empty() ){
 		fmt::print( "\n" );
 	}else if( option.mSensitive ){

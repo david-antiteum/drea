@@ -41,6 +41,8 @@ Fields:
 | `sensitive`    | If true, the default is hidden in `--help` |
 | `required`     | If true, `parse()` fails when no source provides a value |
 | `min` / `max`  | Numeric bounds, validated after source resolution |
+| `choices`      | Sequence of legal values; any other value fails validation |
+| `deprecated`   | If true, flagged as deprecated in `--help` and `--describe` |
 
 `bool` options take no value by default — their presence on the CLI flips
 them to true. They can be explicitly disabled with `--no-<name>` (see
@@ -148,8 +150,19 @@ MYAPP_config_file=/etc/config.json ./myapp ...   # option: config-file
 MYAPP_db_host=localhost ./myapp ...              # option: db.host
 ```
 
-The exact spelling (`MYAPP_config-file`) is still checked first, for
-environments that can set such names (for example `env` or `execve`).
+The conventional all-uppercase spelling is accepted as well:
+
+```bash
+MYAPP_CONFIG_FILE=/etc/config.json ./myapp ...
+```
+
+Lookup order per option: the exact spelling (`MYAPP_config-file`, for
+environments that can set such names, e.g. `env` or `execve`), then the
+sanitized spelling (`MYAPP_config_file`), then its uppercase form
+(`MYAPP_CONFIG_FILE`). First hit wins.
+
+Only options whose scope permits config sources (`both`, `file`) read the
+environment; `line` and `none` scoped options ignore it.
 
 ## Remote config sources
 
@@ -230,12 +243,21 @@ options:
     min: 1
     max: 65535
     value: 8080
+
+  - option: color
+    description: colorize the output
+    params-names: mode
+    type: string
+    choices: [ auto, always, never ]
+    value: auto
 ```
 
 `App::parse` validates after all sources are resolved (defaults, remote
 sources, config file, env, flags): `required` fails when no source provided a
-value; `min`/`max` bound each value of numeric options. On failure every
-violation is logged at `critical` and the process exits with
+value; `min`/`max` bound each value of numeric options; `choices` restricts
+values to a closed set. Every option referenced by a command's
+`local-options`/`global-options` must exist, or validation fails too. On
+failure every violation is logged at `critical` and the process exits with
 `drea::core::ExitCode::ConfigError` (78, sysexits `EX_CONFIG`). `--help` and
 `--version` still work when the config is invalid.
 
@@ -321,12 +343,16 @@ thread, which is why drea's loggers are — and must stay — synchronous.
 
 ## Option scope
 
-`scope` controls where an option appears in `--help`:
+`scope` controls where an option appears in `--help`, and which sources may
+set it:
 
-- `both` (default) — top-level options block.
-- `line` — top-level options block only.
-- `file` — config-file-only block (separate section in `--help`).
-- `none` — never shown in help, but still parseable.
+- `both` (default) — top-level options block; read from every source.
+- `line` — top-level options block only; command line only, environment
+  variables are ignored for it.
+- `file` — config-file-only block (separate section in `--help`); read from
+  the config sources (remote sources, config file, environment).
+- `none` — never shown in help, but still parseable; environment variables
+  are ignored for it.
 
 Options declared as `local-options` of a single command are automatically
 filtered out of the global help section. They appear only on that command's

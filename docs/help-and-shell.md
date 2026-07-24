@@ -33,6 +33,123 @@ Filtering rules:
 - Options with `scope: none` are never shown.
 - Options with `scope: file` move to the *Config file options* section.
 
+## `--describe`
+
+`./myapp --describe` prints the full app description — commands (with
+sub commands), options and their limits — as a single JSON object on
+stdout and quits. It is aimed at AI agents and other tools that want to
+discover the CLI without scraping `--help`.
+
+```json
+{
+  "schema": "drea-describe/1",
+  "app": "myapp",
+  "version": "1.2.3",
+  "description": "...",
+  "usage": "myapp COMMAND [SUBCOMMAND ...] [PARAMS] [OPTIONS]",
+  "conventions": {
+    "option-syntax": "pass options as --name value or --name=value; an option with a short version also accepts -x",
+    "bool-options": "bool options are flags: --name enables, --no-name disables",
+    "option-types": ["bool", "int", "double", "string"],
+    "option-scopes": ["both", "command-line", "config-file", "none"],
+    "option-fields": "scope tells where an option may be set; min and max bound numeric values; choices is the closed set of legal values; nb-params is the fixed number of values the option takes per use (commands instead declare a min-params/max-params range for their positional params)",
+    "values": "every option value is a list: default is always an array, and any value-taking option may be repeated with values accumulating, so a scalar-looking option passed twice carries two elements. The app reads the first element when it expects a single value (first wins). Repeating a flag increases its intensity (-vv). The default of a sensitive option is masked as the string [redacted]",
+    "required-options": "required means the option must end up with a value from any source; a default already satisfies it",
+    "scopes": "both = command line plus config sources; command-line = flags only; config-file = config sources only, which bundle remote sources, the config file and environment variables; none = not set by users, the app sets it in code (listed so its meaning is known). An option reads the environment only when its scope permits config sources AND it carries an env field",
+    "env-derivation": "an option is read from the variable env-prefix + '_' + the option name with every character outside [A-Za-z0-9_] replaced by '_'; the all-uppercase spelling is also accepted. The env field gives the exact name per option",
+    "command-options": "a command accepts its local-options and global-options; global-options are also accepted by its subcommands",
+    "command-groups": "a command listing groups is only available when one of those groups is enabled by the app; commands gated by disabled groups are omitted from this description",
+    "config-precedence": "defaults, then remote config sources, then the config file, then environment variables, then command line flags; later sources win"
+  },
+  "env-prefix": "MYAPP",
+  "options": [
+    {
+      "name": "threshold",
+      "description": "detection threshold",
+      "type": "double",
+      "param-name": "value",
+      "nb-params": 1,
+      "min": 0,
+      "max": 1,
+      "default": [0.5],
+      "env": "MYAPP_threshold",
+      "scope": "both",
+      "required": false,
+      "sensitive": false
+    },
+    {
+      "name": "color",
+      "description": "colorize the output",
+      "type": "string",
+      "param-name": "mode",
+      "nb-params": 1,
+      "choices": ["auto", "always", "never"],
+      "default": ["auto"],
+      "env": "MYAPP_color",
+      "scope": "both",
+      "required": false,
+      "sensitive": false
+    }
+  ],
+  "commands": [
+    {
+      "name": "repeat",
+      "description": "repeat something",
+      "min-params": 0,
+      "max-params": 0,
+      "local-options": ["reverse"],
+      "global-options": [],
+      "commands": [
+        {
+          "name": "parrot",
+          "description": "print parrot",
+          "min-params": 0,
+          "max-params": 0,
+          "local-options": ["reverse"],
+          "global-options": [],
+          "commands": [
+            { "name": "blue", "...": "..." },
+            { "name": "red", "...": "..." }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Notes:
+
+- Commands form a tree that mirrors the command line: a command's
+  subcommands are nested objects under its `commands` key (omitted for
+  leaf commands). The words of an invocation are the `name`s along the
+  path — the example above describes `myapp repeat parrot blue`.
+- `nb-params` / `max-params` are numbers, or the string `"unlimited"`.
+- `min` / `max` appear only when the option declares limits; `default`
+  only when the option has a default. Defaults of sensitive options are
+  emitted as the string `"[redacted]"`.
+- `env` gives the exact environment variable name (prefix applied,
+  invalid characters mapped to `_`). It is present only when an env
+  prefix is set AND the option's scope permits config sources — "does
+  this option read from env?" is exactly "does it carry an `env` field?".
+- `deprecated: true` appears only on deprecated options/commands;
+  `examples` only on commands that declare worked invocations. Absent
+  means not deprecated / no examples.
+- `scope` is one of `"both"`, `"command-line"`, `"config-file"` or
+  `"none"`; the closed sets for `scope` and `type` are also emitted
+  machine-readable as `conventions.option-scopes` and
+  `conventions.option-types`.
+- A command gated by groups carries a `groups` array when visible; gated
+  commands whose groups are disabled are omitted entirely.
+- The same filtering as `--help` applies to commands: hidden and gated
+  commands are omitted. All registered options are listed, with their
+  `scope` field telling where each one may be used.
+- Like `--help`, it works even when the current configuration is invalid.
+- The output is validatable against the published JSON Schema:
+  [`docs/describe.schema.json`](describe.schema.json). Every name in a
+  command's `local-options`/`global-options` refers to an entry in the
+  top-level `options` array — `App::parse` enforces this invariant.
+
 ## Dynamic help footer
 
 Install a callback to append text to `--help`. The callback is invoked once

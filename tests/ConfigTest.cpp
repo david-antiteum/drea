@@ -315,3 +315,38 @@ TEST_CASE( "Config still reads env var matching option name exactly", "[config]"
 
 	REQUIRE( fx.app.config().get<int>( "workers" ) == 8 );
 }
+
+TEST_CASE( "Config reads all-uppercase env var spelling", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "config-file";
+	opt.mParamName = "path";
+	opt.mType = typeid( std::string );
+	fx.app.config().add( opt );
+	fx.app.config().setEnvPrefix( "DREATEST" );
+
+	setEnvVar( "DREATEST_CONFIG_FILE", "/etc/upper.json" );
+	fx.app.config().configure( {} );
+	unsetEnvVar( "DREATEST_CONFIG_FILE" );
+
+	REQUIRE( fx.app.config().get<std::string>( "config-file" ) == "/etc/upper.json" );
+}
+
+TEST_CASE( "env vars are ignored for command-line scoped options", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "burst";
+	opt.mParamName = "n";
+	opt.mType = typeid( int );
+	opt.mScope = Option::Scope::Line;
+	fx.app.config().add( opt );
+	fx.app.config().setEnvPrefix( "DREATEST" );
+
+	setEnvVar( "DREATEST_burst", "5" );
+	fx.app.config().configure( {} );
+	unsetEnvVar( "DREATEST_burst" );
+
+	REQUIRE_FALSE( fx.app.config().used( "burst" ) );
+}
