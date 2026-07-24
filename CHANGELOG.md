@@ -25,6 +25,16 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   declared before source resolution replaced it. `Option::typeName()` and
   `Option::scopeName()` expose the closed sets used by `--describe`.
 
+### Fixed
+
+- `--help` and `--describe` showed the *resolved* value as `Default` — e.g.
+  `myapp --tier operator --help` claimed "Default operator" for an option
+  with no default. Both now report the declared default (snapshot before
+  source resolution), and `--help` additionally prints
+  `Current value <v>` when a flag, env var or config source set the option
+  (`(hidden)` for sensitive options). `--describe` stays static: declared
+  default only.
+
 ### Changed
 
 - A value that does not parse as its option's declared type is now collected

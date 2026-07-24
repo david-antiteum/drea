@@ -33,6 +33,17 @@ Filtering rules:
 - Options with `scope: none` are never shown.
 - Options with `scope: file` move to the *Config file options* section.
 
+Each option line ends with its computed facts: `One of: ...` (declared
+`choices`), `Default ...` (the *declared* default), and `Current value ...`
+when a real source — flag, environment, config file, remote source — set the
+option; a value that merely comes from the default shows `Default` alone.
+For `sensitive` options both render as `(hidden)`:
+
+```
+--log-size size    log <size> (in MB) for each log file. Default 10. Current value 20
+--tier tier        simulated staff tier. One of: none, readonly, operator. Current value operator
+```
+
 ## `--describe`
 
 `./myapp --describe` prints the full app description — commands (with

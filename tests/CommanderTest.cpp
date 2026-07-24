@@ -648,3 +648,25 @@ TEST_CASE( "--describe lists command examples", "[commander][describe]" )
 
 	REQUIRE( cap.str().find( "\"examples\": [\"myapp copy in.txt out.txt\"]" ) != std::string::npos );
 }
+
+TEST_CASE( "--describe reports the declared default, not the resolved value", "[commander][describe]" )
+{
+	BuiltinFixture fx;
+
+	drea::core::Option threshold;
+	threshold.mName = "threshold";
+	threshold.mParamName = "value";
+	threshold.mType = typeid( double );
+	threshold.mValues = { 0.5 };
+	fx.app.config().add( threshold );
+
+	fx.app.config().configure( { "--describe", "--threshold", "0.9" } );
+	fx.app.commander().configure( {} );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	const std::string out = cap.str();
+	REQUIRE( out.find( "\"default\": [0.5]" ) != std::string::npos );
+	REQUIRE( out.find( "0.9" ) == std::string::npos );
+}

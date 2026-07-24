@@ -160,13 +160,21 @@ inline void describe( const drea::core::App & app, std::ostream & os )
 			}
 			os << "],\n";
 		}
-		if( !option.mValues.empty() ){
+		// the declared default, not the resolved value: sources (flags, env,
+		// config file) may have replaced mValues by the time describe runs.
+		// Before Config::configure runs (no snapshot, no source registered)
+		// mValues still holds the declared defaults.
+		std::vector<OptionValue> defaults = app.config().declaredDefault( option.mName );
+		if( defaults.empty() && app.config().source( option.mName ) == "default" ){
+			defaults = option.mValues;
+		}
+		if( !defaults.empty() ){
 			if( option.mSensitive ){
 				os << "      \"default\": \"[redacted]\",\n";
 			}else{
 				os << "      \"default\": [";
 				bool firstValue = true;
-				for( const auto & value: option.mValues ){
+				for( const auto & value: defaults ){
 					os << fmt::format( "{}{}", firstValue ? "" : ", ", detail::valueLiteral( option, value ) );
 					firstValue = false;
 				}

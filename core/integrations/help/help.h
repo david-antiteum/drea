@@ -159,7 +159,20 @@ static void help( const drea::core::App & app, std::string_view commandName )
 	}
 }
 
-static void helpOption( const Option & option, std::string::size_type offset, bool anyShort )
+//! The default an option declares, regardless of what source resolution
+//! later put in mValues. Before Config::configure runs (no snapshot yet and
+//! no source registered) mValues still holds the declared defaults.
+inline std::vector<OptionValue> declaredDefault( const drea::core::App & app, const Option & option )
+{
+	std::vector<OptionValue>	defaults = app.config().declaredDefault( option.mName );
+
+	if( defaults.empty() && app.config().source( option.mName ) == "default" ){
+		defaults = option.mValues;
+	}
+	return defaults;
+}
+
+static void helpOption( const drea::core::App & app, const Option & option, std::string::size_type offset, bool anyShort )
 {
 	std::string::size_type paramsSize = 2 + 2 + option.mName.size();
 
@@ -185,17 +198,29 @@ static void helpOption( const Option & option, std::string::size_type offset, bo
 	if( !option.mChoices.empty() ){
 		fmt::print( ". One of: {}", utilities::string::join( option.mChoices, ", " ) );
 	}
-	if( option.mValues.empty() ){
-		fmt::print( "\n" );
-	}else if( option.mSensitive ){
-		fmt::print( ". Default (hidden)\n" );
-	}else{
-		fmt::print( ". Default" );
-		for( const auto & v: option.mValues ){
-			fmt::print( " {}", option.toString( v ));
+	// the declared default and the resolved value are different facts: a
+	// flag, env var or config file may have replaced the default by now
+	if( const auto defaults = declaredDefault( app, option ); !defaults.empty() ){
+		if( option.mSensitive ){
+			fmt::print( ". Default (hidden)" );
+		}else{
+			fmt::print( ". Default" );
+			for( const auto & v: defaults ){
+				fmt::print( " {}", option.toString( v ));
+			}
 		}
-		fmt::print( "\n" );
 	}
+	if( app.config().source( option.mName ) != "default" && !option.mValues.empty() ){
+		if( option.mSensitive ){
+			fmt::print( ". Current value (hidden)" );
+		}else{
+			fmt::print( ". Current value" );
+			for( const auto & v: option.mValues ){
+				fmt::print( " {}", option.toString( v ));
+			}
+		}
+	}
+	fmt::print( "\n" );
 }
 
 static void help( const drea::core::App & app )
@@ -259,9 +284,9 @@ static void help( const drea::core::App & app )
 	// Config: application options first, the predefined drea set under its own header
 	if( anyLineApp ){
 		fmt::print( "Options:\n" );
-		app.config().options( [ offset, anyShort, &localOnlyOptions ](const Option & option){
+		app.config().options( [ &app, offset, anyShort, &localOnlyOptions ](const Option & option){
 			if( option.helpInLine() && !option.mPredefined && localOnlyOptions.find( option.mName ) == localOnlyOptions.end() ){
-				helpOption( option, offset, anyShort );
+				helpOption( app, option, offset, anyShort );
 			}
 		});
 	}
@@ -270,17 +295,17 @@ static void help( const drea::core::App & app )
 			fmt::print( "\n" );
 		}
 		fmt::print( "Common options:\n" );
-		app.config().options( [ offset, anyShort, &localOnlyOptions ](const Option & option){
+		app.config().options( [ &app, offset, anyShort, &localOnlyOptions ](const Option & option){
 			if( option.helpInLine() && option.mPredefined && localOnlyOptions.find( option.mName ) == localOnlyOptions.end() ){
-				helpOption( option, offset, anyShort );
+				helpOption( app, option, offset, anyShort );
 			}
 		});
 	}
 	if( anyFile ){
 		fmt::print( "Config file options:\n" );
-		app.config().options( [ offset, anyShort, &localOnlyOptions ](const Option & option){
+		app.config().options( [ &app, offset, anyShort, &localOnlyOptions ](const Option & option){
 			if( option.helpInFileOnly() && localOnlyOptions.find( option.mName ) == localOnlyOptions.end() ){
-				helpOption( option, offset, anyShort );
+				helpOption( app, option, offset, anyShort );
 			}
 		});
 	}
