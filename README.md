@@ -1,18 +1,33 @@
 # Drea
 
-A C++17 framework for CLI apps and services. Declare commands and options once
-in YAML; Drea derives the rest.
+Drea is a C++17 framework for building command-line tools and services. You
+describe the commands and options once in a YAML file, and Drea uses that
+description to parse arguments, validate them, render `--help`, generate man
+pages and shell completion, and produce a machine-readable description of the
+interface.
+
+The goal is a single source of truth. Many option parsers turn `argv` into typed
+values and leave the rest to you. Drea also covers the configuration, logging,
+and documentation that a longer-lived tool or service usually needs, all derived
+from the same declaration, so the help text and the code stay in step.
 
 ## Features
 
-- Commands and subcommands (with argument validation)
-- Options (typed, validated, with short forms)
-- Configuration from multiple sources (file, env, flags, AWS Secrets Manager)
-- Logging (spdlog-based, with optional Graylog sink)
-- `--help` rendering with a dynamic footer hook
-- Command groups for tier/role-based gating of help, completion, and execution
-- `man` page generation
-- Shell completion (`bash`, `zsh`, `fish`)
+- Commands and subcommands, with argument validation.
+- Typed, validated options with short forms.
+- Configuration from several sources — defaults, remote sources, a config file
+  (including TOML), environment variables, and command-line flags — resolved in
+  a defined order.
+- Optional AWS Secrets Manager as a configuration source, with sensitive values
+  masked in help and description output.
+- Logging based on spdlog, with an optional Graylog sink.
+- `--help` rendering with a dynamic footer hook.
+- `--describe`: the full command and option tree (types, bounds, choices,
+  defaults, scopes, environment mapping) as versioned JSON, so tools and agents
+  can read the interface without parsing `--help`.
+- Command groups, for gating help, completion, and execution by tier or role.
+- `man` page generation.
+- Shell completion for `bash`, `zsh`, and `fish`.
 
 ## A 30-second example
 
@@ -108,7 +123,7 @@ target_link_libraries(main PRIVATE drea)
 
 - [Commands](docs/commands.md) — anatomy, parameters, hierarchy, hiding, groups
 - [Configuration](docs/configuration.md) — options, sources, evaluation order, sensitive values
-- [Help and shell integration](docs/help-and-shell.md) — `--help`, dynamic footer, `man`, completion
+- [Help and shell integration](docs/help-and-shell.md) — `--help`, dynamic footer, `man`, completion, `--describe`
 - [API reference](docs/api-reference.md) — `App`, `Commander`, `Config`, `Command`, `Option`
 - [Examples](docs/examples.md) — index of `examples/`
 
@@ -123,13 +138,46 @@ set `SONAR_TOKEN`, reconfigure CMake (so it picks up `sonar-scanner`), and:
 cmake --build build --target sonarqube
 ```
 
+## Inspiration and alternatives
+
+Drea follows the design that Go's CLI ecosystem settled on:
+[Cobra](https://github.com/spf13/cobra) for the command/subcommand structure
+with generated help, completion, and man pages, and
+[Viper](https://github.com/spf13/viper) for layered configuration (defaults,
+config file, environment, flags, and remote sources). Drea combines both around
+a single declarative spec in C++17.
+
+C++ already has several good argument parsers. Most of them focus on parsing
+rather than on the wider app/service setup, so they make different trade-offs.
+A rough comparison:
+
+| Library | Stars | Status | Notes |
+| --- | --- | --- | --- |
+| [CLI11](https://github.com/CLIUtils/CLI11) | ~4.4k | Active | Header-only, no dependencies, C++11. Strong subcommand support and config-file (TOML/INI) plus environment variables. Options are set up imperatively in C++ rather than declared; no remote/secret source, logging, or machine-readable description. |
+| [cxxopts](https://github.com/jarro2783/cxxopts) | ~4.8k | Active | Header-only C++11, small and quick to adopt, Boost.Program_options-style syntax. No real subcommands, config files, or environment sources; no man/completion generation. |
+| [p-ranav/argparse](https://github.com/p-ranav/argparse) | ~3.5k | Active | Single-header C++17 with an API close to Python's argparse, including subparsers. No config-file, environment, or remote sources; no man/completion generation. |
+| [gflags](https://github.com/gflags/gflags) | ~3.0k | Maintenance only | Long used at scale; flags can be defined across translation units. No longer developed by Google (Abseil Flags is the successor); no subcommands or layered configuration. |
+| [docopt.cpp](https://github.com/docopt/docopt.cpp) | ~1.1k | Last release 2020 | Fully declarative — the parser is generated from the help text, which is the closest approach to Drea's. Effectively unmaintained; no configuration sources and limited validation. |
+| [Boost.Program_options](https://github.com/boostorg/program_options) | (part of Boost) | Mature | Merges config file, environment, and command line; a natural fit where Boost is already a dependency. Verbose pre-C++11 API, no subcommands, and no man/completion generation. |
+
+A note on where Drea costs more: unlike CLI11, cxxopts, and argparse, it is not
+header-only. It builds with CMake and vcpkg and brings in dependencies (spdlog,
+a YAML parser, and optionally the AWS SDK), it requires C++17, and it is younger
+and less widely used than the parsers above. For a single binary that only needs
+to read a few flags, a header-only parser is the simpler choice. Drea fits when
+the declarative spec, layered configuration, and service features are useful
+together.
+
 ## Further reading
 
-- [Command-line syntax: some basic concepts](https://pythonconquerstheuniverse.wordpress.com/2010/07/25/command-line-syntax-some-basic-concepts/)
+- [Command Line Interface Guidelines (clig.dev)](https://clig.dev/) — modern,
+  opinionated conventions for CLI design
+- [POSIX Utility Conventions](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap12.html)
+  — the base standard for utility syntax: options, option-arguments, operands,
+  and the `--` separator
+- [GNU Program Argument Syntax Conventions](https://www.gnu.org/software/libc/manual/html_node/Argument-Syntax.html)
+  — long options and the widely-followed GNU extensions
 - [Man pages](https://liw.fi/manpages/)
 - [On formats](https://news.ycombinator.com/item?id=19653834)
-
-Similar libraries: [Cobra](https://github.com/spf13/cobra) (Go),
-[Viper](https://github.com/spf13/viper) (Go),
-[CLI11](https://github.com/CLIUtils/CLI11),
-[cpp_cli](https://github.com/TheLandfill/cpp_cli).
+- [AGENTS.md](https://agents.md/) — a convention for guiding AI agents, related
+  to Drea's `--describe`
