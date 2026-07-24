@@ -462,6 +462,12 @@ Lines without fields are unchanged. The console pattern is spdlog's default
 plus the field blocks; both formatters read the fields on the calling
 thread, which is why drea's loggers are — and must stay — synchronous.
 
+The transport is `drea::log::mdc` (`include/drea/log/Mdc.h`), a
+thread-local key/value context you can also fill directly for
+request-scoped fields — put `session` once and every log line of the
+request carries it until you `clear()`. Self-contained: drea does not
+depend on `spdlog::mdc` (spdlog ≥ 1.15).
+
 ## Option scope
 
 `scope` controls where an option appears in `--help`, and which sources may

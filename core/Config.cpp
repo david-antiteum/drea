@@ -754,7 +754,7 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 	std::vector<spdlog::sink_ptr> 		sinks;
 	std::string							logFile = get<std::string>( "log-file" );
 
-	// Both formatters read spdlog::mdc at format time, on the calling thread.
+	// Both formatters read drea::log::mdc at format time, on the calling thread.
 	// NEVER switch this function to spdlog::async_logger: formatting would
 	// move to a backend thread and every MDC read would silently return an
 	// empty map, dropping all structured fields.

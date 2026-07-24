@@ -66,6 +66,13 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Structured log fields ride on `drea::log::mdc`
+  (`include/drea/log/Mdc.h`), a self-contained thread-local context owned
+  by the drea library, instead of `spdlog::mdc` — drea no longer requires
+  spdlog ≥ 1.15. **Breaking** for code that put request-scoped context
+  into `spdlog::mdc` directly: swap the namespace, same put/get/remove/
+  clear/get_context API. As before, only synchronous loggers see the
+  context.
 - `--config-file` is repeatable: files are merged in order, later wins
   (same rule as `--config-source`). Previously only the first flag was
   read and the rest were silently ignored.

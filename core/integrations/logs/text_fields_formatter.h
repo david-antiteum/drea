@@ -1,7 +1,8 @@
 #pragma once
 
 #include <spdlog/pattern_formatter.h>
-#include <spdlog/mdc.h>
+
+#include <drea/log/Mdc.h>
 
 #include <memory>
 
@@ -21,7 +22,7 @@ class text_fields_flag : public spdlog::custom_flag_formatter
 public:
 	void format( const spdlog::details::log_msg &, const std::tm &, spdlog::memory_buf_t & dest ) override
 	{
-		const auto & context = spdlog::mdc::get_context();
+		const auto & context = drea::log::mdc::get_context();
 
 		if( context.empty() ){
 			return;

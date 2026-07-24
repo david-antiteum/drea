@@ -1,7 +1,8 @@
 #pragma once
 
 #include <spdlog/spdlog.h>
-#include <spdlog/mdc.h>
+
+#include <drea/log/Mdc.h>
 
 #include <initializer_list>
 #include <string>
@@ -36,7 +37,7 @@ struct Field
 };
 
 /*! Thin wrapper over spdlog::logger that adds per-call structured fields,
-	using spdlog::mdc as a hidden transport: put the fields, log, remove
+	using drea::log::mdc as a hidden transport: put the fields, log, remove
 	them. Safe because drea loggers are synchronous — formatting runs on the
 	calling thread inside log() (never wrap an spdlog::async_logger: its
 	backend thread sees an empty MDC).
@@ -218,7 +219,7 @@ private:
 		{
 			for( const Field * it = begin; it != end; ++it ){
 				if( !it->value.empty() ){
-					spdlog::mdc::remove( it->key );
+					drea::log::mdc::remove( it->key );
 				}
 			}
 		}
@@ -237,7 +238,7 @@ private:
 			// empty value = field skipped, like the old "empty context
 			// prepends nothing" convention
 			if( !it->value.empty() ){
-				spdlog::mdc::put( it->key, it->value );
+				drea::log::mdc::put( it->key, it->value );
 			}
 		}
 		mLogger->log( lvl, fmt, std::forward<Args>( args )... );

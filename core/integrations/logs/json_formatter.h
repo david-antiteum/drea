@@ -4,7 +4,8 @@
 #include <spdlog/details/log_msg.h>
 #include <spdlog/details/os.h>
 #include <spdlog/fmt/fmt.h>
-#include <spdlog/mdc.h>
+
+#include <drea/log/Mdc.h>
 
 #include <chrono>
 #include <ctime>
@@ -21,7 +22,7 @@ namespace drea::core::integrations::logs {
 // be JSON-escaped: embedded quotes, backslashes and control characters do not
 // corrupt the stream.
 //
-// Entries in spdlog::mdc (thread-local) are emitted as extra top-level string
+// Entries in drea::log::mdc (thread-local) are emitted as extra top-level string
 // fields between "logger" and "msg". This only works with synchronous loggers:
 // formatting must run on the thread that populated the MDC.
 class json_lines_formatter : public spdlog::formatter
@@ -36,7 +37,7 @@ public:
 		appendLiteral( dest, "\",\"logger\":\"" );
 		appendEscaped( dest, msg.logger_name );
 		appendLiteral( dest, "\"" );
-		for( const auto & [key, value] : spdlog::mdc::get_context() ){
+		for( const auto & [key, value] : drea::log::mdc::get_context() ){
 			if( isReservedKey( key ) ){
 				continue;
 			}

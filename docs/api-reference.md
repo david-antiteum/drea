@@ -274,6 +274,15 @@ bool drea::log::redactionEnabled();
 std::string drea::log::sanitizeCorrelationId( std::string_view value );
 bool drea::log::isValidCorrelationId( std::string_view value );
 
+// Mdc.h — thread-local context merged into every record formatted on
+// this thread (the transport behind Logger fields; usable directly for
+// request-scoped context)
+drea::log::mdc::put( "session", sessionId );
+drea::log::mdc::get( "session" );
+drea::log::mdc::remove( "session" );
+drea::log::mdc::clear();
+drea::log::mdc::get_context();          // std::map<std::string, std::string> &
+
 // Logger.h — per-call structured fields; App::logger() returns this wrapper
 auto & logger = app.logger();
 logger.info( "plain" );                                   // passthrough

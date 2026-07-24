@@ -70,6 +70,7 @@ add_library( ${PROJECT_NAME}
 	Commander.cpp
 	Option.cpp
 	Command.cpp
+	Mdc.cpp
 )
 
 set_target_properties( ${PROJECT_NAME} PROPERTIES

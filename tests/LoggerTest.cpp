@@ -9,7 +9,9 @@
 #include <integrations/logs/text_fields_formatter.h>
 
 #include <spdlog/spdlog.h>
-#include <spdlog/mdc.h>
+#include <drea/log/Mdc.h>
+
+#include <thread>
 #include <spdlog/sinks/ostream_sink.h>
 
 #include <filesystem>
@@ -87,44 +89,44 @@ TEST_CASE( "JSON formatter escapes quotes, backslashes and control characters", 
 
 TEST_CASE( "JSON formatter emits MDC entries as top-level fields", "[logger]" )
 {
-	spdlog::mdc::clear();
-	spdlog::mdc::put( "session", "abc-123" );
-	spdlog::mdc::put( "user", "dave" );
+	drea::log::mdc::clear();
+	drea::log::mdc::put( "session", "abc-123" );
+	drea::log::mdc::put( "user", "dave" );
 
 	const std::string line = format( spdlog::level::info, "hello" );
 
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 	REQUIRE( line.find( "\"logger\":\"test\",\"session\":\"abc-123\",\"user\":\"dave\",\"msg\":\"hello\"" ) != std::string::npos );
 }
 
 TEST_CASE( "JSON formatter escapes MDC keys and values", "[logger]" )
 {
-	spdlog::mdc::clear();
-	spdlog::mdc::put( "we\"ird", "a\\b\nc" );
+	drea::log::mdc::clear();
+	drea::log::mdc::put( "we\"ird", "a\\b\nc" );
 
 	const std::string line = format( spdlog::level::info, "x" );
 
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 	REQUIRE( line.find( "\"we\\\"ird\":\"a\\\\b\\nc\"" ) != std::string::npos );
 }
 
 TEST_CASE( "JSON formatter skips reserved MDC keys", "[logger]" )
 {
-	spdlog::mdc::clear();
-	spdlog::mdc::put( "level", "hacked" );
-	spdlog::mdc::put( "msg", "hacked" );
-	spdlog::mdc::put( "ok", "kept" );
+	drea::log::mdc::clear();
+	drea::log::mdc::put( "level", "hacked" );
+	drea::log::mdc::put( "msg", "hacked" );
+	drea::log::mdc::put( "ok", "kept" );
 
 	const std::string line = format( spdlog::level::info, "hello" );
 
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 	REQUIRE( line.find( "hacked" ) == std::string::npos );
 	REQUIRE( line.find( "\"ok\":\"kept\"" ) != std::string::npos );
 }
 
 TEST_CASE( "JSON formatter output is unchanged with an empty MDC", "[logger]" )
 {
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 
 	const std::string line = format( spdlog::level::info, "hello" );
 
@@ -159,19 +161,19 @@ std::pair<std::string, std::string> formatConsole( const std::string & payload )
 
 TEST_CASE( "console pattern renders fields as [key:value] blocks", "[logger]" )
 {
-	spdlog::mdc::clear();
-	spdlog::mdc::put( "session", "abc-123" );
-	spdlog::mdc::put( "user", "dave" );
+	drea::log::mdc::clear();
+	drea::log::mdc::put( "session", "abc-123" );
+	drea::log::mdc::put( "user", "dave" );
 
 	const auto [line, unused] = formatConsole( "hello" );
 
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 	REQUIRE( line.find( "[session:abc-123][user:dave] hello" ) != std::string::npos );
 }
 
 TEST_CASE( "console pattern with empty MDC matches spdlog's default output", "[logger]" )
 {
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 
 	const auto [line, defaultLine] = formatConsole( "hello" );
 
@@ -182,29 +184,29 @@ TEST_CASE( "Logger wrapper emits per-call fields in the JSON output", "[logger]"
 {
 	CapturedLogger cap;
 
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 	cap.logger.info( { "session", "abc-123" }, "hello {}", 42 );
 
 	REQUIRE( cap.text().find( "\"session\":\"abc-123\",\"msg\":\"hello 42\"" ) != std::string::npos );
-	REQUIRE( spdlog::mdc::get_context().empty() );
+	REQUIRE( drea::log::mdc::get_context().empty() );
 }
 
 TEST_CASE( "Logger wrapper accepts multiple fields", "[logger]" )
 {
 	CapturedLogger cap;
 
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 	cap.logger.warn( { { "session", "abc-123" }, { "user", "dave" } }, "hello" );
 
 	REQUIRE( cap.text().find( "\"session\":\"abc-123\",\"user\":\"dave\",\"msg\":\"hello\"" ) != std::string::npos );
-	REQUIRE( spdlog::mdc::get_context().empty() );
+	REQUIRE( drea::log::mdc::get_context().empty() );
 }
 
 TEST_CASE( "Logger wrapper logs at a runtime-chosen level with fields", "[logger]" )
 {
 	CapturedLogger cap;
 
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 	cap.logger.log( spdlog::level::err, { "session", "abc-123" }, "dynamic {}", 1 );
 	cap.logger.log( spdlog::level::warn, { { "session", "abc-123" }, { "user", "dave" } }, "multi" );
 	cap.logger.log( spdlog::level::info, "plain" );
@@ -214,7 +216,7 @@ TEST_CASE( "Logger wrapper logs at a runtime-chosen level with fields", "[logger
 	REQUIRE( cap.text().find( "\"level\":\"warning\"" ) != std::string::npos );
 	REQUIRE( cap.text().find( "\"session\":\"abc-123\",\"user\":\"dave\",\"msg\":\"multi\"" ) != std::string::npos );
 	REQUIRE( cap.text().find( "\"msg\":\"plain\"" ) != std::string::npos );
-	REQUIRE( spdlog::mdc::get_context().empty() );
+	REQUIRE( drea::log::mdc::get_context().empty() );
 }
 
 TEST_CASE( "Logger wrapper should_log follows the underlying level", "[logger]" )
@@ -231,12 +233,12 @@ TEST_CASE( "Logger wrapper skips fields with an empty value", "[logger]" )
 {
 	CapturedLogger cap;
 
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 	cap.logger.info( { "session", "" }, "hello" );
 
 	REQUIRE( cap.text().find( "\"session\"" ) == std::string::npos );
 	REQUIRE( cap.text().find( "\"msg\":\"hello\"" ) != std::string::npos );
-	REQUIRE( spdlog::mdc::get_context().empty() );
+	REQUIRE( drea::log::mdc::get_context().empty() );
 }
 
 TEST_CASE( "Logger wrapper leaves MDC untouched on a disabled level", "[logger]" )
@@ -244,30 +246,30 @@ TEST_CASE( "Logger wrapper leaves MDC untouched on a disabled level", "[logger]"
 	CapturedLogger cap;
 
 	cap.raw.set_level( spdlog::level::warn );
-	spdlog::mdc::clear();
-	spdlog::mdc::put( "outer", "kept" );
+	drea::log::mdc::clear();
+	drea::log::mdc::put( "outer", "kept" );
 
 	cap.logger.debug( { "session", "abc-123" }, "hidden" );
 
 	REQUIRE( cap.text().empty() );
-	REQUIRE( spdlog::mdc::get( "outer" ) == "kept" );
-	REQUIRE( spdlog::mdc::get_context().size() == 1 );
-	spdlog::mdc::clear();
+	REQUIRE( drea::log::mdc::get( "outer" ) == "kept" );
+	REQUIRE( drea::log::mdc::get_context().size() == 1 );
+	drea::log::mdc::clear();
 }
 
 TEST_CASE( "Logger wrapper overwrites a colliding MDC key and removes it after", "[logger]" )
 {
 	CapturedLogger cap;
 
-	spdlog::mdc::clear();
-	spdlog::mdc::put( "session", "outer" );
+	drea::log::mdc::clear();
+	drea::log::mdc::put( "session", "outer" );
 
 	cap.logger.info( { "session", "inner" }, "hello" );
 
 	REQUIRE( cap.text().find( "\"session\":\"inner\"" ) != std::string::npos );
 	// removed, not restored to "outer"
-	REQUIRE( spdlog::mdc::get( "session" ).empty() );
-	spdlog::mdc::clear();
+	REQUIRE( drea::log::mdc::get( "session" ).empty() );
+	drea::log::mdc::clear();
 }
 
 TEST_CASE( "Field composes with redacted()", "[logger]" )
@@ -275,7 +277,7 @@ TEST_CASE( "Field composes with redacted()", "[logger]" )
 	CapturedLogger cap;
 
 	drea::log::detail::setRedactionEnabled( true );
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 	cap.logger.info( { "email", drea::log::redacted( "dave@example.com" ) }, "hello" );
 
 	REQUIRE( cap.text().find( "\"email\":\"[redacted]\"" ) != std::string::npos );
@@ -287,7 +289,7 @@ TEST_CASE( "Logger wrapper passthrough matches the raw logger output", "[logger]
 	CapturedLogger viaWrapper;
 	CapturedLogger viaRaw;
 
-	spdlog::mdc::clear();
+	drea::log::mdc::clear();
 	viaWrapper.logger.info( "hello {}", 42 );
 	viaRaw.raw.info( "hello {}", 42 );
 
@@ -376,4 +378,25 @@ TEST_CASE( "file sink writes JSON lines", "[logger]" )
 
 	in.close();
 	std::filesystem::remove( logFile );
+}
+
+TEST_CASE( "drea::log::mdc stores per-thread key/values", "[logger][mdc]" )
+{
+	drea::log::mdc::clear();
+	drea::log::mdc::put( "session", "abc" );
+
+	REQUIRE( drea::log::mdc::get( "session" ) == "abc" );
+	REQUIRE( drea::log::mdc::get( "missing" ).empty() );
+	REQUIRE( drea::log::mdc::get_context().size() == 1 );
+
+	drea::log::mdc::put( "session", "def" );
+	REQUIRE( drea::log::mdc::get( "session" ) == "def" );
+
+	drea::log::mdc::remove( "session" );
+	REQUIRE( drea::log::mdc::get_context().empty() );
+
+	// another thread sees its own, empty context
+	std::string other = "sentinel";
+	std::thread( [&other]{ other = drea::log::mdc::get( "session" ); } ).join();
+	REQUIRE( other.empty() );
 }
