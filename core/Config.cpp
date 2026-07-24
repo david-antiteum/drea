@@ -124,6 +124,12 @@ struct drea::core::Config::Private
 	// which stage of Config::configure provided the current value, per option
 	std::map<std::string, std::string>		mSources;
 	std::string								mCurrentSource = "default";
+	// declared defaults, snapshot by Config::configure before sources overwrite them
+	std::map<std::string, std::vector<OptionValue>>	mDeclaredDefaults;
+	// problems collected while sources are applied; Config::findings adds the declarative checks
+	std::vector<Config::Finding>			mFindings;
+	// the config file being read, for unknown-key messages
+	std::string								mActiveConfigFile;
 	App										& mApp;
 
 	explicit Private( App & app ) : mApp( app )
@@ -160,8 +166,16 @@ struct drea::core::Config::Private
 			if( val.index() > 0 ){
 				option->mValues.push_back( val );
 				mSources[ option->mName ] = mCurrentSource;
-			}else{
+			}else if( mCurrentSource == "code" ){
+				// Config::set after parsing keeps its documented contract:
+				// fromString already reported, exit
 				exit( -1 );
+			}else{
+				// collect and continue: validation reports every problem
+				// after source resolution instead of dying on the first one
+				mFindings.push_back( { option->mName, mCurrentSource, "parse_error",
+					fmt::format( "Option --{} value {} is not a valid {}", option->mName,
+						option->mSensitive ? "[redacted]" : value, option->typeName() ) } );
 			}
 		}
 	}
@@ -238,6 +252,8 @@ struct drea::core::Config::Private
 			}
 		}else{
 			spdlog::error( "Cannot read the config file {}", configFileName );
+			mFindings.push_back( { "config-file", mCurrentSource, "file_error",
+				fmt::format( "Cannot read the config file {}", configFileName ) } );
 		}
 		return { res, boost::algorithm::to_lower_copy( path.extension().string() ) };
 	}
@@ -253,16 +269,24 @@ struct drea::core::Config::Private
 			}
 		}
 		if( !configFileName.empty() ){
+			mActiveConfigFile = configFileName;
 			auto [fileData, extension] = readFile( configFileName );
 			if( !fileData.empty() ){
+				bool	ok = true;
+
 				if( extension == ".toml" ){
-					readConfigTOML( fileData );
+					ok = readConfigTOML( fileData );
 				}else if( extension == ".json" ){
-					readConfigJSON( fileData );
+					ok = readConfigJSON( fileData );
 				}else if( extension == ".yaml" ){
-					readConfigYAML( fileData );
+					ok = readConfigYAML( fileData );
 				}else if( !readConfig( fileData ) ){
 					spdlog::error( "Cannot determine the format of the config file {}", configFileName );
+					ok = false;
+				}
+				if( !ok ){
+					mFindings.push_back( { "config-file", mCurrentSource, "parse_error",
+						fmt::format( "The config file {} cannot be parsed", configFileName ) } );
 				}
 			}
 		}
@@ -349,6 +373,12 @@ drea::core::Config & drea::core::Config::addDefaults()
 			"describe", "", "print the app description (commands, options and limits) as JSON and quit", {}, typeid( bool )
 		},
 		{
+			"validate", "", "check the configuration resolved from all sources, report every problem and quit", {}, typeid( bool )
+		},
+		{
+			"json", "", "machine readable output (JSON) where supported (--validate)", {}, typeid( bool )
+		},
+		{
 			"config-source", "uri", "read configs from a remote source. Can be repeated. "
 			                       "Supported schemes: aws://<region>/<secret-id> (requires ENABLE_AWS)",
 			{}, typeid( std::string )
@@ -390,9 +420,12 @@ drea::core::Config & drea::core::Config::addDefaults()
 	find( "version" )->mShortVersion = "V";
 	find( "version" )->mNbParams = 0;
 	find( "describe" )->mNbParams = 0;
+	find( "validate" )->mNbParams = 0;
+	find( "json" )->mNbParams = 0;
 
 	for( const char * name: {
-		"verbose", "help", "version", "describe", "config-source", "config-file",
+		"verbose", "help", "version", "describe", "validate", "json",
+		"config-source", "config-file",
 		"log-file", "log-folder", "log-size", "log-nb-files",
 		"log-flush-level", "log-redact", "log-config"
 #ifdef ENABLE_REST_USE
@@ -473,11 +506,15 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 	// order options alphabetically
 	std::sort( d->mOptions.begin(), d->mOptions.end(), []( const auto & a, const auto & b ){ return a->mName < b->mName; });
 
-	// Add values with defaults
+	d->mFindings.clear();
+	d->mDeclaredDefaults.clear();
+	// Add values with defaults, and snapshot them before sources overwrite
+	// them: the resolved-config model keeps value, source and declared default
 	for( const auto & option: d->mOptions ){
 		if( !option->mValues.empty() ){
 			registerUse( option->mName );
 			d->mSources[ option->mName ] = "default";
+			d->mDeclaredDefaults[ option->mName ] = option->mValues;
 		}
 	}
 	// Remote config sources: --config-source <uri> (repeatable).
@@ -700,14 +737,31 @@ std::vector<std::string> drea::core::Config::validate() const
 {
 	std::vector<std::string>	errors;
 
+	// the fatal subset of the findings: --validate reports them all
+	for( const auto & finding: findings() ){
+		if( finding.mCode == "parse_error" || finding.mCode == "missing_required" || finding.mCode == "bad_choice"
+			|| finding.mCode == "out_of_range" || finding.mCode == "unknown_option_ref" ){
+			errors.push_back( finding.mMessage );
+		}
+	}
+	return errors;
+}
+
+std::vector<drea::core::Config::Finding> drea::core::Config::findings() const
+{
+	std::vector<Finding>	res = d->mFindings;
+
 	for( const auto & option: d->mOptions ){
+		const std::string	src = source( option->mName );
+
 		if( option->mRequired && option->mValues.empty() ){
-			errors.push_back( fmt::format( "Missing required option --{}", option->mName ) );
+			res.push_back( { option->mName, {}, "missing_required", fmt::format( "Missing required option --{}", option->mName ) } );
 		}
 		if( !option->mChoices.empty() ){
 			for( const auto & value: option->mValues ){
 				if( const std::string asText = option->toString( value ); std::find( option->mChoices.begin(), option->mChoices.end(), asText ) == option->mChoices.end() ){
-					errors.push_back( fmt::format( "Option --{} value {} is not one of: {}", option->mName, asText, boost::algorithm::join( option->mChoices, ", " ) ) );
+					res.push_back( { option->mName, src, "bad_choice", fmt::format( "Option --{} value {} is not one of: {}", option->mName,
+						option->mSensitive ? "[redacted]" : asText, boost::algorithm::join( option->mChoices, ", " ) ) } );
 				}
 			}
 		}
@@ -721,27 +775,65 @@ std::vector<std::string> drea::core::Config::validate() const
 					num = std::get<double>( value );
 				}
 				if( num ){
+					const std::string asText = option->mSensitive ? "[redacted]" : fmt::format( "{}", *num );
+
 					if( option->mMin && *num < *option->mMin ){
-						errors.push_back( fmt::format( "Option --{} value {} is below the minimum {}", option->mName, *num, *option->mMin ) );
+						res.push_back( { option->mName, src, "out_of_range", fmt::format( "Option --{} value {} is below the minimum {}", option->mName, asText, *option->mMin ) } );
 					}
 					if( option->mMax && *num > *option->mMax ){
-						errors.push_back( fmt::format( "Option --{} value {} is above the maximum {}", option->mName, *num, *option->mMax ) );
+						res.push_back( { option->mName, src, "out_of_range", fmt::format( "Option --{} value {} is above the maximum {}", option->mName, asText, *option->mMax ) } );
 					}
+				}
+			}
+		}
+		// checks on the source that provided the value: only when a real
+		// source (not the declared default) set the option
+		if( const auto it = d->mSources.find( option->mName ); it != d->mSources.end() && it->second != "default" && it->second != "code" ){
+			const bool	fromConfigSources = src == "config-source" || src == "config-file" || src == "environment";
+
+			if( src == "flag" && ( option->mScope == Option::Scope::File || option->mScope == Option::Scope::None ) ){
+				res.push_back( { option->mName, src, "wrong_scope",
+					fmt::format( "Option --{} has scope {} and may not be set from the command line", option->mName, option->scopeName() ) } );
+			}else if( fromConfigSources && ( option->mScope == Option::Scope::Line || option->mScope == Option::Scope::None ) ){
+				res.push_back( { option->mName, src, "wrong_scope",
+					fmt::format( "Option --{} has scope {} and may not be set from config sources or the environment", option->mName, option->scopeName() ) } );
+			}
+			if( option->numberOfParams() > 0 && option->mNbParams != Option::mUnlimitedParams ){
+				if( option->mValues.empty() ){
+					res.push_back( { option->mName, src, "missing_params", fmt::format( "Missing arguments for option --{}", option->mName ) } );
+				}else if( option->mValues.size() % static_cast<size_t>( option->numberOfParams() ) != 0 ){
+					res.push_back( { option->mName, src, "missing_params",
+						fmt::format( "Option --{} takes {} values per use, {} given", option->mName, option->numberOfParams(), option->mValues.size() ) } );
 				}
 			}
 		}
 	}
 	// every option a command references must exist
-	d->mApp.commander().commands( [ this, &errors ]( const Command & command ){
+	d->mApp.commander().commands( [ this, &res ]( const Command & command ){
 		for( const auto * list: { &command.mLocalParameters, &command.mGlobalParameters } ){
 			for( const auto & optionName: *list ){
 				if( !find( optionName ) ){
-					errors.push_back( fmt::format( "Command \"{}\" references unknown option \"{}\"", command.mName, optionName ) );
+					res.push_back( { optionName, {}, "unknown_option_ref", fmt::format( "Command \"{}\" references unknown option \"{}\"", command.mName, optionName ) } );
 				}
 			}
 		}
 	});
-	return errors;
+	// the requested command exists but its groups are disabled
+	if( const std::string & requested = d->mApp.commander().requestedCommand(); !requested.empty() ){
+		if( auto cmd = d->mApp.commander().find( requested ); cmd && !cmd->mHidden && !d->mApp.commander().isVisible( *cmd ) ){
+			res.push_back( { requested, {}, "disabled_group",
+				fmt::format( "The command \"{}\" is gated by groups that are not enabled ({})", requested, boost::algorithm::join( cmd->mGroups, ", " ) ) } );
+		}
+	}
+	return res;
+}
+
+std::vector<drea::core::OptionValue> drea::core::Config::declaredDefault( std::string_view optionName ) const
+{
+	if( const auto it = d->mDeclaredDefaults.find( std::string( optionName ) ); it != d->mDeclaredDefaults.end() ){
+		return it->second;
+	}
+	return {};
 }
 
 std::string drea::core::Config::source( std::string_view optionName ) const
@@ -786,5 +878,21 @@ void drea::core::Config::reportUnknownArgument( const std::string & optionName )
 			bestArg = opt->mName;
 		}
 	}
-	spdlog::warn( "Unknown argument \"{}\". Did you mean \"{}\"?", optionName, bestArg );
+
+	std::string		message;
+
+	if( d->mCurrentSource == "config-file" || d->mCurrentSource == "config-source" ){
+		if( d->mActiveConfigFile.empty() ){
+			message = fmt::format( "Unknown config key \"{}\"", optionName );
+		}else{
+			message = fmt::format( "Unknown config key \"{}\" in {}", optionName, d->mActiveConfigFile );
+		}
+	}else{
+		message = fmt::format( "Unknown argument \"{}\"", optionName );
+	}
+	if( !bestArg.empty() ){
+		message += fmt::format( ". Did you mean \"{}\"?", bestArg );
+	}
+	d->mFindings.push_back( { optionName, d->mCurrentSource, "unknown_key", message } );
+	spdlog::warn( "{}", message );
 }

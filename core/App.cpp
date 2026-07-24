@@ -270,8 +270,9 @@ void drea::core::App::parse( const std::string & definitions )
 		config().configure( args.first );
 		d->mLogger = config().setupLogger();
 		d->mLog.reset( *d->mLogger );
-		// --help, --version and --describe must work even when the config is invalid
-		if( !config().used( "help" ) && !config().used( "version" ) && !config().used( "describe" ) ){
+		// --help, --version, --describe and --validate must work even when
+		// the config is invalid: --validate reports the problems itself
+		if( !config().used( "help" ) && !config().used( "version" ) && !config().used( "describe" ) && !config().used( "validate" ) ){
 			if( const auto errors = config().validate(); !errors.empty() ){
 				for( const auto & error: errors ){
 					logger().critical( "{}", error );

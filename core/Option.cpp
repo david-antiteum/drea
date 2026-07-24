@@ -19,6 +19,28 @@ std::string drea::core::Option::toString( const OptionValue & val ) const
 	return res;
 }
 
+std::string drea::core::Option::typeName() const
+{
+	if( mType == typeid( bool ) ){
+		return "bool";
+	}else if( mType == typeid( int ) ){
+		return "int";
+	}else if( mType == typeid( double ) ){
+		return "double";
+	}
+	return "string";
+}
+
+std::string drea::core::Option::scopeName() const
+{
+	switch( mScope ){
+		case Scope::File:	return "config-file";
+		case Scope::Line:	return "command-line";
+		case Scope::None:	return "none";
+		default:			return "both";
+	}
+}
+
 drea::core::OptionValue drea::core::Option::fromString( const std::string & val ) const
 {
 	OptionValue		res = std::monostate();

@@ -37,6 +37,18 @@ class App;
 class DREA_CORE_API Config
 {
 public:
+	/*! One problem found while checking the resolved configuration. Produced
+		while sources are applied (parse errors, unknown keys, unreadable
+		config files) and by the declarative checks in Config::findings.
+	*/
+	struct Finding
+	{
+		std::string		mName;		//!< option name, config key or dotted command name
+		std::string		mSource;	//!< source of the offending value: "default", "config-source", "config-file", "environment" or "flag"; empty when no single source applies
+		std::string		mCode;		//!< stable machine code: "parse_error", "file_error", "unknown_key", "missing_required", "bad_choice", "out_of_range", "missing_params", "wrong_scope", "unknown_option_ref" or "disabled_group"
+		std::string		mMessage;	//!< human readable message. Values of sensitive options are masked as [redacted]
+	};
+
 	explicit Config( App & app );
 	~Config();
 
@@ -153,6 +165,25 @@ public:
 		requested).
 	*/
 	[[nodiscard]] std::vector<std::string> validate() const;
+
+	/*! Check the resolved configuration and return every problem found, not
+		just the first one: the issues collected while sources were applied
+		(values that do not parse as the declared type, unknown config keys,
+		unreadable or unparseable config files) plus the declarative checks
+		(`required`, `min`/`max`, `choices`, `nb-params`, `scope`) and the
+		command gated by disabled groups, if one was requested.
+
+		This is the model behind --validate, which reports the findings and
+		exits (\see docs/configuration.md for the codes and exit codes).
+		Config::validate is the fatal subset that App::parse enforces.
+	*/
+	[[nodiscard]] std::vector<Finding> findings() const;
+
+	/*! The default values an option declared before source resolution
+		replaced them (Config::configure snapshots them). Empty if the option
+		had no default or configure has not run.
+	*/
+	[[nodiscard]] std::vector<OptionValue> declaredDefault( std::string_view optionName ) const;
 
 	/*! Which source provided the current value of an option: "default",
 		"config-source", "config-file", "environment", "flag" or "code"

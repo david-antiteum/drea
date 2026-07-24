@@ -50,6 +50,16 @@ struct DREA_CORE_API Option
 	[[nodiscard]] std::string toString( const OptionValue & val ) const;
 	[[nodiscard]] OptionValue fromString( const std::string & val ) const;
 
+	/*! The declared type as text: "bool", "int", "double" or "string".
+		The same closed set that --describe emits.
+	*/
+	[[nodiscard]] std::string typeName() const;
+
+	/*! The scope as text: "both", "command-line", "config-file" or "none".
+		The same closed set that --describe emits.
+	*/
+	[[nodiscard]] std::string scopeName() const;
+
 	[[nodiscard]] bool helpInLine() const
 	{
 		return mScope == Scope::Both || mScope == Scope::Line;
