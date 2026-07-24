@@ -42,8 +42,22 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`(hidden)` for sensitive options). `--describe` stays static: declared
   default only.
 
+- `--config-source` problems are findings now: an unsupported scheme, a
+  malformed `aws://` URI or a build without `ENABLE_AWS` report
+  `bad_source`; a source that returns no data reports `file_error`; an
+  unparseable payload reports `parse_error`. Previously all of these were
+  log lines only and validation said "valid".
+- `bad_definition` findings for declared constraints that cannot act:
+  `min`/`max` on a non-numeric option, `choices` on a bool. Like
+  `bad_source`, fatal in `App::parse` (`ExitCode::ConfigError`).
+
 ### Changed
 
+- **Breaking:** `Option::fromString` is strict about scalar syntax: bool
+  values must be `true`/`false`, `yes`/`no` or `1`/`0` (anything else was
+  silently `false` before), and numbers reject trailing characters
+  (`"80x"` parsed as `80` before). Bad values follow the normal
+  `parse_error` path.
 - A value that does not parse as its option's declared type is now collected
   and reported together with every other validation error (`App::parse`
   exits with `ExitCode::ConfigError`), instead of `exit(-1)` at read time.

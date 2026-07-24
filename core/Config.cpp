@@ -316,14 +316,27 @@ struct drea::core::Config::Private
 			auto [region, secretId] = parseAwsUri( uri );
 			if( secretId.empty() ){
 				spdlog::error( "Invalid config-source URI '{}': missing secret id", uri );
+				mFindings.push_back( { "config-source", mCurrentSource, "bad_source",
+					fmt::format( "Invalid config-source URI '{}': missing secret id", uri ) } );
 				return;
 			}
-			readConfigJSON( integrations::aws::SecretsManager( region ).get( secretId ) );
+			if( const std::string payload = integrations::aws::SecretsManager( region ).get( secretId ); payload.empty() ){
+				spdlog::error( "The config-source '{}' returned no data", uri );
+				mFindings.push_back( { "config-source", mCurrentSource, "file_error",
+					fmt::format( "The config-source '{}' returned no data", uri ) } );
+			}else if( !readConfigJSON( payload ) ){
+				mFindings.push_back( { "config-source", mCurrentSource, "parse_error",
+					fmt::format( "The config-source '{}' payload cannot be parsed as JSON", uri ) } );
+			}
 #else
 			spdlog::error( "config-source '{}' requires drea built with ENABLE_AWS", uri );
+			mFindings.push_back( { "config-source", mCurrentSource, "bad_source",
+				fmt::format( "config-source '{}' requires drea built with ENABLE_AWS", uri ) } );
 #endif
 		}else{
 			spdlog::warn( "Unsupported config-source scheme: '{}'", uri );
+			mFindings.push_back( { "config-source", mCurrentSource, "bad_source",
+				fmt::format( "Unsupported config-source scheme: '{}'", uri ) } );
 		}
 	}
 
@@ -743,7 +756,8 @@ std::vector<std::string> drea::core::Config::validate() const
 	// the fatal subset of the findings: --validate reports them all
 	for( const auto & finding: findings() ){
 		if( finding.mCode == "parse_error" || finding.mCode == "missing_required" || finding.mCode == "bad_choice"
-			|| finding.mCode == "out_of_range" || finding.mCode == "unknown_option_ref" ){
+			|| finding.mCode == "out_of_range" || finding.mCode == "unknown_option_ref"
+			|| finding.mCode == "bad_source" || finding.mCode == "bad_definition" ){
 			errors.push_back( finding.mMessage );
 		}
 	}
@@ -757,6 +771,15 @@ std::vector<drea::core::Config::Finding> drea::core::Config::findings() const
 	for( const auto & option: d->mOptions ){
 		const std::string	src = source( option->mName );
 
+		// declaration errors by the app author: constraints that cannot act
+		if( ( option->mMin || option->mMax ) && option->mType != typeid( int ) && option->mType != typeid( double ) ){
+			res.push_back( { option->mName, {}, "bad_definition",
+				fmt::format( "Option --{} declares min/max but its type {} is not numeric", option->mName, option->typeName() ) } );
+		}
+		if( !option->mChoices.empty() && option->mType == typeid( bool ) ){
+			res.push_back( { option->mName, {}, "bad_definition",
+				fmt::format( "Option --{} declares choices but bool options already have a closed domain", option->mName ) } );
+		}
 		if( option->mRequired && option->mValues.empty() ){
 			res.push_back( { option->mName, {}, "missing_required", fmt::format( "Missing required option --{}", option->mName ) } );
 		}

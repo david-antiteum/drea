@@ -655,3 +655,81 @@ TEST_CASE( "addDefaults registers log-effective-config, not log-config", "[confi
 	REQUIRE( fx.app.config().find( "log-effective-config" ) );
 	REQUIRE_FALSE( fx.app.config().find( "log-config" ) );
 }
+
+TEST_CASE( "findings reports config-source problems", "[findings]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	SECTION( "unsupported scheme" ){
+		fx.app.config().configure( { "--config-source", "ftp://example.com/config" } );
+		const auto findings = fx.app.config().findings();
+		const auto * finding = getFinding( findings, "bad_source", "config-source" );
+		REQUIRE( finding );
+		REQUIRE( finding->mSource == "config-source" );
+		REQUIRE( finding->mMessage.find( "ftp://" ) != std::string::npos );
+		REQUIRE( drea::core::integrations::Help::validateExitCode( findings ) == drea::core::ExitCode::ConfigError );
+		// bad sources are part of the fatal subset
+		REQUIRE_FALSE( fx.app.config().validate().empty() );
+	}
+#ifndef ENABLE_AWS
+	SECTION( "aws scheme without ENABLE_AWS" ){
+		fx.app.config().configure( { "--config-source", "aws://eu-1/prod/secret" } );
+		const auto findings = fx.app.config().findings();
+		const auto * finding = getFinding( findings, "bad_source", "config-source" );
+		REQUIRE( finding );
+		REQUIRE( finding->mMessage.find( "ENABLE_AWS" ) != std::string::npos );
+	}
+#endif
+}
+
+TEST_CASE( "a bool value outside the vocabulary is a parse error", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "dry-run";
+	opt.mParamName = "flag";
+	opt.mType = typeid( bool );
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--dry-run", "banana" } );
+
+	const auto findings = fx.app.config().findings();
+	const auto * finding = getFinding( findings, "parse_error", "dry-run" );
+	REQUIRE( finding );
+	REQUIRE( finding->mMessage.find( "banana" ) != std::string::npos );
+}
+
+TEST_CASE( "findings reports constraints that cannot act", "[findings]" )
+{
+	SECTION( "min/max on a string option" ){
+		AppFixture fx;
+		Option opt;
+		opt.mName = "label";
+		opt.mParamName = "text";
+		opt.mType = typeid( std::string );
+		opt.mMin = 1;
+		fx.app.config().add( opt );
+
+		fx.app.config().configure( {} );
+
+		const auto findings = fx.app.config().findings();
+		const auto * finding = getFinding( findings, "bad_definition", "label" );
+		REQUIRE( finding );
+		REQUIRE( finding->mMessage.find( "not numeric" ) != std::string::npos );
+		REQUIRE( drea::core::integrations::Help::validateExitCode( findings ) == drea::core::ExitCode::ConfigError );
+		REQUIRE_FALSE( fx.app.config().validate().empty() );
+	}
+	SECTION( "choices on a bool option" ){
+		AppFixture fx;
+		Option opt;
+		opt.mName = "mode";
+		opt.mType = typeid( bool );
+		opt.mChoices = { "true", "false" };
+		fx.app.config().add( opt );
+
+		fx.app.config().configure( {} );
+
+		REQUIRE( hasFinding( fx.app.config().findings(), "bad_definition", "mode" ) );
+	}
+}

@@ -324,8 +324,8 @@ single source applies), a human message, and one of these stable codes:
 
 | Code                 | Meaning |
 |----------------------|---------|
-| `parse_error`        | A value does not parse as the option's declared type, or a config file cannot be parsed |
-| `file_error`         | The config file cannot be read |
+| `parse_error`        | A value does not parse as the option's declared type, or a config file / remote payload cannot be parsed |
+| `file_error`         | The config file cannot be read, or a remote source returned no data |
 | `unknown_key`        | A config file key (or a flag) matches no declared option |
 | `missing_required`   | A `required` option ended up with no value from any source (a default satisfies it) |
 | `bad_choice`         | A value is outside the option's `choices` |
@@ -334,6 +334,8 @@ single source applies), a human message, and one of these stable codes:
 | `wrong_scope`        | An option was set through a source its `scope` disallows (e.g. a `line` option in a config file) |
 | `unknown_option_ref` | A command's `local-options`/`global-options` references an option that does not exist |
 | `disabled_group`     | The requested command is gated by groups that are not enabled |
+| `bad_source`         | A `--config-source` URI is malformed, uses an unsupported scheme, or needs a feature drea was built without |
+| `bad_definition`     | The app declares a constraint that cannot act, e.g. `min`/`max` on a non-numeric option or `choices` on a bool |
 
 Values of `sensitive` options are masked as `[redacted]` in both output
 modes.
@@ -348,8 +350,8 @@ Exit codes map the main failure categories:
 | Exit | `ExitCode`    | When |
 |------|---------------|------|
 | 0    | `Ok`          | The configuration is valid |
-| 66   | `NoInput`     | A config file cannot be read (`file_error`) — beats every other category |
-| 78   | `ConfigError` | Structural problems: `unknown_key`, `missing_required`, `wrong_scope`, `unknown_option_ref`, `disabled_group` |
+| 66   | `NoInput`     | A config file or remote source cannot be read (`file_error`) — beats every other category |
+| 78   | `ConfigError` | Structural problems: `unknown_key`, `missing_required`, `wrong_scope`, `unknown_option_ref`, `disabled_group`, `bad_source`, `bad_definition` |
 | 65   | `DataError`   | Only values are wrong: `parse_error`, `out_of_range`, `bad_choice`, `missing_params` |
 
 Like `--help` and `--describe`, `--validate` works even when the

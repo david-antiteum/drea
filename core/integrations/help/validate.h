@@ -22,10 +22,11 @@ namespace drea::core::integrations::Help {
 */
 
 //! Exit code for a set of findings: Ok when empty; NoInput when a config
-//! file cannot be read; ConfigError for structural problems (unknown keys,
-//! missing required options, wrong scopes, gated commands, bad option
-//! references); DataError when only values are wrong (parse errors, out of
-//! range, bad choices, missing params). File beats structural beats values.
+//! file or remote source cannot be read; ConfigError for structural
+//! problems (unknown keys, missing required options, wrong scopes, bad
+//! sources, bad definitions, gated commands, bad option references);
+//! DataError when only values are wrong (parse errors, out of range, bad
+//! choices, missing params). File beats structural beats values.
 inline ExitCode validateExitCode( const std::vector<Config::Finding> & findings )
 {
 	if( findings.empty() ){
@@ -38,7 +39,8 @@ inline ExitCode validateExitCode( const std::vector<Config::Finding> & findings 
 			return ExitCode::NoInput;
 		}
 		structural = structural || finding.mCode == "unknown_key" || finding.mCode == "missing_required"
-			|| finding.mCode == "wrong_scope" || finding.mCode == "disabled_group" || finding.mCode == "unknown_option_ref";
+			|| finding.mCode == "wrong_scope" || finding.mCode == "disabled_group" || finding.mCode == "unknown_option_ref"
+			|| finding.mCode == "bad_source" || finding.mCode == "bad_definition";
 	}
 	return structural ? ExitCode::ConfigError : ExitCode::DataError;
 }

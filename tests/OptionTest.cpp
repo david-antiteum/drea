@@ -90,3 +90,33 @@ TEST_CASE( "Option::mSensitive defaults to false", "[option]" )
 	Option opt;
 	REQUIRE( opt.mSensitive == false );
 }
+
+TEST_CASE( "fromString accepts the bool vocabulary and rejects the rest", "[option]" )
+{
+	Option opt;
+	opt.mName = "flag";
+	opt.mType = typeid( bool );
+
+	REQUIRE( std::get<bool>( opt.fromString( "yes" ) ) == true );
+	REQUIRE( std::get<bool>( opt.fromString( "1" ) ) == true );
+	REQUIRE( std::get<bool>( opt.fromString( "false" ) ) == false );
+	REQUIRE( std::get<bool>( opt.fromString( "no" ) ) == false );
+	REQUIRE( std::get<bool>( opt.fromString( "0" ) ) == false );
+	REQUIRE( opt.fromString( "banana" ).index() == 0 );
+	REQUIRE( opt.fromString( "" ).index() == 0 );
+}
+
+TEST_CASE( "fromString rejects numbers with trailing characters", "[option]" )
+{
+	Option intOpt;
+	intOpt.mName = "port";
+	intOpt.mType = typeid( int );
+	REQUIRE( std::get<int>( intOpt.fromString( "80" ) ) == 80 );
+	REQUIRE( intOpt.fromString( "80x" ).index() == 0 );
+
+	Option dblOpt;
+	dblOpt.mName = "ratio";
+	dblOpt.mType = typeid( double );
+	REQUIRE( std::get<double>( dblOpt.fromString( "1.5" ) ) == 1.5 );
+	REQUIRE( dblOpt.fromString( "1.5x" ).index() == 0 );
+}

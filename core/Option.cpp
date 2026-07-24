@@ -46,16 +46,38 @@ drea::core::OptionValue drea::core::Option::fromString( const std::string & val 
 	OptionValue		res = std::monostate();
 
 	if( mType == typeid( bool )){
-		res = val == "yes" || val == "true";
+		// closed vocabulary: anything else is a type error, not false
+		if( val == "true" || val == "yes" || val == "1" ){
+			res = true;
+		}else if( val == "false" || val == "no" || val == "0" ){
+			res = false;
+		}else{
+			spdlog::critical( "Incorrect argument type for option {}: \"{}\" is not a boolean. Use true/false, yes/no or 1/0", mName, val );
+		}
 	}else if( mType == typeid( int ) ){
 		try{
-			res = std::stoi( val );
+			size_t	consumed = 0;
+			int		parsed = std::stoi( val, &consumed );
+
+			// reject partial parses like "80x"
+			if( consumed == val.size() ){
+				res = parsed;
+			}else{
+				spdlog::critical( "Incorrect argument type for option {}: \"{}\". Must be an integer number", mName, val );
+			}
 		}catch( const std::exception & e ){
 			spdlog::critical( "Incorrect argument type for option {}: {}. Must be an integer number", mName, e.what() );
 		}
 	}else if( mType == typeid( double ) ){
 		try{
-			res = std::stod( val );
+			size_t	consumed = 0;
+			double	parsed = std::stod( val, &consumed );
+
+			if( consumed == val.size() ){
+				res = parsed;
+			}else{
+				spdlog::critical( "Incorrect argument type for option {}: \"{}\". Must be an floating number", mName, val );
+			}
 		}catch( const std::exception & e ){
 			spdlog::critical( "Incorrect argument type for option {}: {}. Must be an floating number", mName, e.what() );
 		}
