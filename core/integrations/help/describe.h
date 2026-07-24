@@ -56,14 +56,7 @@ inline std::string jsonQuoted( std::string_view text )
 
 inline std::string typeName( const Option & option )
 {
-	if( option.mType == typeid( bool ) ){
-		return "bool";
-	}else if( option.mType == typeid( int ) ){
-		return "int";
-	}else if( option.mType == typeid( double ) ){
-		return "double";
-	}
-	return "string";
+	return option.typeName();
 }
 
 inline std::string valueLiteral( const Option & option, const OptionValue & value )
@@ -80,14 +73,9 @@ inline std::string valueLiteral( const Option & option, const OptionValue & valu
 	return jsonQuoted( option.toString( value ) );
 }
 
-inline std::string scopeName( Option::Scope scope )
+inline std::string scopeName( const Option & option )
 {
-	switch( scope ){
-		case Option::Scope::File:	return "config-file";
-		case Option::Scope::Line:	return "command-line";
-		case Option::Scope::None:	return "none";
-		default:					return "both";
-	}
+	return option.scopeName();
 }
 
 //! Same mapping as the env lookup in Config: chars invalid in shell
@@ -106,7 +94,7 @@ inline std::string envVarName( const std::string & prefix, const std::string & n
 
 }
 
-static void describe( const drea::core::App & app, std::ostream & os )
+inline void describe( const drea::core::App & app, std::ostream & os )
 {
 	namespace detail = describe_detail;
 
@@ -188,7 +176,7 @@ static void describe( const drea::core::App & app, std::ostream & os )
 		if( !app.config().envPrefix().empty() && ( option.mScope == Option::Scope::Both || option.mScope == Option::Scope::File ) ){
 			os << fmt::format( "      \"env\": {},\n", detail::jsonQuoted( detail::envVarName( app.config().envPrefix(), option.mName ) ) );
 		}
-		os << fmt::format( "      \"scope\": {},\n", detail::jsonQuoted( detail::scopeName( option.mScope ) ) );
+		os << fmt::format( "      \"scope\": {},\n", detail::jsonQuoted( detail::scopeName( option ) ) );
 		if( option.mDeprecated ){
 			os << "      \"deprecated\": true,\n";
 		}

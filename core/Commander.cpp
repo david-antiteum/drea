@@ -15,6 +15,7 @@
 
 #include "integrations/help/help.h"
 #include "integrations/help/describe.h"
+#include "integrations/help/validate.h"
 #include "integrations/bash/bash_completion.h"
 #include "integrations/zsh/zsh_completion.h"
 #include "integrations/fish/fish_completion.h"
@@ -295,6 +296,14 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 
 void drea::core::Commander::run( std::function<void( std::string )> f )
 {
+	// --validate is a mode of its own: check the resolved configuration,
+	// report and quit with the mapped exit code. It runs before the
+	// visibility gate so a command gated by disabled groups is reported as
+	// a finding, and before --help and --version so the exit code always
+	// reflects the check.
+	if( d->mApp.config().used( "validate" ) ){
+		exit( integrations::Help::validateConfig( d->mApp, d->mApp.config().used( "json" ) ) );
+	}
 	// Visibility gate: a command whose groups are not enabled (or that has
 	// been hidden) must be indistinguishable from a typo. This covers both
 	// `myapp gated --help` and direct invocation `myapp gated arg`.
