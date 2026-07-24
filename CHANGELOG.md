@@ -50,9 +50,22 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `bad_definition` findings for declared constraints that cannot act:
   `min`/`max` on a non-numeric option, `choices` on a bool. Like
   `bad_source`, fatal in `App::parse` (`ExitCode::ConfigError`).
+- The environment is checked like the other sources: a variable set for an
+  option whose scope does not read the environment is reported
+  (`wrong_scope`), and a variable under the prefix that matches no option
+  in any accepted spelling is reported (`unknown_key`). Both non-fatal.
+- Shell completion (bash, zsh, fish) offers the values of options that
+  declare `choices`, and man pages render the computed facts help already
+  shows: `One of: ...`, the declared default, `Required`, deprecation.
 
 ### Changed
 
+- `--config-file` is repeatable: files are merged in order, later wins
+  (same rule as `--config-source`). Previously only the first flag was
+  read and the rest were silently ignored.
+- `bool` options now read their value from the environment
+  (`MYAPP_dry_run=false` works); before, the variable's presence only
+  marked the option as used and `get<bool>` stayed false.
 - **Breaking:** `Option::fromString` is strict about scalar syntax: bool
   values must be `true`/`false`, `yes`/`no` or `1`/`0` (anything else was
   silently `false` before), and numbers reject trailing characters

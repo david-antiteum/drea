@@ -103,6 +103,10 @@ override earlier ones.
 
 ## Config files
 
+`--config-file` is repeatable: files are merged in order and later files
+win, the same rule as `--config-source`. Passing any `--config-file` flag
+overrides the default file set via `Config::setDefaultConfigFile`.
+
 Drea autodetects the format from the extension when reading
 `--config-file <path>`:
 
@@ -162,7 +166,20 @@ sanitized spelling (`MYAPP_config_file`), then its uppercase form
 (`MYAPP_CONFIG_FILE`). First hit wins.
 
 Only options whose scope permits config sources (`both`, `file`) read the
-environment; `line` and `none` scoped options ignore it.
+environment; `line` and `none` scoped options ignore it — a variable set
+for one of those is reported (`wrong_scope` in `--validate`) instead of
+silently dropped, as is a variable under the prefix that matches no option
+(`unknown_key`, non-fatal).
+
+`bool` options read their value from the environment (`true`/`false`,
+`yes`/`no`, `1`/`0`):
+
+```bash
+MYAPP_dry_run=true ./myapp ...
+MYAPP_dry_run=no ./myapp ...
+```
+
+Anything else is a `parse_error`, not silently false.
 
 ## Remote config sources
 

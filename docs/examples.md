@@ -8,7 +8,7 @@ All samples live under [`examples/`](../examples). Build with `BUILD_EXAMPLES=ON
 | [`hello`](../examples/hello) | Bare-minimum app skeleton. No commands, just description and version. |
 | [`saythis`](../examples/saythis) | Single command (`this <arg>`) with one local option (`--reverse`). The shortest meaningful drea program. |
 | [`say`](../examples/say) | Nested subcommands, three levels deep (`repeat parrot blue`), inherited global options. |
-| [`calculator`](../examples/calculator) | Multiple commands (`sum`, `power`, `count`), typed options (`int`, `double`), env-prefix (`CAL_*`), `params: unlimited`, short forms. |
+| [`calculator`](../examples/calculator) | Multiple commands (`sum`, `power`, `count`), typed options (`int`, `double`), env-prefix (`CAL_*`), `params: unlimited`, short forms. Ships `config-invalid.yml` to demo `--validate` (see the Try lines in its `commands.yml`). |
 | [`multi`](../examples/multi) | Repeated options with `params: 1, scope: line`. Read all values via `Config::getAll<T>`. |
 | [`hidden`](../examples/hidden) | `Command::mHidden` — runtime-only hide based on a CLI flag (`--dev`). Demonstrates programmatic command registration alongside YAML. |
 | [`groups`](../examples/groups) | Command groups (tier-style gating), `setEnabledGroups`, dynamic help footer for anonymous callers. |
