@@ -103,6 +103,12 @@ void _parseCmd( drea::core::App & app, const YAML::Node & cmdsNode, const std::s
 							command.mExamples.push_back( exampleNode.as<std::string>() );
 						}
 					}
+				}else if( key == "param-choices" ){
+					for( auto choiceNode: cmdNode.second ){
+						if( choiceNode.IsScalar() ){
+							command.mParamChoices.push_back( choiceNode.as<std::string>() );
+						}
+					}
 				}else if( key == "commands" ){
 					for( auto subCmdsNode: cmdNode.second ){
 						_parseCmd( app, subCmdsNode, parentId.empty() ? command.mName : parentId + "."  + command.mName );

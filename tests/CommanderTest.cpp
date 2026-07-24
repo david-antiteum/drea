@@ -728,3 +728,74 @@ TEST_CASE( "man pages render choices, defaults and required", "[commander][man]"
 	REQUIRE( page.find( "Default none" ) != std::string::npos );
 	REQUIRE( page.find( "Required" ) != std::string::npos );
 }
+
+TEST_CASE( "param-choices gate the positional argument", "[commander][param-choices]" )
+{
+	BuiltinFixture fx;
+
+	Command deploy;
+	deploy.mName = "deploy";
+	deploy.mParamName = "stage";
+	deploy.mNbParams = 1;
+	deploy.mParamChoices = { "dev", "prod" };
+	fx.app.commander().add( deploy );
+
+	SECTION( "a declared value runs the command" ){
+		fx.app.config().configure( {} );
+		fx.app.commander().configure( { "deploy", "prod" } );
+		bool called = false;
+		fx.app.commander().run( [&]( const std::string & cmd ){ called = ( cmd == "deploy" ); } );
+		REQUIRE( called );
+	}
+	SECTION( "an unknown value is rejected before dispatch" ){
+		fx.app.config().configure( {} );
+		fx.app.commander().configure( { "deploy", "prd" } );
+		bool called = false;
+		fx.app.commander().run( [&]( const std::string & ){ called = true; } );
+		REQUIRE_FALSE( called );
+	}
+}
+
+TEST_CASE( "the completion builtin declares its shells as param-choices", "[commander][param-choices]" )
+{
+	BuiltinFixture fx;
+
+	auto completion = fx.app.commander().find( "completion" );
+	REQUIRE( completion );
+	REQUIRE( completion->mParamChoices == std::vector<std::string>{ "bash", "zsh", "fish" } );
+
+	// scripts and describe pick them up
+	fx.app.config().configure( { "--describe" } );
+	fx.app.commander().configure( {} );
+
+	std::ostringstream bash, zsh, fish;
+	drea::core::integrations::Bash::generateAutoCompletion( fx.app, bash );
+	drea::core::integrations::Zsh::generateAutoCompletion( fx.app, zsh );
+	drea::core::integrations::Fish::generateAutoCompletion( fx.app, fish );
+	REQUIRE( bash.str().find( " bash zsh fish" ) != std::string::npos );
+	REQUIRE( zsh.str().find( "'1: :(bash zsh fish)'" ) != std::string::npos );
+	REQUIRE( fish.str().find( "-a 'bash zsh fish'" ) != std::string::npos );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+	REQUIRE( cap.str().find( "\"param-choices\": [\"bash\", \"zsh\", \"fish\"]" ) != std::string::npos );
+}
+
+TEST_CASE( "parse reads param-choices from yml definitions", "[commander][param-choices]" )
+{
+	AppFixture fx;
+	fx.app.parse( R"(
+app: drea-test
+commands:
+  - command: deploy
+    description: deploy the app
+    params-names: stage
+    params: 1
+    param-choices: [ dev, staging, prod ]
+)" );
+
+	auto cmd = fx.app.commander().find( "deploy" );
+	REQUIRE( cmd );
+	REQUIRE( cmd->mParamChoices == std::vector<std::string>{ "dev", "staging", "prod" } );
+	REQUIRE( fx.app.config().validate().empty() );
+}

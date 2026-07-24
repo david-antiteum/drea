@@ -49,6 +49,17 @@ inline void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 		}
 		out << "        '" << escape( display ) << "')\n";
 		out << "            _arguments";
+		if( !cmd.mParamChoices.empty() ){
+			std::string	action = "(";
+			for( const auto & choice: cmd.mParamChoices ){
+				if( action.size() > 1 ){
+					action += ' ';
+				}
+				action += choice;
+			}
+			action += ")";
+			out << " \\\n                '1: :" << escape( action ) << "'";
+		}
 		auto emitOption = [&out, &app]( const std::string & optName ){
 			auto opt = app.config().find( optName );
 			if( !opt ){

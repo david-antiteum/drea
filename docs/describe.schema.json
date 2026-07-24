@@ -81,6 +81,11 @@
         "max-params": {
           "oneOf": [ { "type": "integer", "minimum": 0 }, { "const": "unlimited" } ]
         },
+        "param-choices": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Closed set of legal values of the positional param; present only on commands that declare it (requires exactly one param)"
+        },
         "local-options": {
           "type": "array",
           "items": { "type": "string" },

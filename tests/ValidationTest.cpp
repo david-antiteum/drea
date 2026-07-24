@@ -870,3 +870,22 @@ TEST_CASE( "--config-file is repeatable and later files win", "[config]" )
 	REQUIRE( fx.app.config().get<std::string>( "host" ) == "alpha" );
 	REQUIRE( fx.app.config().source( "port" ) == "config-file" );
 }
+
+TEST_CASE( "param-choices on a multi-param command is a bad definition", "[findings]" )
+{
+	AppFixture fx;
+	drea::core::Command cmd;
+	cmd.mName = "copy";
+	cmd.mParamName = "src dst";
+	cmd.mNbParams = 2;
+	cmd.mParamChoices = { "a", "b" };
+	fx.app.commander().add( cmd );
+
+	fx.app.config().configure( {} );
+
+	const auto findings = fx.app.config().findings();
+	const auto * finding = getFinding( findings, "bad_definition", "copy" );
+	REQUIRE( finding );
+	REQUIRE( finding->mMessage.find( "param-choices" ) != std::string::npos );
+	REQUIRE_FALSE( fx.app.config().validate().empty() );
+}

@@ -54,6 +54,9 @@ inline std::list<std::string> calculateAutoCompletion( const drea::core::App & a
 					for( auto v: cmd->mSubcommand ){
 						res.push_back( v );
 					}
+					for( const auto & choice: cmd->mParamChoices ){
+						res.push_back( choice );
+					}
 				}
 			}
 		}
@@ -106,6 +109,9 @@ inline void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 		out << "            COMPREPLY=( $(compgen -W \"";
 		for( const auto & sub: cmd.mSubcommand ){
 			out << " " << sub;
+		}
+		for( const auto & choice: cmd.mParamChoices ){
+			out << " " << choice;
 		}
 		for( const auto & str: cmd.mLocalParameters ){
 			out << " --" << str;

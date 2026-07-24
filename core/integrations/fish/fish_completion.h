@@ -94,6 +94,17 @@ inline void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 		}
 		std::string		fullPath = cmd.mParentCommand.empty() ? cmd.mName : cmd.mParentCommand + "." + cmd.mName;
 		std::string		predicate = seenPredicate( fullPath );
+		if( !cmd.mParamChoices.empty() ){
+			out << "complete -c " << name
+			    << " -n \"" << predicate << "\""
+			    << " -f -a '";
+			bool first = true;
+			for( const auto & choice: cmd.mParamChoices ){
+				out << ( first ? "" : " " ) << escape( choice );
+				first = false;
+			}
+			out << "'\n";
+		}
 		auto emit = [&out, &name, &predicate, &app]( const std::string & optName ){
 			auto opt = app.config().find( optName );
 			if( !opt ){

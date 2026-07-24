@@ -38,6 +38,7 @@ Fields:
 | `params-names`   | no       | Names of positional args (for help) |
 | `params`         | no       | Number of positional args: integer or `unlimited` |
 | `min-params`     | no       | Minimum positionals when some are optional. `params` becomes the maximum |
+| `param-choices`  | no       | Closed set of legal values of the positional param (requires `params: 1`). Drives the runtime check, `--help`, `man`, `--describe` and shell completion |
 | `local-options`  | no       | Option names that apply only to this command |
 | `global-options` | no       | Option names that apply to this command and its subcommands |
 | `group`          | no       | One or more groups gating visibility (see *Command groups* below) |

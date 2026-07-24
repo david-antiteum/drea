@@ -20,6 +20,7 @@ struct DREA_CORE_API Command
 	bool							mHidden = false;
 	std::vector<std::string>		mGroups;
 	std::vector<std::string>		mExamples;	//!< worked invocations, e.g. "myapp copy src.txt dst.txt"; shown in describe
+	std::vector<std::string>		mParamChoices;	//!< closed set of legal values of the positional param; only for commands taking exactly one (params: 1). Drives validation, help, describe and completion
 	bool							mDeprecated = false;	//!< kept working but discouraged; flagged in help and describe
 	bool							mPredefined = false;	//!< added by Commander::addDefaults; shown under "Common commands" in help
 	static const int				mUnlimitedParams = 0xfffffffa;

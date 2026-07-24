@@ -914,7 +914,8 @@ std::vector<drea::core::Config::Finding> drea::core::Config::findings() const
 			}
 		}
 	}
-	// every option a command references must exist
+	// every option a command references must exist, and param-choices only
+	// makes sense on a command taking exactly one positional param
 	d->mApp.commander().commands( [ this, &res ]( const Command & command ){
 		for( const auto * list: { &command.mLocalParameters, &command.mGlobalParameters } ){
 			for( const auto & optionName: *list ){
@@ -922,6 +923,10 @@ std::vector<drea::core::Config::Finding> drea::core::Config::findings() const
 					res.push_back( { optionName, {}, "unknown_option_ref", fmt::format( "Command \"{}\" references unknown option \"{}\"", command.mName, optionName ) } );
 				}
 			}
+		}
+		if( !command.mParamChoices.empty() && command.maxParams() != 1 ){
+			res.push_back( { command.mName, {}, "bad_definition",
+				fmt::format( "Command \"{}\" declares param-choices but does not take exactly one positional param", command.mName ) } );
 		}
 	});
 	// the requested command exists but its groups are disabled

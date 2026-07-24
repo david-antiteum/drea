@@ -94,6 +94,9 @@ inline void help( const drea::core::App & app, std::string_view commandName )
 				fmt::print( "\n\n" );
 
 				fmt::print( "{}{}\n", cmd->mDescription, cmd->mDeprecated ? " (deprecated)" : "" );
+				if( !cmd->mParamChoices.empty() ){
+					fmt::print( "{}: one of {}\n", cmd->mParamName, utilities::string::join( cmd->mParamChoices, ", " ) );
+				}
 
 				if( !cmd->mSubcommand.empty() ){
 					std::string::size_type offset = 0;

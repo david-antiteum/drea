@@ -313,6 +313,13 @@ inline void generateManPage( const drea::core::App & app, std::string_view comma
 		out << escapeBody( cmd->mDescription ) << "\n";
 	}
 
+	if( !cmd->mParamChoices.empty() ){
+		out << ".SH ARGUMENTS\n";
+		out << ".TP\n";
+		out << "\\fI" << escape( cmd->mParamName ) << "\\fR\n";
+		out << "One of: " << escapeBody( utilities::string::join( cmd->mParamChoices, ", " ) ) << "\n";
+	}
+
 	if( !cmd->mSubcommand.empty() ){
 		out << ".SH COMMANDS\n";
 		for( const auto & subName: cmd->mSubcommand ){

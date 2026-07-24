@@ -144,8 +144,9 @@ Notes:
   prefix is set AND the option's scope permits config sources — "does
   this option read from env?" is exactly "does it carry an `env` field?".
 - `deprecated: true` appears only on deprecated options/commands;
-  `examples` only on commands that declare worked invocations. Absent
-  means not deprecated / no examples.
+  `examples` only on commands that declare worked invocations; a command's
+  `param-choices` only when it declares a closed value set for its
+  positional param. Absent means not deprecated / no examples / open set.
 - `scope` is one of `"both"`, `"command-line"`, `"config-file"` or
   `"none"`; the closed sets for `scope` and `type` are also emitted
   machine-readable as `conventions.option-scopes` and
@@ -264,6 +265,8 @@ All three shells complete:
 - per-command options (long and short forms)
 - the values of options that declare `choices` (`--tier <TAB>` →
   `none readonly operator`)
+- the values of command params that declare `param-choices`
+  (`completion <TAB>` → `bash zsh fish`)
 
 Hidden and gated commands are omitted. As with `man`, the `completion`
 builtin defers to a user-defined `completion` command if one exists.

@@ -31,6 +31,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `--validate` — and `Config::declaredDefault(name)`, the default an option
   declared before source resolution replaced it. `Option::typeName()` and
   `Option::scopeName()` expose the closed sets used by `--describe`.
+- `param-choices` on commands: a closed set of legal values for the
+  positional param of a command taking exactly one (`params: 1`). Checked
+  at dispatch, rendered by `--help`, `man` and `--describe`, offered by
+  shell completion. The `completion` builtin declares `bash`/`zsh`/`fish`
+  this way. Declaring it on a command with a different param count is a
+  `bad_definition` finding.
 
 ### Fixed
 

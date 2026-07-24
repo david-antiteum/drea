@@ -162,6 +162,7 @@ drea::core::Commander & drea::core::Commander::addDefaults()
 		cmd.mParamName = "shell";
 		cmd.mNbParams = 1;
 		cmd.mMinParams = 0;
+		cmd.mParamChoices = { "bash", "zsh", "fish" };
 		cmd.mPredefined = true;
 		add( cmd );
 		d->mBuiltins.insert( "completion" );
@@ -341,6 +342,18 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 				}else if( actual < minP ){
 					wrongNumberOfArguments( d->mCommand );
 					return;
+				}
+				// param-choices: the positional argument must be one of the
+				// declared values, same rule as choices on options
+				if( !cmd->mParamChoices.empty() ){
+					for( const auto & argument: d->mArguments ){
+						if( std::find( cmd->mParamChoices.begin(), cmd->mParamChoices.end(), argument ) == cmd->mParamChoices.end() ){
+							d->mApp.logger().error( "The command \"{}\" argument \"{}\" is not one of: {}",
+								utilities::string::replace( d->mCommand, ".", " " ), argument,
+								utilities::string::join( cmd->mParamChoices, ", " ) );
+							return;
+						}
+					}
 				}
 			}
 		}

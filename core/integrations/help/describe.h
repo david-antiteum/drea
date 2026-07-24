@@ -219,6 +219,9 @@ inline void describe( const drea::core::App & app, std::ostream & os )
 		if( command.mDeprecated ){
 			os << fmt::format( "{}  \"deprecated\": true,\n", pad );
 		}
+		if( !command.mParamChoices.empty() ){
+			stringList( "param-choices", command.mParamChoices, false );
+		}
 		stringList( "local-options", command.mLocalParameters, false );
 		if( !command.mGroups.empty() ){
 			stringList( "global-options", command.mGlobalParameters, false );
