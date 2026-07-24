@@ -28,7 +28,7 @@ class App {
 
     Config &       config() const;
     Commander &    commander() const;
-    spdlog::logger & logger() const;
+    drea::log::Logger & logger() const;   // structured-fields wrapper, raw() for spdlog
 
     void parse( const std::string & definitions );  // YAML
     void addToParser( std::string_view definitions );
@@ -119,13 +119,17 @@ cascades to its descendants.
 
 Dispatches based on parsed argv:
 
+- `--validate` → reports the configuration findings and exits with the mapped code
 - `--version`  → prints version and returns
 - `--help`     → renders help (top-level or per-command) and returns
+- `--describe` → prints the machine-readable app description and returns
 - gated cmd    → emits `Unknown command "X". Did you mean "Y"?` and returns
 - builtin (`completion`, `man`) → runs builtin and returns
 - otherwise    → invokes `f` with the dotted command path
 
-The visibility gate runs first: if the parsed command is not visible
+`--validate` runs before everything else, including the visibility gate, so
+a command gated by disabled groups surfaces as a `disabled_group` finding.
+For the rest, the visibility gate runs first: if the parsed command is not visible
 (`!isVisible`), drea emits the unknown-command error and skips the rest.
 This makes a probe and a typo indistinguishable.
 
@@ -168,6 +172,13 @@ Owns the option registry and the parsed values.
 
 ```cpp
 class Config {
+    struct Finding {
+        std::string mName;      // option name, config key or dotted command
+        std::string mSource;    // offending source; empty when none applies
+        std::string mCode;      // stable machine code, see docs/configuration.md
+        std::string mMessage;   // human message; sensitive values masked
+    };
+
     void setDefaultConfigFile( const std::string & filePath );
     Config & addDefaults();
 
@@ -193,8 +204,11 @@ class Config {
     template<typename T> std::vector<T> getAll( std::string_view optionName ) const;
 
     std::vector<std::string> validate() const;
+    std::vector<Finding> findings() const;
+    std::vector<OptionValue> declaredDefault( std::string_view optionName ) const;
+    bool redundant( std::string_view optionName ) const;
     std::string source( std::string_view optionName ) const;
-    void logEffective( spdlog::logger & logger ) const;
+    void logEffective( drea::log::Logger & logger ) const;
 
     void reportUnknownArgument( const std::string & optionName ) const;
 };
@@ -215,13 +229,18 @@ reported as unknown. Typical use: drop a default option (e.g.
 before `configure` reads CLI flags. See
 [Configuration → Disabling default options](configuration.md#disabling-default-options).
 
-`validate` checks the declarative constraints (`required`, `min`, `max`) and
-returns one message per violation; `App::parse` runs it and exits with
-`ExitCode::ConfigError` on failure. `source` reports which source provided an
-option's value (`default`, `config-source`, `config-file`, `environment`,
-`flag`, `code`). `logEffective` emits one info line per set option with value
-and source; sensitive values are redacted. See
-[Configuration → Validation](configuration.md#validation).
+`findings` checks the configuration resolved from every source and returns
+every problem as a structured `Finding` (the model behind `--validate`);
+`validate` is its fatal subset — one message per violation — which
+`App::parse` runs, exiting with `ExitCode::ConfigError` on failure. `source`
+reports which source provided an option's value (`default`, `config-source`,
+`config-file`, `environment`, `flag`, `code`). `declaredDefault` returns the
+default an option declared before source resolution replaced it, and
+`redundant` is true when a real source set an option to exactly that
+default. `logEffective` emits one info line per set option with value,
+source and the redundant marker; sensitive values are redacted. See
+[Configuration → Validation](configuration.md#validation) and
+[Configuration → Checking the configuration](configuration.md#checking-the-configuration---validate).
 
 ---
 
@@ -335,6 +354,8 @@ struct Option {
     int numberOfParams() const;
     std::string toString( const OptionValue & val ) const;
     OptionValue fromString( const std::string & val ) const;
+    std::string typeName() const;    // "bool", "int", "double", "string"
+    std::string scopeName() const;   // "both", "command-line", "config-file", "none"
     bool helpInLine() const;
     bool helpInFileOnly() const;
 };

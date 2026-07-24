@@ -26,8 +26,9 @@ from the same declaration, so the help text and the code stay in step.
   defaults, scopes, environment mapping) as versioned JSON, so tools and agents
   can read the interface without parsing `--help`.
 - `--validate`: check the configuration resolved from every source and report
-  all the problems — typed findings with stable codes, `--json` machine
-  output, and exit codes per failure category — without running any command.
+  all the problems plus the effective values, sources and redundant settings —
+  typed findings with stable codes, `--json` machine output, and exit codes
+  per failure category — without running any command.
 - Command groups, for gating help, completion, and execution by tier or role.
 - `man` page generation.
 - Shell completion for `bash`, `zsh`, and `fish`.
