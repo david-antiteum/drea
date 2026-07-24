@@ -119,6 +119,7 @@ inline void describe( const drea::core::App & app, std::ostream & os )
 	os << "    \"scopes\": \"both = command line plus config sources; command-line = flags only; config-file = config sources only, which bundle remote sources, the config file and environment variables; none = not set by users, the app sets it in code (listed so its meaning is known). An option reads the environment only when its scope permits config sources AND it carries an env field\",\n";
 	os << "    \"env-derivation\": \"an option is read from the variable env-prefix + '_' + the option name with every character outside [A-Za-z0-9_] replaced by '_'; the all-uppercase spelling is also accepted. The env field gives the exact name per option\",\n";
 	os << "    \"command-options\": \"a command accepts its local-options and global-options; global-options are also accepted by its subcommands\",\n";
+	os << "    \"command-params\": \"param-choices, when present, is the closed set of legal values of a command's single positional param; absent means the values are unrestricted\",\n";
 	os << "    \"command-groups\": \"a command listing groups is only available when one of those groups is enabled by the app; commands gated by disabled groups are omitted from this description\",\n";
 	os << "    \"config-precedence\": \"defaults, then remote config sources, then the config file, then environment variables, then command line flags; later sources win\"\n";
 	os << "  },\n";

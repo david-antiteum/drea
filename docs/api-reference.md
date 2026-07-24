@@ -309,6 +309,7 @@ struct Command {
     bool                     mHidden = false;
     std::vector<std::string> mGroups;
     std::vector<std::string> mExamples;
+    std::vector<std::string> mParamChoices;  // legal values of the single positional param
     bool                     mDeprecated = false;
     bool                     mPredefined = false;
     static const int         mUnlimitedParams = 0xfffffffa;
