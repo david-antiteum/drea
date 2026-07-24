@@ -262,6 +262,8 @@ All three shells complete:
 - top-level commands
 - subcommands
 - per-command options (long and short forms)
+- the values of options that declare `choices` (`--tier <TAB>` →
+  `none readonly operator`)
 
 Hidden and gated commands are omitted. As with `man`, the `completion`
 builtin defers to a user-defined `completion` command if one exists.

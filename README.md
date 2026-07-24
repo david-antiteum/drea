@@ -31,7 +31,8 @@ from the same declaration, so the help text and the code stay in step.
   per failure category — without running any command.
 - Command groups, for gating help, completion, and execution by tier or role.
 - `man` page generation.
-- Shell completion for `bash`, `zsh`, and `fish`.
+- Shell completion for `bash`, `zsh`, and `fish`, including the values of
+  options with `choices`.
 
 ## A 30-second example
 
