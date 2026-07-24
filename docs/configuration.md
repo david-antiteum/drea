@@ -321,6 +321,11 @@ single source applies), a human message, and one of these stable codes:
 Values of `sensitive` options are masked as `[redacted]` in both output
 modes.
 
+The output is validatable against the published JSON Schema:
+[`docs/validate.schema.json`](validate.schema.json). In validate mode
+drea silences its parse-time logging — every problem it would have logged
+is a finding — so `stdout` carries nothing but the JSON.
+
 Exit codes map the main failure categories:
 
 | Exit | `ExitCode`    | When |

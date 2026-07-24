@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/david-antiteum/drea/master/docs/validate.schema.json",
+  "title": "drea-validate/1",
+  "description": "Machine readable configuration check of a drea CLI app, as printed by --validate --json",
+  "type": "object",
+  "required": [ "schema", "app", "version", "valid", "findings" ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "drea-validate/1" },
+    "app": { "type": "string" },
+    "version": { "type": "string" },
+    "valid": { "type": "boolean", "description": "True exactly when findings is empty; the process exit code is 0 then" },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "required": [ "option", "code", "message" ],
+      "additionalProperties": false,
+      "properties": {
+        "option": { "type": "string", "description": "Option name, config file key or dotted command name the finding is about" },
+        "source": {
+          "enum": [ "default", "config-source", "config-file", "environment", "flag" ],
+          "description": "Source that supplied the offending value; absent when no single source applies (e.g. missing_required)"
+        },
+        "code": {
+          "enum": [
+            "parse_error",
+            "file_error",
+            "unknown_key",
+            "missing_required",
+            "bad_choice",
+            "out_of_range",
+            "missing_params",
+            "wrong_scope",
+            "unknown_option_ref",
+            "disabled_group"
+          ],
+          "description": "Stable machine code; exit codes group them as 66 file_error, 78 unknown_key/missing_required/wrong_scope/unknown_option_ref/disabled_group, 65 the rest"
+        },
+        "message": { "type": "string", "description": "Human readable message. Values of sensitive options are masked as [redacted]" }
+      }
+    }
+  }
+}

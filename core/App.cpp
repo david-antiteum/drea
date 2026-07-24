@@ -1,6 +1,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/fmt.h>
 
+#include <algorithm>
+
 #include "App.h"
 #include "Config.h"
 #include "Commander.h"
@@ -266,9 +268,23 @@ void drea::core::App::parse( const std::string & definitions )
 	if( auto args = utilities::Parser( *this, d->mArgs ).parse(); !args.second.empty() && args.second.at(0) == "autocomplete" ){
 		commander().configureForAutocompletion( d->mArgs );
 	}else{
+		// In validate mode the report is the only output: parse-time log
+		// noise (which the findings duplicate) would pollute it — the
+		// console sinks write to stdout, where --validate --json must emit
+		// clean JSON. Checked on the raw args because it must act before
+		// Config::configure emits anything.
+		const bool validateMode = config().find( "validate" )
+			&& std::find( args.first.begin(), args.first.end(), "--validate" ) != args.first.end();
+
+		if( validateMode ){
+			spdlog::default_logger()->set_level( spdlog::level::off );
+		}
 		configureInRunTime();
 		config().configure( args.first );
 		d->mLogger = config().setupLogger();
+		if( validateMode ){
+			d->mLogger->set_level( spdlog::level::off );
+		}
 		d->mLog.reset( *d->mLogger );
 		// --help, --version, --describe and --validate must work even when
 		// the config is invalid: --validate reports the problems itself

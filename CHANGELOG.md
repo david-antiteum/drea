@@ -17,8 +17,9 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `missing_params`, `wrong_scope`, `unknown_option_ref`, `disabled_group`);
   sensitive values are masked. Exit codes: 0 valid, 66 unreadable config
   file, 78 structural problems, 65 bad values. Human output goes to stderr,
-  `--json` (`drea-validate/1`) to stdout. Both options are registered by
-  `Config::addDefaults`.
+  `--json` (`drea-validate/1`, JSON Schema in `docs/validate.schema.json`)
+  to stdout; parse-time logging is silenced in validate mode so the report
+  is the only output. Both options are registered by `Config::addDefaults`.
 - `Config::findings()` — the structured resolved-config checks behind
   `--validate` — and `Config::declaredDefault(name)`, the default an option
   declared before source resolution replaced it. `Option::typeName()` and
