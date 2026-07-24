@@ -4,9 +4,17 @@
 #include <drea/core/Command.h>
 #include <drea/core/Commander.h>
 #include <drea/core/Config.h>
+#include <drea/core/ExitCode.h>
 #include <drea/core/Option.h>
 
+#include "integrations/help/validate.h"
+
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <string>
+#include <vector>
 
 using drea::core::App;
 using drea::core::Option;
@@ -19,6 +27,34 @@ struct AppFixture {
 	App   app;
 	AppFixture() : app( 1, argv ) {}
 };
+
+bool hasFinding( const std::vector<drea::core::Config::Finding> & findings, const std::string & code, const std::string & name )
+{
+	for( const auto & finding: findings ){
+		if( finding.mCode == code && finding.mName == name ){
+			return true;
+		}
+	}
+	return false;
+}
+
+const drea::core::Config::Finding * getFinding( const std::vector<drea::core::Config::Finding> & findings, const std::string & code, const std::string & name )
+{
+	for( const auto & finding: findings ){
+		if( finding.mCode == code && finding.mName == name ){
+			return &finding;
+		}
+	}
+	return nullptr;
+}
+
+std::string writeTempFile( const std::string & name, const std::string & content )
+{
+	const auto path = std::filesystem::temp_directory_path() / name;
+	std::ofstream file( path );
+	file << content;
+	return path.string();
+}
 
 }
 
@@ -234,4 +270,290 @@ TEST_CASE( "validate flags a command referencing an unknown option", "[validate]
 	REQUIRE( errors.size() == 1 );
 	REQUIRE( errors.front().find( "start" ) != std::string::npos );
 	REQUIRE( errors.front().find( "does-not-exist" ) != std::string::npos );
+}
+
+TEST_CASE( "findings reports a value that does not parse as its type", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "port";
+	opt.mParamName = "n";
+	opt.mType = typeid( int );
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--port", "banana" } );
+
+	const auto findings = fx.app.config().findings();
+	const auto * finding = getFinding( findings, "parse_error", "port" );
+	REQUIRE( finding );
+	REQUIRE( finding->mSource == "flag" );
+	REQUIRE( finding->mMessage.find( "banana" ) != std::string::npos );
+	// parse errors are part of the fatal subset
+	REQUIRE_FALSE( fx.app.config().validate().empty() );
+}
+
+TEST_CASE( "findings reports an unknown config file key with the file name", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "workers";
+	opt.mParamName = "n";
+	opt.mType = typeid( int );
+	fx.app.config().add( opt );
+	const std::string path = writeTempFile( "drea-validate-unknown.yaml", "bogus: 1\nworkers: 4\n" );
+	fx.app.config().setDefaultConfigFile( path );
+
+	fx.app.config().configure( {} );
+
+	const auto findings = fx.app.config().findings();
+	const auto * finding = getFinding( findings, "unknown_key", "bogus" );
+	REQUIRE( finding );
+	REQUIRE( finding->mSource == "config-file" );
+	REQUIRE( finding->mMessage.find( "Unknown config key" ) != std::string::npos );
+	REQUIRE( finding->mMessage.find( path ) != std::string::npos );
+	// unknown keys are reported by --validate but stay non-fatal in parse
+	REQUIRE( fx.app.config().validate().empty() );
+	REQUIRE( fx.app.config().get<int>( "workers" ) == 4 );
+}
+
+TEST_CASE( "findings reports an unreadable config file", "[findings]" )
+{
+	AppFixture fx;
+	fx.app.config().setDefaultConfigFile( "/nonexistent/drea-validate.yaml" );
+
+	fx.app.config().configure( {} );
+
+	const auto findings = fx.app.config().findings();
+	REQUIRE( hasFinding( findings, "file_error", "config-file" ) );
+	REQUIRE( drea::core::integrations::Help::validateExitCode( findings ) == drea::core::ExitCode::NoInput );
+}
+
+TEST_CASE( "findings reports a config file that cannot be parsed", "[findings]" )
+{
+	AppFixture fx;
+	const std::string path = writeTempFile( "drea-validate-broken.json", "{ this is not json" );
+	fx.app.config().setDefaultConfigFile( path );
+
+	fx.app.config().configure( {} );
+
+	REQUIRE( hasFinding( fx.app.config().findings(), "parse_error", "config-file" ) );
+}
+
+TEST_CASE( "findings reports an option set through a source its scope disallows", "[findings]" )
+{
+	SECTION( "config-file-only option passed as a flag" ){
+		AppFixture fx;
+		Option opt;
+		opt.mName = "db-password";
+		opt.mParamName = "secret";
+		opt.mType = typeid( std::string );
+		opt.mScope = Option::Scope::File;
+		fx.app.config().add( opt );
+
+		fx.app.config().configure( { "--db-password", "hunter2" } );
+
+		const auto findings = fx.app.config().findings();
+		const auto * finding = getFinding( findings, "wrong_scope", "db-password" );
+		REQUIRE( finding );
+		REQUIRE( finding->mSource == "flag" );
+		REQUIRE( finding->mMessage.find( "command line" ) != std::string::npos );
+	}
+	SECTION( "command-line-only option set from the config file" ){
+		AppFixture fx;
+		Option opt;
+		opt.mName = "force";
+		opt.mParamName = "mode";
+		opt.mType = typeid( std::string );
+		opt.mScope = Option::Scope::Line;
+		fx.app.config().add( opt );
+		const std::string path = writeTempFile( "drea-validate-scope.yaml", "force: always\n" );
+		fx.app.config().setDefaultConfigFile( path );
+
+		fx.app.config().configure( {} );
+
+		const auto findings = fx.app.config().findings();
+		const auto * finding = getFinding( findings, "wrong_scope", "force" );
+		REQUIRE( finding );
+		REQUIRE( finding->mSource == "config-file" );
+	}
+}
+
+TEST_CASE( "findings reports missing arguments for a value-taking option", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "port";
+	opt.mParamName = "n";
+	opt.mType = typeid( int );
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--port" } );
+
+	const auto findings = fx.app.config().findings();
+	const auto * finding = getFinding( findings, "missing_params", "port" );
+	REQUIRE( finding );
+	REQUIRE( finding->mSource == "flag" );
+}
+
+TEST_CASE( "findings reports a requested command gated by disabled groups", "[findings]" )
+{
+	AppFixture fx;
+	drea::core::Command cmd;
+	cmd.mName = "deploy";
+	cmd.mGroups = { "admin" };
+	fx.app.commander().add( cmd );
+
+	fx.app.config().configure( { } );
+	fx.app.commander().configure( { "deploy" } );
+
+	const auto findings = fx.app.config().findings();
+	const auto * finding = getFinding( findings, "disabled_group", "deploy" );
+	REQUIRE( finding );
+	REQUIRE( finding->mMessage.find( "admin" ) != std::string::npos );
+	REQUIRE( drea::core::integrations::Help::validateExitCode( findings ) == drea::core::ExitCode::ConfigError );
+
+	// enabling the group clears the finding
+	fx.app.commander().setEnabledGroups( { "admin" } );
+	REQUIRE_FALSE( hasFinding( fx.app.config().findings(), "disabled_group", "deploy" ) );
+}
+
+TEST_CASE( "findings track the source that wins across several sources", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "port";
+	opt.mParamName = "n";
+	opt.mType = typeid( int );
+	opt.mMin = 1;
+	opt.mMax = 100;
+	opt.mValues = { 50 };
+	fx.app.config().add( opt );
+	const std::string path = writeTempFile( "drea-validate-precedence.yaml", "port: 80\n" );
+	fx.app.config().setDefaultConfigFile( path );
+
+	SECTION( "the config file wins over the default and is in range" ){
+		fx.app.config().configure( {} );
+		REQUIRE( fx.app.config().get<int>( "port" ) == 80 );
+		REQUIRE_FALSE( hasFinding( fx.app.config().findings(), "out_of_range", "port" ) );
+	}
+	SECTION( "the flag wins over the config file and carries the finding" ){
+		fx.app.config().configure( { "--port", "200" } );
+		REQUIRE( fx.app.config().get<int>( "port" ) == 200 );
+		const auto findings = fx.app.config().findings();
+		const auto * finding = getFinding( findings, "out_of_range", "port" );
+		REQUIRE( finding );
+		REQUIRE( finding->mSource == "flag" );
+	}
+	// the declared default survives resolution for later comparisons
+	REQUIRE( fx.app.config().declaredDefault( "port" ).size() == 1 );
+	REQUIRE( std::get<int>( fx.app.config().declaredDefault( "port" ).front() ) == 50 );
+}
+
+TEST_CASE( "findings mask values of sensitive options", "[findings][sensitive]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "api-key";
+	opt.mParamName = "key";
+	opt.mType = typeid( std::string );
+	opt.mSensitive = true;
+	opt.mChoices = { "alpha", "beta" };
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--api-key", "s3cr3t" } );
+
+	const auto findings = fx.app.config().findings();
+	const auto * finding = getFinding( findings, "bad_choice", "api-key" );
+	REQUIRE( finding );
+	REQUIRE( finding->mMessage.find( "[redacted]" ) != std::string::npos );
+	REQUIRE( finding->mMessage.find( "s3cr3t" ) == std::string::npos );
+
+	// masked in both output modes too
+	std::ostringstream out, err;
+	drea::core::integrations::Help::validateConfig( fx.app, true, out, err );
+	drea::core::integrations::Help::validateConfig( fx.app, false, out, err );
+	REQUIRE( out.str().find( "s3cr3t" ) == std::string::npos );
+	REQUIRE( err.str().find( "s3cr3t" ) == std::string::npos );
+	REQUIRE( out.str().find( "[redacted]" ) != std::string::npos );
+	REQUIRE( err.str().find( "[redacted]" ) != std::string::npos );
+}
+
+TEST_CASE( "validateConfig emits drea-validate/1 JSON on stdout", "[validate-cli]" )
+{
+	AppFixture fx;
+	fx.app.setName( "myapp" );
+	fx.app.setVersion( "1.2.3" );
+	Option opt;
+	opt.mName = "color";
+	opt.mParamName = "mode";
+	opt.mType = typeid( std::string );
+	opt.mChoices = { "auto", "always", "never" };
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--color", "sometimes" } );
+
+	std::ostringstream out, err;
+	const int code = drea::core::integrations::Help::validateConfig( fx.app, true, out, err );
+
+	REQUIRE( code == drea::core::toInt( drea::core::ExitCode::DataError ) );
+	REQUIRE( err.str().empty() );
+	const std::string json = out.str();
+	REQUIRE( json.find( "\"schema\": \"drea-validate/1\"" ) != std::string::npos );
+	REQUIRE( json.find( "\"app\": \"myapp\"" ) != std::string::npos );
+	REQUIRE( json.find( "\"valid\": false" ) != std::string::npos );
+	REQUIRE( json.find( "\"option\": \"color\"" ) != std::string::npos );
+	REQUIRE( json.find( "\"source\": \"flag\"" ) != std::string::npos );
+	REQUIRE( json.find( "\"code\": \"bad_choice\"" ) != std::string::npos );
+	REQUIRE( std::count( json.begin(), json.end(), '{' ) == std::count( json.begin(), json.end(), '}' ) );
+	REQUIRE( std::count( json.begin(), json.end(), '[' ) == std::count( json.begin(), json.end(), ']' ) );
+}
+
+TEST_CASE( "validateConfig reports a valid configuration and exits 0", "[validate-cli]" )
+{
+	AppFixture fx;
+	fx.app.setName( "myapp" );
+	Option opt;
+	opt.mName = "port";
+	opt.mParamName = "n";
+	opt.mType = typeid( int );
+	opt.mMin = 1;
+	opt.mMax = 65535;
+	opt.mValues = { 8080 };
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( {} );
+
+	SECTION( "human output goes to stderr" ){
+		std::ostringstream out, err;
+		const int code = drea::core::integrations::Help::validateConfig( fx.app, false, out, err );
+		REQUIRE( code == drea::core::toInt( drea::core::ExitCode::Ok ) );
+		REQUIRE( out.str().empty() );
+		REQUIRE( err.str().find( "valid" ) != std::string::npos );
+	}
+	SECTION( "machine output goes to stdout" ){
+		std::ostringstream out, err;
+		const int code = drea::core::integrations::Help::validateConfig( fx.app, true, out, err );
+		REQUIRE( code == drea::core::toInt( drea::core::ExitCode::Ok ) );
+		REQUIRE( err.str().empty() );
+		REQUIRE( out.str().find( "\"valid\": true" ) != std::string::npos );
+		REQUIRE( out.str().find( "\"findings\": []" ) != std::string::npos );
+	}
+}
+
+TEST_CASE( "validateExitCode maps finding categories to exit codes", "[validate-cli]" )
+{
+	using drea::core::ExitCode;
+	using drea::core::integrations::Help::validateExitCode;
+	using Finding = drea::core::Config::Finding;
+
+	REQUIRE( validateExitCode( {} ) == ExitCode::Ok );
+	REQUIRE( validateExitCode( { Finding{ "port", "flag", "out_of_range", "" } } ) == ExitCode::DataError );
+	REQUIRE( validateExitCode( { Finding{ "port", "flag", "parse_error", "" } } ) == ExitCode::DataError );
+	REQUIRE( validateExitCode( { Finding{ "token", "", "missing_required", "" } } ) == ExitCode::ConfigError );
+	REQUIRE( validateExitCode( { Finding{ "bogus", "config-file", "unknown_key", "" } } ) == ExitCode::ConfigError );
+	// structural beats values, an unreadable file beats everything
+	REQUIRE( validateExitCode( { Finding{ "port", "flag", "out_of_range", "" },
+		Finding{ "token", "", "missing_required", "" } } ) == ExitCode::ConfigError );
+	REQUIRE( validateExitCode( { Finding{ "token", "", "missing_required", "" },
+		Finding{ "config-file", "config-file", "file_error", "" } } ) == ExitCode::NoInput );
 }

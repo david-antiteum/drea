@@ -22,8 +22,10 @@ set_target_properties( ${PROJECT_NAME} PROPERTIES
 )
 drea_set_rpath( ${PROJECT_NAME} )
 
-# core/ so tests can exercise internal pieces (json_lines_formatter)
-target_include_directories( ${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../core )
+# core/ so tests can exercise internal pieces (json_lines_formatter,
+# integrations/help/validate.h); include/drea/core so those internal headers
+# resolve their flat "App.h"-style includes like they do inside core/
+target_include_directories( ${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../core ${CMAKE_CURRENT_SOURCE_DIR}/../include/drea/core )
 target_link_libraries( ${PROJECT_NAME}
 	PRIVATE
 		Catch2::Catch2WithMain
