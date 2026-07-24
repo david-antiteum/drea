@@ -557,3 +557,22 @@ TEST_CASE( "validateExitCode maps finding categories to exit codes", "[validate-
 	REQUIRE( validateExitCode( { Finding{ "token", "", "missing_required", "" },
 		Finding{ "config-file", "config-file", "file_error", "" } } ) == ExitCode::NoInput );
 }
+
+TEST_CASE( "log-flush-level rejects values outside its choices", "[validate]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	SECTION( "a spdlog level name passes" ){
+		fx.app.config().configure( { "--log-flush-level", "err" } );
+		REQUIRE( fx.app.config().validate().empty() );
+	}
+	SECTION( "an unknown level fails validation instead of a silent fallback" ){
+		fx.app.config().configure( { "--log-flush-level", "loud" } );
+		const auto findings = fx.app.config().findings();
+		const auto * finding = getFinding( findings, "bad_choice", "log-flush-level" );
+		REQUIRE( finding );
+		REQUIRE( finding->mMessage.find( "trace, debug, info, warn, err, critical, off" ) != std::string::npos );
+		REQUIRE_FALSE( fx.app.config().validate().empty() );
+	}
+}

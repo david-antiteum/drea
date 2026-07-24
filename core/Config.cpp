@@ -396,7 +396,7 @@ drea::core::Config & drea::core::Config::addDefaults()
 			"log-nb-files", "number-of-log-files", "<number-of-log-files> to keep", {10}, typeid( int )
 		},
 		{
-			"log-flush-level", "level", "flush log sinks on messages of <level> (trace, debug, info, warn, err, critical, off) or above", {std::string("warn")}, typeid( std::string )
+			"log-flush-level", "level", "flush log sinks on messages of <level> or above", {std::string("warn")}, typeid( std::string )
 		},
 		{
 			"log-redact", "", "redact values wrapped in drea::log::redacted(); use --no-log-redact to see them", {true}, typeid( bool )
@@ -422,6 +422,9 @@ drea::core::Config & drea::core::Config::addDefaults()
 	find( "describe" )->mNbParams = 0;
 	find( "validate" )->mNbParams = 0;
 	find( "json" )->mNbParams = 0;
+	// the set Config::setupLogger accepts; validation rejects anything else
+	// before the logger silently falls back to warn
+	find( "log-flush-level" )->mChoices = { "trace", "debug", "info", "warn", "err", "critical", "off" };
 
 	for( const char * name: {
 		"verbose", "help", "version", "describe", "validate", "json",

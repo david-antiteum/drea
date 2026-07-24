@@ -45,6 +45,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unreadable one stays a logged error (and a `--validate` finding).
 - `.yml` config files are read directly as YAML instead of going through
   format autodetection.
+- `log-flush-level` declares `choices` (`trace`, `debug`, `info`, `warn`,
+  `err`, `critical`, `off`): an unknown level now fails validation
+  (`bad_choice`, `ExitCode::ConfigError`) instead of silently falling back
+  to `warn`. The spdlog alternate spellings `warning`/`error`, which
+  happened to parse before, are rejected — use `warn`/`err` as documented.
+  Help renders the set from the same metadata.
 
 ## [0.36.0] — 2026-07-14
 
