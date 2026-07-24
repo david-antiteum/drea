@@ -30,7 +30,7 @@ description: |
 
 options:
   - option: tier
-    description: simulated staff tier (none|readonly|operator). Default none.
+    description: simulated staff tier (none|readonly|operator)
     type: string
     params-names: tier
 
