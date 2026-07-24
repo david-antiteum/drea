@@ -150,6 +150,11 @@ Notes:
   command's `local-options`/`global-options` refers to an entry in the
   top-level `options` array — `App::parse` enforces this invariant.
 
+`--describe` has a runtime counterpart: `--validate` checks the
+configuration resolved from every source and reports the problems (with
+`--json` for machine output). See
+[Configuration → Checking the configuration](configuration.md#checking-the-configuration---validate).
+
 ## Dynamic help footer
 
 Install a callback to append text to `--help`. The callback is invoked once

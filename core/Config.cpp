@@ -278,7 +278,7 @@ struct drea::core::Config::Private
 					ok = readConfigTOML( fileData );
 				}else if( extension == ".json" ){
 					ok = readConfigJSON( fileData );
-				}else if( extension == ".yaml" ){
+				}else if( extension == ".yaml" || extension == ".yml" ){
 					ok = readConfigYAML( fileData );
 				}else if( !readConfig( fileData ) ){
 					spdlog::error( "Cannot determine the format of the config file {}", configFileName );

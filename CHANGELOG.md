@@ -5,6 +5,36 @@ All notable changes to drea are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `--validate` (with `--json` for machine output): load the configuration
+  from every source, check it, report **all** the problems and quit without
+  running any command. Findings carry the option, the offending source, a
+  human message and a stable code (`parse_error`, `file_error`,
+  `unknown_key`, `missing_required`, `bad_choice`, `out_of_range`,
+  `missing_params`, `wrong_scope`, `unknown_option_ref`, `disabled_group`);
+  sensitive values are masked. Exit codes: 0 valid, 66 unreadable config
+  file, 78 structural problems, 65 bad values. Human output goes to stderr,
+  `--json` (`drea-validate/1`) to stdout. Both options are registered by
+  `Config::addDefaults`.
+- `Config::findings()` — the structured resolved-config checks behind
+  `--validate` — and `Config::declaredDefault(name)`, the default an option
+  declared before source resolution replaced it. `Option::typeName()` and
+  `Option::scopeName()` expose the closed sets used by `--describe`.
+
+### Changed
+
+- A value that does not parse as its option's declared type is now collected
+  and reported together with every other validation error (`App::parse`
+  exits with `ExitCode::ConfigError`), instead of `exit(-1)` at read time.
+  `Config::set` after parsing keeps the old report-and-exit contract. A
+  config file that cannot be parsed is fatal in `App::parse` too; an
+  unreadable one stays a logged error (and a `--validate` finding).
+- `.yml` config files are read directly as YAML instead of going through
+  format autodetection.
+
 ## [0.36.0] — 2026-07-14
 
 ### Added

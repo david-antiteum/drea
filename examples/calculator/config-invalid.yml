@@ -1,0 +1,7 @@
+# Deliberately broken config file, to demo --validate:
+#
+#   ./calculator --config-file config-invalid.yml --validate
+#   ./calculator --config-file config-invalid.yml --validate --json
+#
+equal: banana   # parse_error: not a double
+rond: true      # unknown_key: typo of "round"

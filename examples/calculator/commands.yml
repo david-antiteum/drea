@@ -2,6 +2,13 @@ app: calculator
 description: |
   A basic calculator as an example for the Drea Framework.
   Drea is available at https://github.com/david-antiteum/drea.
+
+  Try:
+    ./calculator sum 1 2 3
+    ./calculator --validate                                  # check the config, exit 0
+    ./calculator --equal banana sum 1 2 --validate           # bad value, exit 65
+    ./calculator --config-file config-invalid.yml --validate # unknown key and bad value
+    ./calculator --config-file config-invalid.yml --validate --json
 env-prefix: CAL
 options:
   - option: round

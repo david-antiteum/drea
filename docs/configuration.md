@@ -266,6 +266,82 @@ that want to handle them differently. `drea::core::ExitCode`
 (`include/drea/core/ExitCode.h`) provides the shared exit-code vocabulary
 (`Ok`, `ConfigError`, `DependencyError`, ...).
 
+## Checking the configuration: `--validate`
+
+`--validate` is the runtime counterpart of `--describe`: where `--describe`
+emits the static command/option tree, `--validate` loads the configuration
+from every source (defaults, remote sources, config file, environment,
+flags), checks it, reports **all** the problems found — not just the first —
+and quits without running any command.
+
+```bash
+./myapp --validate                       # human summary on stderr
+./myapp --validate --json                # machine readable findings on stdout
+./myapp --config-file prod.yml --validate
+```
+
+The human summary goes to `stderr`, keeping `stdout` clean for machine
+output. With `--json`, structured findings go to `stdout`:
+
+```json
+{
+  "schema": "drea-validate/1",
+  "app": "myapp",
+  "version": "1.2.3",
+  "valid": false,
+  "findings": [
+    {
+      "option": "port",
+      "source": "config-file",
+      "code": "out_of_range",
+      "message": "Option --port value 70000 is above the maximum 65535"
+    }
+  ]
+}
+```
+
+Each finding carries the option name (or config key, or dotted command
+name), the source that supplied the offending value (`default`,
+`config-source`, `config-file`, `environment` or `flag`; omitted when no
+single source applies), a human message, and one of these stable codes:
+
+| Code                 | Meaning |
+|----------------------|---------|
+| `parse_error`        | A value does not parse as the option's declared type, or a config file cannot be parsed |
+| `file_error`         | The config file cannot be read |
+| `unknown_key`        | A config file key (or a flag) matches no declared option |
+| `missing_required`   | A `required` option ended up with no value from any source (a default satisfies it) |
+| `bad_choice`         | A value is outside the option's `choices` |
+| `out_of_range`       | A numeric value violates `min`/`max` |
+| `missing_params`     | A value-taking option was used without satisfying its `params` count |
+| `wrong_scope`        | An option was set through a source its `scope` disallows (e.g. a `line` option in a config file) |
+| `unknown_option_ref` | A command's `local-options`/`global-options` references an option that does not exist |
+| `disabled_group`     | The requested command is gated by groups that are not enabled |
+
+Values of `sensitive` options are masked as `[redacted]` in both output
+modes.
+
+Exit codes map the main failure categories:
+
+| Exit | `ExitCode`    | When |
+|------|---------------|------|
+| 0    | `Ok`          | The configuration is valid |
+| 66   | `NoInput`     | A config file cannot be read (`file_error`) — beats every other category |
+| 78   | `ConfigError` | Structural problems: `unknown_key`, `missing_required`, `wrong_scope`, `unknown_option_ref`, `disabled_group` |
+| 65   | `DataError`   | Only values are wrong: `parse_error`, `out_of_range`, `bad_choice`, `missing_params` |
+
+Like `--help` and `--describe`, `--validate` works even when the
+configuration is invalid — that is its job — and it is registered by
+`Config::addDefaults()` (drop it with `Config::remove` if unwanted, `--json`
+likewise).
+
+Programmatically, the same model is available as `Config::findings()`
+(structured findings) and `Config::declaredDefault(name)` (the default an
+option declared before source resolution replaced it), next to
+`Config::source(name)` for the winning source. See
+[`examples/calculator`](../examples/calculator) for a runnable demo
+(`config-invalid.yml`).
+
 ## Effective config
 
 With `--log-config`, `App::parse` emits one `info` line per option with its
