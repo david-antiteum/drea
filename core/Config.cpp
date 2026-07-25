@@ -14,7 +14,9 @@
 #ifdef __APPLE__
 	#include <crt_externs.h>
 #elif !defined( WIN32 )
-	extern char ** environ;
+	// C linkage: glibc declares environ extern "C" in unistd.h (which boost
+	// pulls in), and the two declarations must agree
+	extern "C" { extern char ** environ; }
 #endif
 
 #if defined(__cpp_lib_filesystem)
