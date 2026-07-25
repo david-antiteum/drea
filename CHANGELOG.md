@@ -5,6 +5,14 @@ All notable changes to drea are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.1] — 2026-07-25
+
+### Fixed
+
+- Linux build: the `environ` declaration used for the unknown-env-var scan
+  now has C linkage, matching glibc's declaration in `unistd.h` (pulled in
+  transitively by boost). 0.37.0 did not compile on Linux.
+
 ## [0.37.0] — 2026-07-24
 
 ### Added
