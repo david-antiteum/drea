@@ -121,7 +121,7 @@ inline void describe( const drea::core::App & app, std::ostream & os )
 	}
 	os << "  \"conventions\": {\n";
 	os << "    \"option-syntax\": \"pass options as --name value or --name=value; an option with a short version also accepts -x\",\n";
-	os << "    \"bool-options\": \"bool options are flags: --name enables, --no-name disables\",\n";
+	os << "    \"bool-options\": \"bool options are flags: --name enables, --no-name disables, unless the option is marked negatable false because it is an action (--help, --version, --validate)\",\n";
 	os << "    \"option-types\": [\"bool\", \"int\", \"double\", \"string\"],\n";
 	os << "    \"option-scopes\": [\"both\", \"command-line\", \"config-file\", \"none\"],\n";
 	os << "    \"option-fields\": \"scope tells where an option may be set; min and max bound numeric values; choices is the closed set of legal values; nb-params is the fixed number of values the option takes per use (commands instead declare a min-params/max-params range for their positional params)\",\n";
@@ -194,6 +194,10 @@ inline void describe( const drea::core::App & app, std::ostream & os )
 		os << fmt::format( "      \"scope\": {},\n", detail::jsonQuoted( detail::scopeName( option ) ) );
 		if( option.mDeprecated ){
 			os << "      \"deprecated\": true,\n";
+		}
+		// only for bool options, where --no-<name> is otherwise available
+		if( option.mType == typeid( bool ) && !option.mNegatable ){
+			os << "      \"negatable\": false,\n";
 		}
 		os << fmt::format( "      \"required\": {},\n", option.mRequired );
 		os << fmt::format( "      \"sensitive\": {}\n", option.mSensitive );

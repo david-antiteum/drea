@@ -83,6 +83,7 @@
         "env": { "type": "string", "description": "Exact environment variable name; present only when an env prefix is set and the option's scope permits config sources" },
         "scope": { "enum": [ "both", "command-line", "config-file", "none" ] },
         "deprecated": { "const": true, "description": "Present only when the option is deprecated" },
+        "negatable": { "const": false, "description": "Present only when a bool option refuses --no-<name> because it is an action" },
         "required": { "type": "boolean" },
         "sensitive": { "type": "boolean" }
       }

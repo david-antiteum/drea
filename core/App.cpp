@@ -205,6 +205,8 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 					option.mRequired = optionNode.second.as<bool>();
 				}else if( key == "deprecated" ){
 					option.mDeprecated = optionNode.second.as<bool>();
+				}else if( key == "negatable" ){
+					option.mNegatable = optionNode.second.as<bool>();
 				}else if( key == "min" ){
 					option.mMin = optionNode.second.as<double>();
 				}else if( key == "max" ){

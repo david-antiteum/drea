@@ -20,6 +20,17 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `--no-help` printed the help, `--no-version` printed the version and
+  `--no-validate` ran the validation (reporting `validate=false (from flag)`
+  while doing it). Negation was offered for every `bool` option, and these are
+  read with `used()`, so denying one registered a use and triggered the very
+  action being denied. `Option::mNegatable` (yml `negatable: false`) marks an
+  action: `--no-<name>` is then refused with a `not_negatable` finding —
+  non-fatal, like an unknown argument — instead of being applied. Set for
+  `help`, `version` and `validate`; toggles such as `--no-verbose`,
+  `--no-log-redact` and `--no-json` are unaffected. `--describe` exposes
+  `"negatable": false` for the options that carry it.
+
 - Config files ignored the value of a `bool` option: the YAML, JSON and TOML
   readers registered the option as used and parsed a value only when it had a
   param name, so `round: false` left the toggle on. All three now parse the

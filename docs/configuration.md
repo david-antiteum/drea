@@ -42,6 +42,7 @@ Fields:
 | `required`     | If true, `parse()` fails when no source provides a value |
 | `min` / `max`  | Numeric bounds, validated after source resolution |
 | `choices`      | Sequence of legal values; any other value fails validation |
+| `negatable`    | `bool` options only, default true. False for an action: `--no-<name>` is refused instead of applied |
 | `deprecated`   | If true, flagged as deprecated in `--help` and `describe` |
 
 `bool` options take no value by default — their presence on the CLI flips
@@ -254,6 +255,34 @@ options:
 ```bash
 ./myapp --no-dry-run    # overrides the default to false
 ```
+
+### Actions cannot be negated
+
+Some `bool` options are **actions**: they select what the invocation does, and
+denying one means nothing. `--help`, `--version` and `--validate` are drea's
+own, and they declare `negatable: false`:
+
+```bash
+./myapp --no-help       # Option --help is an action and cannot be negated
+```
+
+Without that, `--no-help` printed the help, because these are read with
+`used()` — presence is their semantics — and the negation registered a use.
+The refusal is a `not_negatable` finding, non-fatal like an unknown argument:
+the app carries on with the option untouched.
+
+Declare it for an app's own actions, the ones that make the process do
+something and quit:
+
+```yaml
+options:
+  - option: reset-db
+    description: recreate the schema and quit
+    negatable: false
+```
+
+Toggles keep their negation — `--no-verbose`, `--no-log-redact`,
+`--no-json` all mean something.
 
 ## Sensitive options
 

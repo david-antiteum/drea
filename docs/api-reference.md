@@ -385,6 +385,7 @@ struct Option {
     std::optional<double>       mMin;
     std::optional<double>       mMax;
     std::vector<std::string>    mChoices;
+    bool                        mNegatable = true;   // bool only: --no-<name> allowed
     bool                        mDeprecated = false;
     bool                        mPredefined = false;
     static const int            mUnlimitedParams = 0xfffffffa;

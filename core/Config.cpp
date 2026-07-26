@@ -466,6 +466,11 @@ drea::core::Config & drea::core::Config::addDefaults()
 	find( "version" )->mNbParams = 0;
 	find( "validate" )->mNbParams = 0;
 	find( "json" )->mNbParams = 0;
+	// actions, not toggles: they select what this invocation does, so there is
+	// nothing to deny and --no-help must not be read as "show the help"
+	for( const char * action: { "help", "version", "validate" } ){
+		find( action )->mNegatable = false;
+	}
 	// the set Config::setupLogger accepts; validation rejects anything else
 	// before the logger silently falls back to warn
 	find( "log-flush-level" )->mChoices = { "trace", "debug", "info", "warn", "err", "critical", "off" };
@@ -695,7 +700,15 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 				}
 			}else if( arg.rfind( "no-", 0 ) == 0 ){
 				std::string boolName = arg.substr( 3 );
-				if( auto boolOpt = d->find( boolName ); boolOpt && boolOpt->mType == typeid( bool ) ){
+				if( auto boolOpt = d->find( boolName ); boolOpt && boolOpt->mType == typeid( bool ) && !boolOpt->mNegatable ){
+					// an action (--help, --version, --validate) has no off
+					// state: negating it used to register the use and trigger
+					// the very action being denied
+					const std::string message = fmt::format( "Option --{} is an action and cannot be negated", boolOpt->mName );
+
+					d->mFindings.push_back( { boolOpt->mName, d->mCurrentSource, "not_negatable", message } );
+					spdlog::warn( "{}", message );
+				}else if( auto boolOpt = d->find( boolName ); boolOpt && boolOpt->mType == typeid( bool ) ){
 					registerUse( boolName );
 					d->mSources[ boolOpt->mName ] = "flag";
 					boolOpt->mValues.clear();

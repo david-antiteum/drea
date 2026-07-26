@@ -4,8 +4,11 @@
 #include <drea/core/Config.h>
 #include <drea/core/Option.h>
 
+#include "integrations/help/describe.h"
+
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <string>
 
 using drea::core::App;
@@ -550,4 +553,84 @@ TEST_CASE( "an option with params-names keeps the default string type", "[config
 	REQUIRE( opt );
 	REQUIRE( opt->mType == typeid( std::string ) );
 	REQUIRE( opt->numberOfParams() == 1 );
+}
+
+TEST_CASE( "an action option refuses --no-X instead of triggering itself", "[config]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	fx.app.config().configure( { "--no-help" } );
+
+	// the whole point: negating an action must not read as "show the help"
+	REQUIRE_FALSE( fx.app.config().used( "help" ) );
+	REQUIRE( fx.app.config().get<bool>( "help" ) == false );
+
+	bool found = false;
+	for( const auto & finding: fx.app.config().findings() ){
+		if( finding.mName == "help" && finding.mCode == "not_negatable" ){
+			found = true;
+		}
+	}
+	REQUIRE( found );
+	// non-fatal: the app keeps running, like an unknown argument
+	REQUIRE( fx.app.config().validate().empty() );
+}
+
+TEST_CASE( "the actions among the default options are not negatable", "[config]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	for( const char * action: { "help", "version", "validate" } ){
+		REQUIRE_FALSE( fx.app.config().find( action )->mNegatable );
+	}
+	// toggles keep their negation
+	for( const char * toggle: { "verbose", "json", "log-redact", "log-effective-config" } ){
+		REQUIRE( fx.app.config().find( toggle )->mNegatable );
+	}
+}
+
+TEST_CASE( "a toggle stays negatable and --no-X still wins", "[config]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	fx.app.config().configure( { "--no-log-redact" } );
+
+	REQUIRE( fx.app.config().used( "log-redact" ) );
+	REQUIRE( fx.app.config().get<bool>( "log-redact" ) == false );
+}
+
+TEST_CASE( "negatable: false can be declared in yml", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: reset-db\n"
+		"    description: recreate the schema and quit\n"
+		"    negatable: false\n"
+	);
+
+	auto opt = fx.app.config().find( "reset-db" );
+	REQUIRE( opt );
+	REQUIRE( opt->mType == typeid( bool ) );	// inferred: takes no value
+	REQUIRE_FALSE( opt->mNegatable );
+
+	fx.app.config().configure( { "--no-reset-db" } );
+	REQUIRE_FALSE( fx.app.config().used( "reset-db" ) );
+}
+
+TEST_CASE( "describe reports negatable only when false", "[config]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	std::ostringstream out;
+	drea::core::integrations::Help::describe( fx.app, out );
+	const std::string json = out.str();
+
+	REQUIRE( json.find( "\"negatable\": false" ) != std::string::npos );
+	REQUIRE( json.find( "\"negatable\": true" ) == std::string::npos );
 }

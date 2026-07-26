@@ -34,6 +34,7 @@ struct DREA_CORE_API Option
 	std::optional<double>		mMin = std::nullopt;
 	std::optional<double>		mMax = std::nullopt;
 	std::vector<std::string>	mChoices = {};	//!< closed set of legal values (compared against Option::toString); empty = unrestricted
+	bool						mNegatable = true;	//!< bool options accept --no-<name>. Set false for an action (--help, --version, --validate): denying it has no meaning, so --no-<name> is refused instead of silently triggering it
 	bool						mDeprecated = false;	//!< kept working but discouraged; flagged in help and describe
 	bool						mPredefined = false;	//!< added by Config::addDefaults; shown under "Common options" in help
 	static const int			mUnlimitedParams = 0xfffffffa;
