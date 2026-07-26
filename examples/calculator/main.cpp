@@ -50,7 +50,9 @@ size_t count( const drea::core::App & app )
 
 void writeResult( const drea::core::App & app, double value )
 {
-	if( app.config().used( "round" ) ){
+	// get<bool>, not used(): a config file or env var may carry "round: false",
+	// which counts as used but means off
+	if( app.config().get<bool>( "round" ) ){
 		value = std::round( value );
 	}
 	app.logger().info( "Result: {}", value );

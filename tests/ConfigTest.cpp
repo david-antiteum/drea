@@ -4,6 +4,10 @@
 #include <drea/core/Config.h>
 #include <drea/core/Option.h>
 
+#include <filesystem>
+#include <fstream>
+#include <string>
+
 using drea::core::App;
 using drea::core::Option;
 
@@ -349,4 +353,85 @@ TEST_CASE( "env vars are ignored for command-line scoped options", "[config]" )
 	unsetEnvVar( "DREATEST_burst" );
 
 	REQUIRE_FALSE( fx.app.config().used( "burst" ) );
+}
+
+namespace {
+
+std::string writeConfigFile( const std::string & name, const std::string & content )
+{
+	const auto path = std::filesystem::temp_directory_path() / name;
+	std::ofstream file( path );
+	file << content;
+	return path.string();
+}
+
+}
+
+TEST_CASE( "a config file sets the value of a bool flag", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "round";
+	opt.mType = typeid( bool );
+	opt.mValues = { true };
+	fx.app.config().add( opt );
+	fx.app.config().setDefaultConfigFile( writeConfigFile( "drea-config-bool.yaml", "round: false\n" ) );
+
+	fx.app.config().configure( {} );
+
+	REQUIRE( fx.app.config().used( "round" ) );
+	REQUIRE( fx.app.config().get<bool>( "round" ) == false );
+	REQUIRE( fx.app.config().source( "round" ) == "config-file" );
+}
+
+TEST_CASE( "a config file enabling a bool flag keeps it true", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "round";
+	opt.mType = typeid( bool );
+	opt.mValues = { false };
+	fx.app.config().add( opt );
+	fx.app.config().setDefaultConfigFile( writeConfigFile( "drea-config-bool-on.yaml", "round: yes\n" ) );
+
+	fx.app.config().configure( {} );
+
+	REQUIRE( fx.app.config().get<bool>( "round" ) == true );
+}
+
+TEST_CASE( "a command line flag beats the config file for a bool", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "round";
+	opt.mType = typeid( bool );
+	opt.mValues = { false };
+	fx.app.config().add( opt );
+	fx.app.config().setDefaultConfigFile( writeConfigFile( "drea-config-bool-flag.yaml", "round: false\n" ) );
+
+	fx.app.config().configure( { "--round" } );
+
+	REQUIRE( fx.app.config().get<bool>( "round" ) == true );
+	REQUIRE( fx.app.config().source( "round" ) == "flag" );
+}
+
+TEST_CASE( "a bad bool value in a config file is a parse_error finding", "[config]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "round";
+	opt.mType = typeid( bool );
+	opt.mValues = { true };
+	fx.app.config().add( opt );
+	fx.app.config().setDefaultConfigFile( writeConfigFile( "drea-config-bool-bad.yaml", "round: banana\n" ) );
+
+	fx.app.config().configure( {} );
+
+	bool found = false;
+	for( const auto & finding: fx.app.config().findings() ){
+		if( finding.mName == "round" && finding.mCode == "parse_error" ){
+			found = true;
+		}
+	}
+	REQUIRE( found );
 }

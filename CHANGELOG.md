@@ -7,6 +7,18 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Config files ignored the value of a `bool` option: the YAML, JSON and TOML
+  readers registered the option as used and parsed a value only when it had a
+  param name, so `round: false` left the toggle on. All three now parse the
+  scalar the way the environment path already did, so a config file can turn a
+  toggle off, and a bad value (`round: banana`) is a `parse_error` finding.
+  The `calculator` sample carried the matching app-side bug: its `round`
+  option declared no `type:` — making it a valueless `string` option, readable
+  only through `used()` — and it now declares `type: bool` and is read with
+  `get<bool>()`.
+
 ### Removed
 
 - **`--describe` is gone**: the app description is printed by the `describe`

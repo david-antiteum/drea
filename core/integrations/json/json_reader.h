@@ -94,6 +94,11 @@ private:
 							if( option->mValues.empty() ){
 								spdlog::warn( "Missing arguments for flag {}", realKey );
 							}
+						}else if( option->mType == typeid( bool ) && value.is_primitive() ){
+							// flags carry a value in a config file
+							// ("round": false): parse it instead of only
+							// marking the option as used
+							app.config().set( option->mName, asString( value ) );
 						}
 					}else{
 						app.config().reportUnknownArgument( realKey );

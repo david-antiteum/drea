@@ -89,6 +89,30 @@ a config file, present in the environment, or has a default value.
 `intensity()` returns how many times an option appeared (useful for `-vvv`
 verbosity).
 
+### Read toggles with `get<bool>()`, not `used()`
+
+A toggle must declare `type: bool`. Then `--round` sets it true, `--no-round`
+sets it false, and a config file or environment variable carries its value:
+
+```yaml
+- option: round
+  description: round the result
+  type: bool
+```
+
+```cpp
+if( app.config().get<bool>( "round" ) ) { /* ... */ }
+```
+
+`used()` answers a different question — *did any source mention this option* —
+so it reads `round: false` in a config file as **on**. Use it for options whose
+mere presence is the signal, not for toggles.
+
+An option with neither `type:` nor `params-names:` is a `string` option taking
+no value: it can never hold anything, so `used()` becomes the only way to read
+it and `--no-<name>` does not apply. That is almost never what you want for a
+toggle — declare `type: bool`.
+
 ## Evaluation order
 
 Sources are applied in this order, lowest priority first. Later values

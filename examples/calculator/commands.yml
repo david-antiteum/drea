@@ -13,6 +13,7 @@ env-prefix: CAL
 options:
   - option: round
     description: round the result to the nearest integer
+    type: bool
   - option: equal
     params-names: number
     description: check if the result is equal to <number>
