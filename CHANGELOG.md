@@ -20,6 +20,15 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `params: unlimited` on an *option* consumed nothing. `numberOfParams()`
+  returns the `mUnlimitedParams` sentinel, which is negative as an `int`, so
+  the value-consuming loops (`np < numberOfParams()`) never ran and the inline
+  form `--opt=value` was rejected as "does not take a value". The option now
+  consumes arguments until the next option, a `--` terminator or the end of the
+  command line, and accepts the inline form. New `Option::unlimitedParams()`
+  and `Option::takesValues()` express the test the sentinel breaks; use those
+  rather than comparing `numberOfParams()`.
+
 - `values:` defaults were always stored as strings, ignoring the declared
   `type:`, so an `int` option with `values: [80, 443]` threw
   `std::bad_variant_access` through `Config::get<int>()` or

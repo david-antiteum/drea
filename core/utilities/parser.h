@@ -76,7 +76,11 @@ public:
 					hasInlineValue = true;
 				}
 				if( auto option = mApp.config().find( nameOnly ); option && !hasInlineValue ){
-					for( int np = 0; np < option->numberOfParams() && i < expandedArgs.size(); np++ ){
+					// params: unlimited consumes until the next option, the
+					// end of the arguments or a "--" terminator
+					const bool	unlimited = option->unlimitedParams();
+
+					for( int np = 0; ( unlimited || np < option->numberOfParams() ) && i < expandedArgs.size(); np++ ){
 						std::string subArg = expandedArgs.at( i );
 						if( subArg.find( "-" ) == 0 ){
 							break;

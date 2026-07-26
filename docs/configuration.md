@@ -88,6 +88,29 @@ flag — for example a negative number or any string starting with `-`:
 `string` options. The equals form is rejected on flags that take no value
 (`bool` toggles, repeated counters such as `--verbose`).
 
+### Options taking several values
+
+`params: unlimited` makes an option greedy: it consumes arguments until the
+next option, a `--` terminator, or the end of the command line.
+
+```yaml
+- option: tags
+  description: tags to apply
+  params-names: tag
+  params: unlimited
+```
+
+```bash
+./myapp --tags a b c --label x     # tags = [a, b, c], label = x
+./myapp --tags=a --tags=b          # one value per use, accumulating
+./myapp --tags a b -- deploy       # -- ends the values; deploy is a command
+```
+
+Read them with `getAll<T>()`. In a command-based app, put a greedy option
+after the command, or end its values with `--`: `myapp --tags a b deploy`
+gives `tags` the command word too. An option declaring `params: 1` and used
+repeatedly accumulates values just the same, without the ambiguity.
+
 ## Reading options
 
 ```cpp

@@ -48,6 +48,23 @@ struct DREA_CORE_API Option
 		}
 	}
 
+	//! Whether the option takes an open ended list of values (params: unlimited)
+	[[nodiscard]] bool unlimitedParams() const
+	{
+		return !mParamName.empty() && mNbParams == mUnlimitedParams;
+	}
+
+	/*! Whether the option takes at least one value per use, unlimited included.
+
+		Use this rather than comparing numberOfParams(), which returns the
+		mUnlimitedParams sentinel for an open ended option: the sentinel is
+		negative as an int, so "numberOfParams() > 0" reads it as a flag.
+	*/
+	[[nodiscard]] bool takesValues() const
+	{
+		return unlimitedParams() || numberOfParams() > 0;
+	}
+
 	[[nodiscard]] std::string toString( const OptionValue & val ) const;
 	[[nodiscard]] OptionValue fromString( const std::string & val ) const;
 

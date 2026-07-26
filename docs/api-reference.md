@@ -348,6 +348,8 @@ struct Command {
     static const int         mUnlimitedParams = 0xfffffffa;
 
     int numberOfParams() const;
+    bool unlimitedParams() const;                   // params: unlimited
+    bool takesValues() const;                       // at least one value per use
     int minParams() const;
     int maxParams() const;
     std::string nameOfParamsForHelp() const;

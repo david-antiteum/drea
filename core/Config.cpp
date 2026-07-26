@@ -673,13 +673,17 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 					optionsWithDefault.erase( option );
 				}
 				if( hasInlineValue ){
-					if( option->numberOfParams() > 0 ){
+					if( option->takesValues() ){
 						append( option->mName, inlineValue );
 					}else{
 						spdlog::warn( "Flag {} does not take a value; ignoring '={}'", arg, inlineValue );
 					}
 				}else{
-					for( int np = 0; np < option->numberOfParams() && i < args.size(); np++ ){
+					// params: unlimited consumes until the next option, the end
+					// of the arguments or a "--" terminator
+					const bool	unlimited = option->unlimitedParams();
+
+					for( int np = 0; ( unlimited || np < option->numberOfParams() ) && i < args.size(); np++ ){
 						std::string subArg = args.at( i );
 						if( subArg.find( "-" ) == 0 ){
 							break;
@@ -688,7 +692,7 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 						i++;
 					}
 				}
-				if( option->numberOfParams() > 0 &&  option->mValues.empty() ){
+				if( option->takesValues() && option->mValues.empty() ){
 					spdlog::warn( "Missing arguments for flag {}", arg );
 				}else if( option->numberOfParams() == 0 && option->mType == typeid( bool ) ){
 					option->mValues.clear();

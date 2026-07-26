@@ -722,3 +722,102 @@ TEST_CASE( "an option with values: is not inferred to be a bool", "[config]" )
 	REQUIRE( opt->mType == typeid( std::string ) );
 	REQUIRE( fx.app.config().get<std::string>( "mode" ) == "fast" );
 }
+
+TEST_CASE( "params: unlimited consumes every value given", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: tags\n"
+		"    description: tags to apply\n"
+		"    params-names: tag\n"
+		"    params: unlimited\n"
+	);
+
+	fx.app.config().configure( { "--tags", "a", "b", "c" } );
+
+	// the loop used to compare against the negative mUnlimitedParams sentinel
+	// and consume nothing at all
+	REQUIRE( fx.app.config().getAll<std::string>( "tags" ) == std::vector<std::string>{ "a", "b", "c" } );
+}
+
+TEST_CASE( "params: unlimited stops at the next option", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: tags\n"
+		"    description: tags\n"
+		"    params-names: tag\n"
+		"    params: unlimited\n"
+		"  - option: label\n"
+		"    description: label\n"
+		"    params-names: text\n"
+	);
+
+	fx.app.config().configure( { "--tags", "a", "b", "--label", "x" } );
+
+	REQUIRE( fx.app.config().getAll<std::string>( "tags" ) == std::vector<std::string>{ "a", "b" } );
+	REQUIRE( fx.app.config().get<std::string>( "label" ) == "x" );
+}
+
+TEST_CASE( "params: unlimited accepts the inline form", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: tags\n"
+		"    description: tags\n"
+		"    params-names: tag\n"
+		"    params: unlimited\n"
+	);
+
+	// used to warn "Flag tags does not take a value" and drop it
+	fx.app.config().configure( { "--tags=a" } );
+
+	REQUIRE( fx.app.config().getAll<std::string>( "tags" ) == std::vector<std::string>{ "a" } );
+}
+
+TEST_CASE( "params: unlimited is typed like any other option", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: ports\n"
+		"    description: ports\n"
+		"    params-names: port\n"
+		"    params: unlimited\n"
+		"    type: int\n"
+	);
+
+	fx.app.config().configure( { "--ports", "80", "443" } );
+
+	REQUIRE( fx.app.config().getAll<int>( "ports" ) == std::vector<int>{ 80, 443 } );
+}
+
+TEST_CASE( "Option::takesValues covers the unlimited sentinel", "[config]" )
+{
+	Option unlimited;
+	unlimited.mName = "tags";
+	unlimited.mParamName = "tag";
+	unlimited.mNbParams = Option::mUnlimitedParams;
+	REQUIRE( unlimited.unlimitedParams() );
+	REQUIRE( unlimited.takesValues() );
+	REQUIRE_FALSE( unlimited.numberOfParams() > 0 );	// the trap this replaces
+
+	Option single;
+	single.mName = "label";
+	single.mParamName = "text";
+	REQUIRE_FALSE( single.unlimitedParams() );
+	REQUIRE( single.takesValues() );
+
+	Option flag;
+	flag.mName = "verbose";
+	flag.mType = typeid( bool );
+	REQUIRE_FALSE( flag.unlimitedParams() );
+	REQUIRE_FALSE( flag.takesValues() );
+}
