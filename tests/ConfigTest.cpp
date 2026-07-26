@@ -435,3 +435,119 @@ TEST_CASE( "a bad bool value in a config file is a parse_error finding", "[confi
 	}
 	REQUIRE( found );
 }
+
+TEST_CASE( "a yml option taking no value is inferred to be a bool", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: round\n"
+		"    description: round the result\n"
+	);
+
+	auto opt = fx.app.config().find( "round" );
+	REQUIRE( opt );
+	REQUIRE( opt->mType == typeid( bool ) );
+	REQUIRE( opt->numberOfParams() == 0 );
+
+	// the whole point: the flag carries a value now
+	fx.app.config().configure( { "--round" } );
+	REQUIRE( fx.app.config().get<bool>( "round" ) == true );
+}
+
+TEST_CASE( "an inferred bool honours --no-X", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: round\n"
+		"    description: round the result\n"
+	);
+
+	fx.app.config().configure( { "--no-round" } );
+
+	REQUIRE( fx.app.config().used( "round" ) );
+	REQUIRE( fx.app.config().get<bool>( "round" ) == false );
+}
+
+TEST_CASE( "an inferred bool reads its value from a config file", "[config]" )
+{
+	const std::string yml =
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: round\n"
+		"    description: round the result\n";
+
+	SECTION( "on" ){
+		AppFixture fx;
+		fx.app.parse( yml );
+		fx.app.config().setDefaultConfigFile( writeConfigFile( "drea-inferred-bool-on.yaml", "round: true\n" ) );
+
+		fx.app.config().configure( {} );
+
+		REQUIRE( fx.app.config().get<bool>( "round" ) == true );
+	}
+	SECTION( "off" ){
+		AppFixture fx;
+		fx.app.parse( yml );
+		fx.app.config().setDefaultConfigFile( writeConfigFile( "drea-inferred-bool-off.yaml", "round: false\n" ) );
+
+		fx.app.config().configure( {} );
+
+		REQUIRE( fx.app.config().get<bool>( "round" ) == false );
+	}
+}
+
+TEST_CASE( "an explicit type: string is not turned into a bool", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: label\n"
+		"    description: a label the app sets\n"
+		"    type: string\n"
+	);
+
+	auto opt = fx.app.config().find( "label" );
+	REQUIRE( opt );
+	REQUIRE( opt->mType == typeid( std::string ) );
+}
+
+TEST_CASE( "scope: none options keep the default type so the app can set them", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: build-id\n"
+		"    description: set by the app at startup\n"
+		"    scope: none\n"
+	);
+
+	auto opt = fx.app.config().find( "build-id" );
+	REQUIRE( opt );
+	REQUIRE( opt->mType == typeid( std::string ) );
+
+	fx.app.config().set( "build-id", "abc123" );
+	REQUIRE( fx.app.config().get<std::string>( "build-id" ) == "abc123" );
+}
+
+TEST_CASE( "an option with params-names keeps the default string type", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: log-tag\n"
+		"    description: tag for the logs\n"
+		"    params-names: tag\n"
+	);
+
+	auto opt = fx.app.config().find( "log-tag" );
+	REQUIRE( opt );
+	REQUIRE( opt->mType == typeid( std::string ) );
+	REQUIRE( opt->numberOfParams() == 1 );
+}

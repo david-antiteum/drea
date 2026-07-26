@@ -24,7 +24,7 @@ int main( int argc, char * argv[] )
 	// excluded from --help, completion, "did you mean?" suggestions, and
 	// direct invocation. Flipping mHidden any time before run() takes effect
 	// uniformly across all integrations.
-	const bool devMode = app.config().used( "dev" );
+	const bool devMode = app.config().get<bool>( "dev" );
 	if( !devMode ){
 		if( auto cmd = app.commander().find( "debug" ) ){
 			cmd->mHidden = true;

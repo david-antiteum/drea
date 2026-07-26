@@ -7,6 +7,17 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- An option declared in YAML with neither `type:` nor `params-names:` is a
+  toggle, and its type is inferred as `bool`. It used to default to `string`
+  while taking no value, so it could never hold anything: `--opt` only marked
+  it as used, `--no-opt` did not apply, and a value from a config file or the
+  environment was ignored — the trap the `calculator` sample fell into. An
+  explicit `type: string` is respected, and `scope: none` (the app sets those
+  in code) and options declaring `choices` are exempt. Options built
+  programmatically are untouched: `mType` is right there in the struct.
+
 ### Fixed
 
 - Config files ignored the value of a `bool` option: the YAML, JSON and TOML

@@ -267,6 +267,18 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 				}
 			}
 		}
+		// An option that takes no value is a toggle. Left to the default type
+		// it would be a string that can never hold anything: --opt would only
+		// register the use, --no-opt would not apply, and a value coming from
+		// a config file or the environment would be ignored. Only when the
+		// author declared no type at all, so an explicit "type: string" is
+		// respected. scope: none is exempt: the app sets those in code, with a
+		// value of its own. choices are exempt too: bool has a closed domain
+		// already, and inferring would turn the declaration into a finding.
+		if( !hasType && option.mParamName.empty() && option.mChoices.empty()
+			&& option.mScope != drea::core::Option::Scope::None ){
+			option.mType = typeid( bool );
+		}
 		app.config().add( option );
 	}
 }

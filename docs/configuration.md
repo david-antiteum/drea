@@ -34,7 +34,7 @@ Fields:
 | `description`  | Help text |
 | `params-names` | Name of the value placeholder in help (`--log-file file`) |
 | `params`       | Number of values: `0`, `1`, ..., or `unlimited` |
-| `type`         | `bool`, `int`, `double`, `string` |
+| `type`         | `bool`, `int`, `double`, `string`. Defaults to `string`, or to `bool` for an option that takes no value |
 | `value`        | Default value (single) |
 | `values`       | Default values (sequence) |
 | `scope`        | `both` (default), `line`, `file`, `none` — where the option is shown in help |
@@ -47,6 +47,24 @@ Fields:
 `bool` options take no value by default — their presence on the CLI flips
 them to true. They can be explicitly disabled with `--no-<name>` (see
 *Boolean negation* below).
+
+An option that declares neither `type:` nor `params-names:` is a toggle, and
+drea infers `type: bool` for it, so these two declarations are the same:
+
+```yaml
+- option: round
+  description: round the result
+- option: round
+  description: round the result
+  type: bool
+```
+
+Without the inference the option would default to `string` while taking no
+value: it could never hold anything, `--round` would only mark it as used,
+`--no-round` would not apply, and a value set in a config file or the
+environment would be ignored. An explicit `type: string` is respected, as is
+`scope: none` — the app sets those in code, with a value of its own — and so
+is an option declaring `choices`.
 
 ## Passing values
 
@@ -91,14 +109,10 @@ verbosity).
 
 ### Read toggles with `get<bool>()`, not `used()`
 
-A toggle must declare `type: bool`. Then `--round` sets it true, `--no-round`
-sets it false, and a config file or environment variable carries its value:
-
-```yaml
-- option: round
-  description: round the result
-  type: bool
-```
+A toggle is a `bool` option — declared, or inferred because it takes no value
+(see *Defining options*). `--round` sets it true, `--no-round` sets it false,
+and a config file or environment variable carries its value, so the value is
+what you must read:
 
 ```cpp
 if( app.config().get<bool>( "round" ) ) { /* ... */ }
@@ -107,11 +121,6 @@ if( app.config().get<bool>( "round" ) ) { /* ... */ }
 `used()` answers a different question — *did any source mention this option* —
 so it reads `round: false` in a config file as **on**. Use it for options whose
 mere presence is the signal, not for toggles.
-
-An option with neither `type:` nor `params-names:` is a `string` option taking
-no value: it can never hold anything, so `used()` becomes the only way to read
-it and `--no-<name>` does not apply. That is almost never what you want for a
-toggle — declare `type: bool`.
 
 ## Evaluation order
 
@@ -149,6 +158,9 @@ db:
 ```
 
 values land at `db.host` and `db.password`.
+
+`bool` options read their value from a config file (`round: false` turns the
+toggle off, not on). Anything that is not a boolean is a `parse_error`.
 
 ## Environment variables
 

@@ -12,7 +12,7 @@ int main( int argc, char * argv[] )
 	app.commander().run( [ &app ]( const std::string & cmd ){
 		app.logger().debug( "command to run {}", cmd );
 
-		bool reverse = app.config().used( "reverse" );
+		bool reverse = app.config().get<bool>( "reverse" );
 		if( cmd == "this" ){
 			for( auto say: app.commander().arguments() ){
 				if( reverse ){
