@@ -210,6 +210,17 @@ public:
 
 	void reportUnknownArgument( const std::string & optionName ) const;
 
+	/*! Whether the option may take a value from the source being read right
+		now — a config file, a remote source or the environment. Options scoped
+		to the command line (`line`), or to no user source at all (`none`),
+		may not: the call then reports a `wrong_scope` finding and the caller
+		must leave the option untouched, neither used nor set.
+
+		The scope rules live here so that every reader applies them the same
+		way. Called by the config readers and the environment scan.
+	*/
+	[[nodiscard]] bool acceptsCurrentSource( const std::string & optionName );
+
 	// Methods called by App
 
 	/*! Init the system with arguments and apply values in order.

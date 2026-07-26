@@ -20,6 +20,15 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A config file could trigger an action or set any command-line-only option:
+  the YAML, JSON and TOML readers never checked `scope`, so `help: true` in a
+  config file printed the help on every run. All three now go through
+  `Config::acceptsCurrentSource()` — the same gate the environment scan uses,
+  and where the scope rules now live — which reports `wrong_scope` and leaves
+  the option untouched instead of applying the value. `help`, `version` and
+  `validate` are `Scope::Line` accordingly. The finding is a warning during a
+  normal run and exit 78 under `--validate`, as before.
+
 - `--no-help` printed the help, `--no-version` printed the version and
   `--no-validate` ran the validation (reporting `validate=false (from flag)`
   while doing it). Negation was offered for every `bool` option, and these are

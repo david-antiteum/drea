@@ -90,6 +90,10 @@ private:
 				}
 			}else{
 				if( auto option = app.config().find( realKey ) ){
+					if( !app.config().acceptsCurrentSource( realKey ) ){
+						// the scope forbids this source: reported, not applied
+						continue;
+					}
 					app.config().registerUse( realKey );
 					if( !option->mParamName.empty() ){
 						if( dynamic_cast< cpptoml::array *>( value.get() )){

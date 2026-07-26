@@ -467,9 +467,12 @@ drea::core::Config & drea::core::Config::addDefaults()
 	find( "validate" )->mNbParams = 0;
 	find( "json" )->mNbParams = 0;
 	// actions, not toggles: they select what this invocation does, so there is
-	// nothing to deny and --no-help must not be read as "show the help"
+	// nothing to deny and --no-help must not be read as "show the help". They
+	// belong to the command line alone: an app whose config file says
+	// "help: true" would otherwise print the help on every run.
 	for( const char * action: { "help", "version", "validate" } ){
 		find( action )->mNegatable = false;
+		find( action )->mScope = Option::Scope::Line;
 	}
 	// the set Config::setupLogger accepts; validation rejects anything else
 	// before the logger silently falls back to warn
@@ -587,14 +590,7 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 			if( env.empty() ){
 				continue;
 			}
-			if( option->mScope == Option::Scope::Line || option->mScope == Option::Scope::None ){
-				// present in the environment, but the scope forbids reading
-				// it: report instead of silently ignoring the variable
-				const std::string message = fmt::format( "Option --{} has scope {} and is not read from the environment; the variable is ignored",
-					option->mName, option->scopeName() );
-
-				d->mFindings.push_back( { option->mName, d->mCurrentSource, "wrong_scope", message } );
-				spdlog::warn( "{}", message );
+			if( !acceptsCurrentSource( option->mName ) ){
 				continue;
 			}
 			registerUse( option->mName );
@@ -1007,6 +1003,30 @@ void drea::core::Config::logEffective( drea::log::Logger & logger ) const
 		logger.info( "config: {}={} (from {}{})", option->mName, value, source( option->mName ),
 			redundant( option->mName ) ? ", matches default" : "" );
 	}
+}
+
+bool drea::core::Config::acceptsCurrentSource( const std::string & optionName )
+{
+	auto option = find( optionName );
+
+	if( !option ){
+		return false;
+	}
+	if( option->mScope != Option::Scope::Line && option->mScope != Option::Scope::None ){
+		return true;
+	}
+	// present in a source the scope forbids: report instead of applying the
+	// value and killing the app later, or silently dropping it
+	const std::string	where = d->mCurrentSource == "environment"
+		? "is not read from the environment; the variable is ignored"
+		: fmt::format( "cannot be set from a {}; the value is ignored", d->mCurrentSource );
+	const std::string	message = fmt::format( "Option --{} has scope {} and {}",
+		option->mName, option->scopeName(), where );
+
+	d->mFindings.push_back( { option->mName, d->mCurrentSource, "wrong_scope", message } );
+	spdlog::warn( "{}", message );
+
+	return false;
 }
 
 void drea::core::Config::reportUnknownArgument( const std::string & optionName ) const

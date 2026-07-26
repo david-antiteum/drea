@@ -889,3 +889,86 @@ TEST_CASE( "param-choices on a multi-param command is a bad definition", "[findi
 	REQUIRE( finding->mMessage.find( "param-choices" ) != std::string::npos );
 	REQUIRE_FALSE( fx.app.config().validate().empty() );
 }
+
+TEST_CASE( "a config file cannot set a command-line-only option", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "force";
+	opt.mParamName = "mode";
+	opt.mType = typeid( std::string );
+	opt.mScope = Option::Scope::Line;
+	fx.app.config().add( opt );
+	fx.app.config().setDefaultConfigFile( writeTempFile( "drea-scope-not-applied.yaml", "force: always\n" ) );
+
+	fx.app.config().configure( {} );
+
+	// reported and left untouched: the value used to be applied anyway
+	REQUIRE( hasFinding( fx.app.config().findings(), "wrong_scope", "force" ) );
+	REQUIRE_FALSE( fx.app.config().used( "force" ) );
+	REQUIRE( fx.app.config().get<std::string>( "force" ).empty() );
+	REQUIRE( fx.app.config().source( "force" ) == "default" );
+}
+
+TEST_CASE( "a config file cannot set a scope none option", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "build-id";
+	opt.mParamName = "id";
+	opt.mType = typeid( std::string );
+	opt.mScope = Option::Scope::None;
+	fx.app.config().add( opt );
+	fx.app.config().setDefaultConfigFile( writeTempFile( "drea-scope-none.yaml", "build-id: abc\n" ) );
+
+	fx.app.config().configure( {} );
+
+	REQUIRE( hasFinding( fx.app.config().findings(), "wrong_scope", "build-id" ) );
+	REQUIRE_FALSE( fx.app.config().used( "build-id" ) );
+}
+
+TEST_CASE( "a config file cannot trigger an action", "[findings]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+	fx.app.config().setDefaultConfigFile( writeTempFile( "drea-scope-help.yaml", "help: true\n" ) );
+
+	fx.app.config().configure( {} );
+
+	// the actions are command-line only: "help: true" in a file must not make
+	// every run print the help
+	REQUIRE( hasFinding( fx.app.config().findings(), "wrong_scope", "help" ) );
+	REQUIRE_FALSE( fx.app.config().used( "help" ) );
+	REQUIRE( fx.app.config().get<bool>( "help" ) == false );
+}
+
+TEST_CASE( "the actions among the default options are command-line only", "[findings]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	for( const char * action: { "help", "version", "validate" } ){
+		REQUIRE( fx.app.config().find( action )->mScope == Option::Scope::Line );
+	}
+	// toggles and settings stay readable from config sources
+	for( const char * fromFile: { "verbose", "json", "log-redact", "log-size" } ){
+		REQUIRE( fx.app.config().find( fromFile )->mScope == Option::Scope::Both );
+	}
+}
+
+TEST_CASE( "an option readable from config sources is applied normally", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "workers";
+	opt.mParamName = "n";
+	opt.mType = typeid( int );
+	opt.mScope = Option::Scope::File;
+	fx.app.config().add( opt );
+	fx.app.config().setDefaultConfigFile( writeTempFile( "drea-scope-file.yaml", "workers: 7\n" ) );
+
+	fx.app.config().configure( {} );
+
+	REQUIRE( fx.app.config().findings().empty() );
+	REQUIRE( fx.app.config().get<int>( "workers" ) == 7 );
+}

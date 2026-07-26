@@ -163,6 +163,9 @@ values land at `db.host` and `db.password`.
 `bool` options read their value from a config file (`round: false` turns the
 toggle off, not on). Anything that is not a boolean is a `parse_error`.
 
+A key naming an option whose scope forbids config sources (`line`, `none`) is
+refused: reported as `wrong_scope` and not applied. See *Option scope*.
+
 ## Environment variables
 
 Set an env prefix (in YAML or via `Config::setEnvPrefix`) and Drea will read
@@ -204,7 +207,7 @@ sanitized spelling (`MYAPP_config_file`), then its uppercase form
 
 Only options whose scope permits config sources (`both`, `file`) read the
 environment; `line` and `none` scoped options ignore it — a variable set
-for one of those is reported (`wrong_scope` in `--validate`) instead of
+for one of those is reported (`wrong_scope`, see *Option scope*) instead of
 silently dropped, as is a variable under the prefix that matches no option
 (`unknown_key`, non-fatal).
 
@@ -539,12 +542,26 @@ depend on `spdlog::mdc` (spdlog ≥ 1.15).
 set it:
 
 - `both` (default) — top-level options block; read from every source.
-- `line` — top-level options block only; command line only, environment
-  variables are ignored for it.
+- `line` — top-level options block only; command line only. A config file,
+  remote source or environment variable naming it is refused.
 - `file` — config-file-only block (separate section in `--help`); read from
   the config sources (remote sources, config file, environment).
-- `none` — never shown in help, but still parseable; environment variables
-  are ignored for it.
+- `none` — never shown in help, but still parseable; the app sets it in code.
+  A config file, remote source or environment variable naming it is refused.
+
+Refused means exactly that: the value is **not applied**, and a `wrong_scope`
+finding is reported (a warning during a normal run, exit 78 under
+`--validate`). Every source goes through the same check, so a `line`-scoped
+option cannot be set behind the app's back:
+
+```bash
+$ myapp --config-file with-help.yaml run
+[warning] Option --help has scope command-line and cannot be set from a config-file; the value is ignored
+```
+
+drea's own actions — `--help`, `--version`, `--validate` — are `line` scoped
+for this reason: a config file saying `help: true` would otherwise print the
+help on every run.
 
 Options declared as `local-options` of a single command are automatically
 filtered out of the global help section. They appear only on that command's

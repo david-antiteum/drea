@@ -56,6 +56,10 @@ private:
 				readConfig( app, node.second, realKey );
 			}else{
 				if( auto option = app.config().find( realKey ) ){
+					if( !app.config().acceptsCurrentSource( realKey ) ){
+						// the scope forbids this source: reported, not applied
+						continue;
+					}
 					app.config().registerUse( realKey );
 					if( !option->mParamName.empty() ){
 						// discard data: config file and defaults

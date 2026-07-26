@@ -234,6 +234,7 @@ class Config {
     void logEffective( drea::log::Logger & logger ) const;
 
     void reportUnknownArgument( const std::string & optionName ) const;
+    bool acceptsCurrentSource( const std::string & optionName );  // scope gate for config sources
 };
 ```
 
