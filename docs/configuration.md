@@ -42,7 +42,7 @@ Fields:
 | `required`     | If true, `parse()` fails when no source provides a value |
 | `min` / `max`  | Numeric bounds, validated after source resolution |
 | `choices`      | Sequence of legal values; any other value fails validation |
-| `deprecated`   | If true, flagged as deprecated in `--help` and `--describe` |
+| `deprecated`   | If true, flagged as deprecated in `--help` and `describe` |
 
 `bool` options take no value by default — their presence on the CLI flips
 them to true. They can be explicitly disabled with `--no-<name>` (see
@@ -285,8 +285,8 @@ that want to handle them differently. `drea::core::ExitCode`
 
 ## Checking the configuration: `--validate`
 
-`--validate` is the runtime counterpart of `--describe`: where `--describe`
-emits the static command/option tree, `--validate` loads the configuration
+`--validate` is the runtime counterpart of the `describe` command: where
+`describe` emits the static command/option tree, `--validate` loads the configuration
 from every source (defaults, remote sources, config file, environment,
 flags), checks it, reports **all** the problems found — not just the first —
 and quits without running any command.
@@ -371,7 +371,7 @@ Exit codes map the main failure categories:
 | 78   | `ConfigError` | Structural problems: `unknown_key`, `missing_required`, `wrong_scope`, `unknown_option_ref`, `disabled_group`, `bad_source`, `bad_definition` |
 | 65   | `DataError`   | Only values are wrong: `parse_error`, `out_of_range`, `bad_choice`, `missing_params` |
 
-Like `--help` and `--describe`, `--validate` works even when the
+Like `--help` and `describe`, `--validate` works even when the
 configuration is invalid — that is its job — and it is registered by
 `Config::addDefaults()` (drop it with `Config::remove` if unwanted, `--json`
 likewise).

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/david-antiteum/drea/master/docs/describe.schema.json",
   "title": "drea-describe/1",
-  "description": "Machine readable description of a drea CLI app, as printed by --describe",
+  "description": "Machine readable description of a drea CLI app, as printed by the describe builtin command",
   "type": "object",
   "required": [ "schema", "app", "version", "description", "usage", "conventions", "options", "commands" ],
   "additionalProperties": false,
@@ -27,6 +27,24 @@
     "options": {
       "type": "array",
       "items": { "$ref": "#/$defs/option" }
+    },
+    "root": {
+      "type": "object",
+      "description": "The positional arguments the app accepts with no command given; absent when the app only takes commands",
+      "required": [ "params-names", "min-params", "max-params" ],
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string" },
+        "params-names": { "type": "string", "description": "Display names of the positional params" },
+        "param-choices": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Closed set of legal values of the positional param (requires exactly one param)"
+        },
+        "examples": { "type": "array", "items": { "type": "string" }, "description": "Worked invocations" },
+        "min-params": { "type": "integer", "minimum": 0 },
+        "max-params": { "oneOf": [ { "type": "integer", "minimum": 0 }, { "const": "unlimited" } ] }
+      }
     },
     "commands": {
       "type": "array",

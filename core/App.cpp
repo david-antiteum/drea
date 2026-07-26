@@ -52,6 +52,52 @@ drea::core::App::~App()
 	}
 }
 
+/*! The `root:` block: the positional arguments the app takes when no command
+	is given. Same keys as a command, minus the ones that only make sense for a
+	named command (command, commands, group, options).
+*/
+void _parseRoot( drea::core::App & app, const YAML::Node & rootNode )
+{
+	if( rootNode.IsMap() ){
+		drea::core::Command	root;
+
+		root.mParamName = "arguments";
+		for( auto node: rootNode ){
+			const std::string key = node.first.as<std::string>();
+			if( node.second.IsScalar() ){
+				if( key == "params-names" ){
+					root.mParamName = node.second.as<std::string>();
+				}else if( key == "params" ){
+					if( node.second.as<std::string>() == "unlimited" ){
+						root.mNbParams = drea::core::Command::mUnlimitedParams;
+					}else{
+						root.mNbParams = node.second.as<int>();
+					}
+				}else if( key == "min-params" ){
+					root.mMinParams = node.second.as<int>();
+				}else if( key == "description" ){
+					root.mDescription = node.second.as<std::string>();
+				}
+			}else if( node.second.IsSequence() ){
+				if( key == "examples" ){
+					for( auto exampleNode: node.second ){
+						if( exampleNode.IsScalar() ){
+							root.mExamples.push_back( exampleNode.as<std::string>() );
+						}
+					}
+				}else if( key == "param-choices" ){
+					for( auto choiceNode: node.second ){
+						if( choiceNode.IsScalar() ){
+							root.mParamChoices.push_back( choiceNode.as<std::string>() );
+						}
+					}
+				}
+			}
+		}
+		app.commander().setRoot( root );
+	}
+}
+
 void _parseCmd( drea::core::App & app, const YAML::Node & cmdsNode, const std::string & parentId )
 {
 	if( cmdsNode.IsMap() ){
@@ -262,6 +308,8 @@ void drea::core::App::parse( const std::string & definitions )
 				for( auto cmdsNode: node.second ){
 					_parseCmd( *this, cmdsNode, "" );
 				}
+			}else if( key == "root" && node.second.IsMap() ){
+				_parseRoot( *this, node.second );
 			}
 		}
 	}
@@ -292,9 +340,19 @@ void drea::core::App::parse( const std::string & definitions )
 			d->mLogger->set_level( spdlog::level::off );
 		}
 		d->mLog.reset( *d->mLogger );
-		// --help, --version, --describe and --validate must work even when
+		// the describe builtin describes the CLI, not the configuration: like
+		// --help it must work when the config is broken. An app that defines a
+		// command of its own named describe does not get the exemption.
+		const bool describeMode = [ this, &args ]{
+			if( args.second.empty() || args.second.at( 0 ) != "describe" ){
+				return false;
+			}
+			auto cmd = commander().find( "describe" );
+			return cmd && cmd->mPredefined;
+		}();
+		// --help, --version, describe and --validate must work even when
 		// the config is invalid: --validate reports the problems itself
-		if( !config().used( "help" ) && !config().used( "version" ) && !config().used( "describe" ) && !config().used( "validate" ) ){
+		if( !config().used( "help" ) && !config().used( "version" ) && !describeMode && !config().used( "validate" ) ){
 			if( const auto errors = config().validate(); !errors.empty() ){
 				for( const auto & error: errors ){
 					logger().critical( "{}", error );

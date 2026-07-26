@@ -6,6 +6,7 @@
 #include "App.h"
 #include "Commander.h"
 #include "Config.h"
+#include "utilities/string.h"
 
 namespace drea::core::integrations::Fish {
 
@@ -72,7 +73,7 @@ inline void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 		out << "complete -c " << name
 		    << " -n \"not __fish_seen_subcommand_from " << topList << "\""
 		    << " -f -a '" << escape( cmd.mName ) << "'"
-		    << " -d '" << escape( cmd.mDescription ) << "'\n";
+		    << " -d '" << escape( utilities::string::firstLine( cmd.mDescription ) ) << "'\n";
 	});
 
 	// Subcommands
@@ -84,7 +85,7 @@ inline void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 		out << "complete -c " << name
 		    << " -n \"" << seenPredicate( parentPath ) << "\""
 		    << " -f -a '" << escape( cmd.mName ) << "'"
-		    << " -d '" << escape( cmd.mDescription ) << "'\n";
+		    << " -d '" << escape( utilities::string::firstLine( cmd.mDescription ) ) << "'\n";
 	});
 
 	// Per-command options

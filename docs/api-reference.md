@@ -79,16 +79,21 @@ The command registry and dispatcher.
 
 ```cpp
 class Commander {
-    Commander & addDefaults();        // registers "completion" and "man"
+    Commander & addDefaults();        // registers "completion", "man", "describe"
 
     jss::object_ptr<Command> add( const Command & cmd );
     std::vector<jss::object_ptr<Command>> add( const std::vector<Command> & );
     void remove( std::string_view cmdName );
 
+    void setRoot( const Command & cmd );            // params taken with no command
+    jss::object_ptr<Command> root() const;
+
     void run( std::function<void( std::string )> f );
 
     std::vector<std::string> arguments() const;     // post-command argv
     bool empty() const;
+    bool hasAppCommands() const;                    // ignoring the builtins
+    bool invalidCommand() const;                    // argv could not be dispatched
 
     void commands( const std::function<void(const Command&)> & f ) const;
     jss::object_ptr<Command> find( std::string_view cmdName ) const;
@@ -111,7 +116,7 @@ you can mutate later (for example to flip `mHidden`).
 ### `remove(cmdName)`
 
 Erase a command (and all its subcommands) from the registry by dotted name.
-Useful to drop a builtin (`man`, `completion`) the app does not want to
+Useful to drop a builtin (`man`, `completion`, `describe`) the app does not want to
 expose, or to retract a command added programmatically. Removing a parent
 cascades to its descendants.
 
@@ -122,16 +127,34 @@ Dispatches based on parsed argv:
 - `--validate` → reports the configuration findings and exits with the mapped code
 - `--version`  → prints version and returns
 - `--help`     → renders help (top-level or per-command) and returns
-- `--describe` → prints the machine-readable app description and returns
 - gated cmd    → emits `Unknown command "X". Did you mean "Y"?` and returns
-- builtin (`completion`, `man`) → runs builtin and returns
-- otherwise    → invokes `f` with the dotted command path
+- invalid cmd  → quits with `ExitCode::UsageError` (see `invalidCommand()`)
+- builtin (`completion`, `man`, `describe`) → runs builtin and returns
+- otherwise    → invokes `f` with the dotted command path (empty for root params)
 
 `--validate` runs before everything else, including the visibility gate, so
 a command gated by disabled groups surfaces as a `disabled_group` finding.
 For the rest, the visibility gate runs first: if the parsed command is not visible
 (`!isVisible`), drea emits the unknown-command error and skips the rest.
 This makes a probe and a typo indistinguishable.
+
+### `setRoot(cmd)` / `root()`
+
+Declares the positional arguments the app accepts with **no** command, the
+*root command*: only the positional fields of `cmd` are used (`mParamName`,
+`mNbParams`, `mMinParams`, `mParamChoices`, `mExamples`) and `mName` must be
+empty. The YAML `root:` block sets the same thing. `root()` returns `nullptr`
+when the app declares none, which is what makes a leading non-command argument
+a usage error. See [Commands → Root
+params](commands.md#root-params-an-app-that-takes-arguments-of-its-own).
+
+### `hasAppCommands()` / `invalidCommand()`
+
+`hasAppCommands()` is true when the app declares commands of its own, ignoring
+the builtins registered by `addDefaults()`; it drives the `usage:` line.
+`invalidCommand()` is true when the arguments could not be dispatched — a
+leading argument that is not a command in an app with no root params. `run()`
+then quits with `ExitCode::UsageError` instead of calling the callback.
 
 ### `find(cmdName)`
 
@@ -335,6 +358,11 @@ struct Command {
 
 All fields are public and mutable. The struct is a plain data container; the
 behaviour lives in `Commander`.
+
+`nameOfParamsForHelp()` renders the positional params for help and man:
+`<name>` up to `minParams()`, `[name]` beyond it, plus a trailing `...` when
+`mNbParams == mUnlimitedParams`. A `Command` with an empty `mName` is the root
+command (`Commander::setRoot`).
 
 ---
 

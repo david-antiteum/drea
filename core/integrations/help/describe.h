@@ -13,6 +13,7 @@
 #include "App.h"
 #include "Commander.h"
 #include "Config.h"
+#include "utilities/string.h"
 
 namespace drea::core::integrations::Help {
 
@@ -103,10 +104,20 @@ inline void describe( const drea::core::App & app, std::ostream & os )
 	os << fmt::format( "  \"app\": {},\n", detail::jsonQuoted( app.name() ) );
 	os << fmt::format( "  \"version\": {},\n", detail::jsonQuoted( app.version() ) );
 	os << fmt::format( "  \"description\": {},\n", detail::jsonQuoted( app.description() ) );
-	if( app.commander().empty() ){
-		os << fmt::format( "  \"usage\": {},\n", detail::jsonQuoted( fmt::format( "{} [OPTIONS]", app.name() ) ) );
-	}else{
-		os << fmt::format( "  \"usage\": {},\n", detail::jsonQuoted( fmt::format( "{} COMMAND [SUBCOMMAND ...] [PARAMS] [OPTIONS]", app.name() ) ) );
+	{
+		// the forms the app accepts: root params, commands, or both
+		std::vector<std::string>	usages;
+
+		if( auto root = app.commander().root() ){
+			usages.push_back( fmt::format( "{} [OPTIONS] {}", app.name(), root->nameOfParamsForHelp() ) );
+		}
+		if( !app.commander().empty() ){
+			usages.push_back( fmt::format( "{} COMMAND [SUBCOMMAND ...] [PARAMS] [OPTIONS]", app.name() ) );
+		}
+		if( usages.empty() ){
+			usages.push_back( fmt::format( "{} [OPTIONS]", app.name() ) );
+		}
+		os << fmt::format( "  \"usage\": {},\n", detail::jsonQuoted( utilities::string::join( usages, " | " ) ) );
 	}
 	os << "  \"conventions\": {\n";
 	os << "    \"option-syntax\": \"pass options as --name value or --name=value; an option with a short version also accepts -x\",\n";
@@ -121,6 +132,7 @@ inline void describe( const drea::core::App & app, std::ostream & os )
 	os << "    \"command-options\": \"a command accepts its local-options and global-options; global-options are also accepted by its subcommands\",\n";
 	os << "    \"command-params\": \"param-choices, when present, is the closed set of legal values of a command's single positional param; absent means the values are unrestricted\",\n";
 	os << "    \"command-groups\": \"a command listing groups is only available when one of those groups is enabled by the app; commands gated by disabled groups are omitted from this description\",\n";
+	os << "    \"root-params\": \"root, when present, describes the positional arguments the app accepts with no command given; a leading -- forces the remaining arguments to be root params\",\n";
 	os << "    \"config-precedence\": \"defaults, then remote config sources, then the config file, then environment variables, then command line flags; later sources win\"\n";
 	os << "  },\n";
 	if( !app.config().envPrefix().empty() ){
@@ -248,6 +260,38 @@ inline void describe( const drea::core::App & app, std::ostream & os )
 		}
 		os << fmt::format( "\n{}}}", pad );
 	};
+
+	// the positional arguments accepted with no command given
+	if( auto root = app.commander().root() ){
+		auto rootList = [ &os ]( const char * key, const std::vector<std::string> & values ){
+			os << fmt::format( "    \"{}\": [", key );
+			bool firstValue = true;
+			for( const auto & value: values ){
+				os << fmt::format( "{}{}", firstValue ? "" : ", ", detail::jsonQuoted( value ) );
+				firstValue = false;
+			}
+			os << "],\n";
+		};
+
+		os << "  \"root\": {\n";
+		if( !root->mDescription.empty() ){
+			os << fmt::format( "    \"description\": {},\n", detail::jsonQuoted( root->mDescription ) );
+		}
+		os << fmt::format( "    \"params-names\": {},\n", detail::jsonQuoted( root->mParamName ) );
+		if( !root->mParamChoices.empty() ){
+			rootList( "param-choices", root->mParamChoices );
+		}
+		if( !root->mExamples.empty() ){
+			rootList( "examples", root->mExamples );
+		}
+		os << fmt::format( "    \"min-params\": {},\n", std::max( root->minParams(), 0 ) );
+		if( root->maxParams() == Command::mUnlimitedParams ){
+			os << "    \"max-params\": \"unlimited\"\n";
+		}else{
+			os << fmt::format( "    \"max-params\": {}\n", root->maxParams() );
+		}
+		os << "  },\n";
+	}
 
 	os << "  \"commands\": [";
 	bool firstCommand = true;

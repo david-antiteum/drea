@@ -12,6 +12,7 @@
 #include "Commander.h"
 #include "App.h"
 #include "Config.h"
+#include "ExitCode.h"
 
 #include "integrations/help/help.h"
 #include "integrations/help/describe.h"
@@ -27,8 +28,10 @@ struct drea::core::Commander::Private
 	std::string								mCommand;
 	std::vector<std::string>				mArguments;
 	std::vector<std::unique_ptr<Command>>	mCommands;
+	std::unique_ptr<Command>				mRoot;
 	std::set<std::string>					mBuiltins;
 	std::vector<std::string>				mEnabledGroups;
+	bool									mInvalidCommand = false;
 	App										& mApp;
 
 	explicit Private( App & app ) : mApp( app )
@@ -155,25 +158,59 @@ drea::core::Commander & drea::core::Commander::addDefaults()
 		return false;
 	};
 
+	const std::string & appName = d->mApp.name();
+
 	if( !hasCommand( "completion" ) ){
 		Command cmd;
 		cmd.mName = "completion";
-		cmd.mDescription = "Print a shell completion script";
+		cmd.mDescription = fmt::format(
+			"Print a shell completion script for {0} to stdout.\n"
+			"Source it in the current shell, or install it where the shell looks\n"
+			"for completions. Defaults to bash when no shell is given.", appName );
 		cmd.mParamName = "shell";
 		cmd.mNbParams = 1;
 		cmd.mMinParams = 0;
 		cmd.mParamChoices = { "bash", "zsh", "fish" };
+		cmd.mExamples = {
+			fmt::format( "eval \"$({0} completion bash)\"", appName ),
+			fmt::format( "{0} completion bash > /etc/bash_completion.d/{0}", appName ),
+			fmt::format( "{0} completion zsh > \"${{fpath[1]}}/_{0}\"", appName ),
+			fmt::format( "{0} completion fish > ~/.config/fish/completions/{0}.fish", appName )
+		};
 		cmd.mPredefined = true;
 		add( cmd );
 		d->mBuiltins.insert( "completion" );
 	}
+	if( !hasCommand( "describe" ) ){
+		Command cmd;
+		cmd.mName = "describe";
+		cmd.mDescription = fmt::format(
+			"Print the description of {0} as JSON to stdout.\n"
+			"Commands, subcommands, options, types, bounds, choices and limits:\n"
+			"everything a tool needs to drive {0} without reading --help.", appName );
+		cmd.mNbParams = 0;
+		cmd.mExamples = {
+			fmt::format( "{0} describe | jq .commands", appName ),
+			fmt::format( "{0} describe > {0}-cli.json", appName )
+		};
+		cmd.mPredefined = true;
+		add( cmd );
+		d->mBuiltins.insert( "describe" );
+	}
 	if( !hasCommand( "man" ) ){
 		Command cmd;
 		cmd.mName = "man";
-		cmd.mDescription = "Print a man page for this application";
+		cmd.mDescription = fmt::format(
+			"Print a man page (roff) for {0} to stdout.\n"
+			"With a command, print the page of that command only. Quote a\n"
+			"subcommand path, as in \"config set\".", appName );
 		cmd.mParamName = "command";
 		cmd.mNbParams = 1;
 		cmd.mMinParams = 0;
+		cmd.mExamples = {
+			fmt::format( "{0} man | man -l -", appName ),
+			fmt::format( "{0} man > {0}.1", appName )
+		};
 		cmd.mPredefined = true;
 		add( cmd );
 		d->mBuiltins.insert( "man" );
@@ -195,6 +232,10 @@ static bool runBuiltin( drea::core::App & app, const std::string & cmd, const st
 			app.logger().error( "Unsupported shell \"{}\". Supported: bash, zsh, fish.", shell );
 			return true;
 		}
+		return true;
+	}
+	if( cmd == "describe" ){
+		drea::core::integrations::Help::describe( app, std::cout );
 		return true;
 	}
 	if( cmd == "man" ){
@@ -225,6 +266,19 @@ std::vector<jss::object_ptr<drea::core::Command>> drea::core::Commander::add( co
 		res.push_back( add( cmd ) );
 	}
 	return res;
+}
+
+void drea::core::Commander::setRoot( const drea::core::Command & cmd )
+{
+	d->mRoot = std::make_unique<Command>( cmd );
+	d->mRoot->mName.clear();
+	d->mRoot->mParentCommand.clear();
+	d->mRoot->mSubcommand.clear();
+}
+
+jss::object_ptr<drea::core::Command> drea::core::Commander::root() const
+{
+	return d->mRoot ? jss::object_ptr<Command>( d->mRoot.get() ) : jss::object_ptr<Command>();
 }
 
 void drea::core::Commander::remove( std::string_view cmdName )
@@ -264,10 +318,32 @@ void drea::core::Commander::configureForAutocompletion( const std::vector<std::s
 	}
 }
 
-void drea::core::Commander::configure( const std::vector<std::string> & args )
+void drea::core::Commander::configure( const std::vector<std::string> & rawArgs )
 {
 	d->createHierarchy();
 	d->detectLocalOptionCollisions();
+	d->mInvalidCommand = false;
+	if( !rawArgs.empty() && rawArgs.at( 0 ) == "--" ){
+		// explicit end of commands: everything left is a root param, even if
+		// it happens to be the name of a command
+		for( size_t i = 1; i < rawArgs.size(); i++ ){
+			d->mArguments.push_back( rawArgs[i] );
+		}
+		if( !d->mRoot ){
+			d->mInvalidCommand = true;
+			d->mApp.logger().error( "The application \"{}\" takes no arguments of its own, only commands.", d->mApp.name() );
+		}
+		return;
+	}
+	// a "--" after the command only marks the end of the options: it is not an
+	// argument of the command
+	std::vector<std::string>	args;
+	args.reserve( rawArgs.size() );
+	for( const auto & arg: rawArgs ){
+		if( arg != "--" ){
+			args.push_back( arg );
+		}
+	}
 	if( !args.empty() ){
 		if( auto cmd = find( args.at( 0 ) ); cmd ){
 			int	pos = 1;
@@ -289,7 +365,11 @@ void drea::core::Commander::configure( const std::vector<std::string> & args )
 			for( size_t i = pos; i < args.size(); i++ ){
 				d->mArguments.push_back( args[i] );
 			}
+		}else if( d->mRoot ){
+			// no command given: the app itself takes these arguments
+			d->mArguments = args;
 		}else{
+			d->mInvalidCommand = true;
 			unknownCommand( args.at( 0 ) );
 		}
 	}
@@ -322,37 +402,43 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 		}else{
 			drea::core::integrations::Help::help( d->mApp, d->mCommand );
 		}
-	}else if( d->mApp.config().used( "describe" ) ){
-		drea::core::integrations::Help::describe( d->mApp, std::cout );
 	}else if( d->mCommand == "autocomplete" ){
 		for( auto var: drea::core::integrations::Bash::calculateAutoCompletion( d->mApp )){
 			fmt::print( "{}\n", var );
 		}
 	}else{
-		if( !d->mCommand.empty() ){
-			if( auto cmd = find( d->mCommand ) ){
-				const int maxP = cmd->maxParams();
-				const int minP = cmd->minParams();
-				const int actual = static_cast<int>( d->mArguments.size() );
-				if( maxP != drea::core::Command::mUnlimitedParams ){
-					if( actual < minP || actual > maxP ){
-						wrongNumberOfArguments( d->mCommand );
-						return;
-					}
-				}else if( actual < minP ){
+		// An argument that is not a command, in an app that declares no root
+		// params, is a usage error: never dispatch it to the app. Checked
+		// after --help and --version so those keep working on a typo.
+		if( d->mInvalidCommand ){
+			d->mApp.logger().flush();
+			exit( toInt( ExitCode::UsageError ) );
+		}
+		// the root command carries the params accepted with no command given
+		if( auto cmd = d->mCommand.empty() ? root() : find( d->mCommand ); cmd ){
+			const int maxP = cmd->maxParams();
+			const int minP = cmd->minParams();
+			const int actual = static_cast<int>( d->mArguments.size() );
+			if( maxP != drea::core::Command::mUnlimitedParams ){
+				if( actual < minP || actual > maxP ){
 					wrongNumberOfArguments( d->mCommand );
 					return;
 				}
-				// param-choices: the positional argument must be one of the
-				// declared values, same rule as choices on options
-				if( !cmd->mParamChoices.empty() ){
-					for( const auto & argument: d->mArguments ){
-						if( std::find( cmd->mParamChoices.begin(), cmd->mParamChoices.end(), argument ) == cmd->mParamChoices.end() ){
-							d->mApp.logger().error( "The command \"{}\" argument \"{}\" is not one of: {}",
-								utilities::string::replace( d->mCommand, ".", " " ), argument,
-								utilities::string::join( cmd->mParamChoices, ", " ) );
-							return;
-						}
+			}else if( actual < minP ){
+				wrongNumberOfArguments( d->mCommand );
+				return;
+			}
+			// param-choices: the positional argument must be one of the
+			// declared values, same rule as choices on options
+			if( !cmd->mParamChoices.empty() ){
+				for( const auto & argument: d->mArguments ){
+					if( std::find( cmd->mParamChoices.begin(), cmd->mParamChoices.end(), argument ) == cmd->mParamChoices.end() ){
+						d->mApp.logger().error( "The {} argument \"{}\" is not one of: {}",
+							d->mCommand.empty()
+								? fmt::format( "application \"{}\"", d->mApp.name() )
+								: fmt::format( "command \"{}\"", utilities::string::replace( d->mCommand, ".", " " ) ),
+							argument, utilities::string::join( cmd->mParamChoices, ", " ) );
+						return;
 					}
 				}
 			}
@@ -400,13 +486,18 @@ void drea::core::Commander::unknownCommand( std::string_view command ) const
 
 void drea::core::Commander::wrongNumberOfArguments( std::string_view command ) const
 {
-	if( auto cmd = find( command ) ){
+	// an empty name means the root command: the params the app takes itself
+	if( auto cmd = command.empty() ? root() : find( command ) ){
+		const std::string subject = command.empty()
+			? fmt::format( "application \"{}\"", d->mApp.name() )
+			: fmt::format( "command \"{}\"", utilities::string::replace( command, ".", " " ) );
+
 		if( cmd->mNbParams == drea::core::Command::mUnlimitedParams ){
-			d->mApp.logger().error( "The command \"{}\" requires at least one argument.", utilities::string::replace( command, ".", " " ) );
+			d->mApp.logger().error( "The {} requires at least {} argument{}.", subject, std::max( 1, cmd->minParams() ), cmd->minParams() > 1 ? "s": "" );
 		}else if( cmd->mNbParams == 0 ){
-			d->mApp.logger().error( "The command \"{}\" has no arguments.", utilities::string::replace( command, ".", " " ) );
+			d->mApp.logger().error( "The {} has no arguments.", subject );
 		}else{
-			d->mApp.logger().error( "The command \"{}\" requires {} argument{}, {} given.", utilities::string::replace( command, ".", " " ), cmd->mNbParams, cmd->mNbParams > 1 ? "s": "", arguments().size() );
+			d->mApp.logger().error( "The {} requires {} argument{}, {} given.", subject, cmd->mNbParams, cmd->mNbParams > 1 ? "s": "", arguments().size() );
 		}
 	}
 }
@@ -439,4 +530,19 @@ const std::string & drea::core::Commander::requestedCommand() const
 bool drea::core::Commander::empty() const
 {
 	return d->mCommands.empty();
+}
+
+bool drea::core::Commander::hasAppCommands() const
+{
+	for( const auto & cmd: d->mCommands ){
+		if( cmd->mParentCommand.empty() && !cmd->mPredefined && d->isVisible( *cmd ) ){
+			return true;
+		}
+	}
+	return false;
+}
+
+bool drea::core::Commander::invalidCommand() const
+{
+	return d->mInvalidCommand;
 }

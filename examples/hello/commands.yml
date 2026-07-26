@@ -3,3 +3,10 @@ version: 0.0.1
 description: |
   An example for the Drea Framework.
   Drea is available at https://github.com/david-antiteum/drea.
+root:
+  params-names: name
+  params: unlimited
+  description: Greets every name given, or the world when no name is given.
+  examples:
+    - hello
+    - hello Ada Alan

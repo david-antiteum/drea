@@ -160,16 +160,34 @@ inline void generateManPage( const drea::core::App & app, std::ostream & out )
 	out << ".SH NAME\n";
 	out << escape( name );
 	if( !app.description().empty() ){
-		out << " \\- " << escapeBody( app.description() );
+		// NAME is a one liner: the full text goes to DESCRIPTION
+		out << " \\- " << escapeBody( utilities::string::firstLine( app.description() ) );
 	}
 	out << "\n";
 
 	out << ".SH SYNOPSIS\n";
-	out << ".B " << escape( name ) << "\n";
-	if( !app.commander().empty() ){
-		out << "[\\fIOPTIONS\\fR] \\fICOMMAND\\fR [\\fIARGS\\fR...]\n";
+	if( auto root = app.commander().root() ){
+		out << ".B " << escape( name ) << "\n";
+		out << "[\\fIOPTIONS\\fR]";
+		for( const auto & param: utilities::string::split( root->mParamName, " " ) ){
+			out << " \\fI" << escape( param ) << "\\fR";
+		}
+		if( root->mNbParams == drea::core::Command::mUnlimitedParams ){
+			out << "...";
+		}
+		out << "\n";
+		if( !app.commander().empty() ){
+			out << ".br\n";
+			out << ".B " << escape( name ) << "\n";
+			out << "[\\fIOPTIONS\\fR] \\fICOMMAND\\fR [\\fIARGS\\fR...]\n";
+		}
 	}else{
-		out << "[\\fIOPTIONS\\fR]\n";
+		out << ".B " << escape( name ) << "\n";
+		if( !app.commander().empty() ){
+			out << "[\\fIOPTIONS\\fR] \\fICOMMAND\\fR [\\fIARGS\\fR...]\n";
+		}else{
+			out << "[\\fIOPTIONS\\fR]\n";
+		}
 	}
 
 	if( !app.description().empty() ){
@@ -290,7 +308,8 @@ inline void generateManPage( const drea::core::App & app, std::string_view comma
 	out << ".SH NAME\n";
 	out << escape( pageName );
 	if( !cmd->mDescription.empty() ){
-		out << " \\- " << escapeBody( cmd->mDescription );
+		// NAME is a one liner: the full text goes to DESCRIPTION
+		out << " \\- " << escapeBody( utilities::string::firstLine( cmd->mDescription ) );
 	}
 	out << "\n";
 

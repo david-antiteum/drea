@@ -418,9 +418,6 @@ drea::core::Config & drea::core::Config::addDefaults()
 			"version", "", "print version information and quit", {}, typeid( bool )
 		},
 		{
-			"describe", "", "print the app description (commands, options and limits) as JSON and quit", {}, typeid( bool )
-		},
-		{
 			"validate", "", "check the configuration resolved from all sources, report every problem and quit", {}, typeid( bool )
 		},
 		{
@@ -467,7 +464,6 @@ drea::core::Config & drea::core::Config::addDefaults()
 	find( "help" )->mNbParams = 0;
 	find( "version" )->mShortVersion = "V";
 	find( "version" )->mNbParams = 0;
-	find( "describe" )->mNbParams = 0;
 	find( "validate" )->mNbParams = 0;
 	find( "json" )->mNbParams = 0;
 	// the set Config::setupLogger accepts; validation rejects anything else
@@ -475,7 +471,7 @@ drea::core::Config & drea::core::Config::addDefaults()
 	find( "log-flush-level" )->mChoices = { "trace", "debug", "info", "warn", "err", "critical", "off" };
 
 	for( const char * name: {
-		"verbose", "help", "version", "describe", "validate", "json",
+		"verbose", "help", "version", "validate", "json",
 		"config-source", "config-file",
 		"log-file", "log-folder", "log-size", "log-nb-files",
 		"log-flush-level", "log-redact", "log-effective-config"

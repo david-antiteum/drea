@@ -13,6 +13,13 @@
 
 namespace drea::core::integrations::Help {
 
+//! First line of a description: the command list is one line per command, the
+//! full text belongs to the help of the command itself
+inline std::string summary( const std::string & description )
+{
+	return utilities::string::firstLine( description );
+}
+
 inline void version( const drea::core::App & app )
 {
 	fmt::print( "{} version {}\n", app.name(), app.version() );
@@ -59,7 +66,7 @@ inline void help( const drea::core::App & app, std::string_view commandName )
 							cmdSize += 8;
 						}
 						fmt::print("{:>{}}", "", 2 + offset - cmdSize );
-						fmt::print( "{}\n", command.mDescription );
+						fmt::print( "{}\n", summary( command.mDescription ) );
 					}
 				});
 			};
@@ -80,22 +87,22 @@ inline void help( const drea::core::App & app, std::string_view commandName )
 			if( auto cmd = app.commander().find( commandName ); cmd && app.commander().isVisible( *cmd ) ){
 				auto commands = utilities::string::split( commandName, "." );
 
-				fmt::print( "\nusage:");
-				fmt::print( " {} {} ", app.name(), utilities::string::join( commands, " " ));
+				std::vector<std::string>	usage{ app.name(), utilities::string::join( commands, " " ) };
+
 				if( !cmd->mSubcommand.empty() ){
-					fmt::print( "COMMAND " );
+					usage.emplace_back( "COMMAND" );
 				}
 				if( cmd->numberOfParams() > 0 || cmd->numberOfParams() == drea::core::Command::mUnlimitedParams ){
-					fmt::print( "{} ", cmd->nameOfParamsForHelp() );
+					usage.push_back( cmd->nameOfParamsForHelp() );
 				}
 				if( !cmd->mLocalParameters.empty() || !cmd->mGlobalParameters.empty() ){
-					fmt::print( "[OPTIONS]" );
+					usage.emplace_back( "[OPTIONS]" );
 				}
-				fmt::print( "\n\n" );
+				fmt::print( "\nusage: {}\n\n", utilities::string::join( usage, " " ) );
 
 				fmt::print( "{}{}\n", cmd->mDescription, cmd->mDeprecated ? " (deprecated)" : "" );
 				if( !cmd->mParamChoices.empty() ){
-					fmt::print( "{}: one of {}\n", cmd->mParamName, utilities::string::join( cmd->mParamChoices, ", " ) );
+					fmt::print( "\n{}: one of {}\n", cmd->mParamName, utilities::string::join( cmd->mParamChoices, ", " ) );
 				}
 
 				if( !cmd->mSubcommand.empty() ){
@@ -124,7 +131,7 @@ inline void help( const drea::core::App & app, std::string_view commandName )
 								cmdSize += 8;
 							}
 							fmt::print("{:>{}}", "", 2 + offset - cmdSize );
-							fmt::print( "{}\n", subCmd->mDescription );
+							fmt::print( "{}\n", summary( subCmd->mDescription ) );
 						}
 					}
 				}
@@ -213,6 +220,36 @@ inline void helpOption( const drea::core::App & app, const Option & option, std:
 	fmt::print( "\n" );
 }
 
+/*! The usage lines of the app: it may take arguments of its own (the root
+	command), commands, or both. Only an app with commands of its own requires a
+	COMMAND: with just the builtins (man, completion) a command is one option
+	among others.
+*/
+inline std::string usageLines( const drea::core::App & app )
+{
+	auto 		root = app.commander().root();
+	const bool	anyCommand = !app.commander().empty();
+	std::string	res;
+
+	if( root ){
+		res = fmt::format( "usage: {} [OPTIONS]", app.name() );
+		if( const std::string params = root->nameOfParamsForHelp(); !params.empty() ){
+			res += " " + params;
+		}
+		res += "\n";
+		if( anyCommand ){
+			res += fmt::format( "       {} COMMAND [OPTIONS]\n", app.name() );
+		}
+	}else if( app.commander().hasAppCommands() ){
+		res = fmt::format( "usage: {} COMMAND [OPTIONS]\n", app.name() );
+	}else if( anyCommand ){
+		res = fmt::format( "usage: {} [COMMAND] [OPTIONS]\n", app.name() );
+	}else{
+		res = fmt::format( "usage: {} [OPTIONS]\n", app.name() );
+	}
+	return res;
+}
+
 inline void help( const drea::core::App & app )
 {
 	std::string::size_type 	offset = 0;
@@ -243,11 +280,26 @@ inline void help( const drea::core::App & app )
 	}
 
 	fmt::print( "\n{}\n", app.description() );
-	fmt::print("usage: {}", app.name() );
-	if( !app.commander().empty() ){
-		fmt::print(" COMMAND", app.name() );
+	fmt::print( "{}", usageLines( app ) );
+	{
+		auto root = app.commander().root();
+
+		if( root ){
+			if( !root->mDescription.empty() ){
+				fmt::print( "\n{}\n", root->mDescription );
+			}
+			if( !root->mParamChoices.empty() ){
+				fmt::print( "\n{}: one of {}\n", root->mParamName, utilities::string::join( root->mParamChoices, ", " ) );
+			}
+			if( !root->mExamples.empty() ){
+				fmt::print( "\nExamples:\n" );
+				for( const std::string & example: root->mExamples ){
+					fmt::print( "  {}\n", example );
+				}
+			}
+		}
+		fmt::print( "\n" );
 	}
-	fmt::print(" [OPTIONS]\n\n", app.name() );
 
 	app.config().options( [ &offset, &anyShort, &anyLineApp, &anyLineCommon, &anyFile, &localOnlyOptions ](const Option & option){
 		if( localOnlyOptions.find( option.mName ) != localOnlyOptions.end() ){

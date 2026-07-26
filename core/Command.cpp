@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "Command.h"
 #include "utilities/string.h"
 
@@ -29,19 +31,24 @@ std::string drea::core::Command::nameOfParamsForHelp() const
 {
 	std::string		res;
 	auto names = utilities::string::split( mParamName, " " );
-	const bool distinguish = mMinParams >= 0;
-	const int minP = minParams();
+	const bool unlimited = mNbParams == mUnlimitedParams;
+	// Names before the minimum are required (<name>), the rest are optional
+	// ([name]). With params: unlimited the count is open ended, so a name is
+	// required only when min-params says so.
+	const int minP = unlimited ? std::max( 0, mMinParams ) : minParams();
+
 	for( size_t i = 0; i < names.size(); ++i ){
 		if( !res.empty() ){
 			res += " ";
 		}
-		if( distinguish && static_cast<int>( i ) >= minP ){
-			res += fmt::format( "[{}]", names[i] );
-		}else if( distinguish ){
+		if( static_cast<int>( i ) < minP ){
 			res += fmt::format( "<{}>", names[i] );
 		}else{
 			res += fmt::format( "[{}]", names[i] );
 		}
+	}
+	if( unlimited && !res.empty() ){
+		res += "...";
 	}
 	return res;
 }

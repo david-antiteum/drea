@@ -38,12 +38,12 @@ Fields:
 | `params-names`   | no       | Names of positional args (for help) |
 | `params`         | no       | Number of positional args: integer or `unlimited` |
 | `min-params`     | no       | Minimum positionals when some are optional. `params` becomes the maximum |
-| `param-choices`  | no       | Closed set of legal values of the positional param (requires `params: 1`). Drives the runtime check, `--help`, `man`, `--describe` and shell completion |
+| `param-choices`  | no       | Closed set of legal values of the positional param (requires `params: 1`). Drives the runtime check, `--help`, `man`, `describe` and shell completion |
 | `local-options`  | no       | Option names that apply only to this command |
 | `global-options` | no       | Option names that apply to this command and its subcommands |
 | `group`          | no       | One or more groups gating visibility (see *Command groups* below) |
-| `examples`       | no       | Worked invocations, shown in per-command `--help` and in `--describe` |
-| `deprecated`     | no       | If true, flagged as deprecated in `--help` and `--describe` |
+| `examples`       | no       | Worked invocations, shown in per-command `--help` and in `describe` |
+| `deprecated`     | no       | If true, flagged as deprecated in `--help` and `describe` |
 | `commands`       | no       | Nested subcommands |
 
 `parent` is set automatically when commands are nested under `commands:`.
@@ -90,6 +90,76 @@ the callback is not called.
   params: 1
   min-params: 0      # zero or one positional arg
 ```
+
+## Root params: an app that takes arguments of its own
+
+Not every app is command based. `./hello Ada` has no command: `Ada` is an
+argument of the app itself. Declare that with the top level `root:` block —
+the *root command* — using the same fields as a command:
+
+```yaml
+app: hello
+root:
+  params-names: name
+  params: unlimited
+  min-params: 0
+  description: Greets every name given, or the world when no name is given.
+  examples:
+    - hello
+    - hello Ada Alan
+```
+
+| Field           | Meaning |
+|-----------------|---------|
+| `params-names`  | Names of the positional args (defaults to `arguments`) |
+| `params`        | Number of positional args: integer or `unlimited` |
+| `min-params`    | Minimum positionals when some are optional |
+| `param-choices` | Closed set of legal values (requires `params: 1`) |
+| `description`   | Printed by `--help` under the usage lines |
+| `examples`      | Worked invocations, shown by `--help` and `describe` |
+
+The arguments arrive through `arguments()`, with an empty command name:
+
+```cpp
+app.commander().run( [&]( const std::string & cmd ){
+    if( cmd.empty() ){                        // no command: root params
+        for( const auto & name: app.commander().arguments() ){
+            app.logger().info( "{}!", name );
+        }
+    }
+});
+```
+
+Root params are counted and checked exactly like the params of a command:
+`params`, `min-params` and `param-choices` all apply before the callback runs.
+
+**A command wins over root params.** `hello man` prints the man page even when
+`man` would also be a legal name. Force the arguments through with `--`:
+
+```bash
+./hello man        # the man builtin
+./hello -- man     # the app, with "man" as a root param
+```
+
+An app that declares **no** root params rejects a leading argument that is not
+a command: drea logs `Unknown command "…"` (with a *did you mean?* suggestion)
+and quits with `ExitCode::UsageError` (64) **without** calling the callback.
+`--help` and `--version` still work in that case. `Commander::invalidCommand()`
+reports the same condition programmatically.
+
+The usage line follows from the two declarations:
+
+| Commands of its own | Root params | `usage:` |
+|---------------------|-------------|----------|
+| no  | no  | `myapp [OPTIONS]` |
+| no  | yes | `myapp [OPTIONS] [name]...` |
+| yes | no  | `myapp COMMAND [OPTIONS]` |
+| yes | yes | both lines, root form first |
+
+The builtins (`man`, `completion`, `describe`) do not count as commands of the
+app: an app
+with only builtins gets `myapp [COMMAND] [OPTIONS]`, a command being one option
+among others rather than a requirement.
 
 ## Hiding commands at runtime
 

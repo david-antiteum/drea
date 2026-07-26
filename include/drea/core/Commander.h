@@ -34,8 +34,24 @@ public:
 	*/
 	std::vector<jss::object_ptr<Command>> add( const std::vector<drea::core::Command> & cmds );
 
+	/*! Declare the positional arguments the app accepts when no command is
+		given (the "root command"). Only the positional fields of \a cmd are
+		used: mParamName, mNbParams, mMinParams, mParamChoices and mExamples.
+		mName must be empty.
+
+		With root params declared, a leading argument that is not a command is
+		an argument of the app itself (\see arguments) and run() calls the
+		callback with an empty command name. Without them, such an argument is
+		a usage error.
+	*/
+	void setRoot( const drea::core::Command & cmd );
+
+	/*! The root command, or nullptr when the app declares no root params.
+	*/
+	[[nodiscard]] jss::object_ptr<Command> root() const;
+
 	/*! Remove a command (and its descendants) from the registry by dotted
-		name. Useful to drop a builtin (`man`, `completion`) that the app does
+		name. Useful to drop a builtin (`man`, `completion`, `describe`) that the app does
 		not want to expose, or to retract a programmatically-added command.
 		Removing a parent removes all its subcommands.
 	*/
@@ -53,6 +69,18 @@ public:
 	/*! Any command?
 	*/
 	[[nodiscard]] bool empty() const;
+
+	/*! Any command of the app itself, that is, ignoring the builtins added by
+		addDefaults (man, completion)? Drives the usage line: an app with only
+		builtins does not require a COMMAND.
+	*/
+	[[nodiscard]] bool hasAppCommands() const;
+
+	/*! True when the arguments could not be dispatched: the first argument is
+		not a command and the app declares no root params. run() refuses to
+		call the callback and quits with ExitCode::UsageError.
+	*/
+	[[nodiscard]] bool invalidCommand() const;
 
 	/*! Access the commands
 	*/
@@ -94,6 +122,9 @@ public:
 	// Methods called by App
 
 	/*! Pass all the arguments that are not options to the commander to set it up.
+
+		A leading "--" forces the remaining arguments to be root params, even
+		when the first of them is the name of a command.
 
 		Don't call this method directly. App::parse will do it.
 	*/

@@ -6,9 +6,22 @@ commands are filtered out of every integration uniformly.
 
 ## `--help`
 
-`./myapp --help` produces a description, a `usage:` line, an *Options*
-section, an optional *Config file options* section, and a *Commands*
+`./myapp --help` produces a description, one or two `usage:` lines, an
+*Options* section, an optional *Config file options* section, and a *Commands*
 section.
+
+The `usage:` lines follow what the app declares: `COMMAND` appears as required
+only when the app has commands of its own (the builtins do not count), and a
+second line documents the arguments the app takes itself when it declares
+[root params](commands.md#root-params-an-app-that-takes-arguments-of-its-own):
+
+```
+usage: hello [OPTIONS] [name]...
+       hello COMMAND [OPTIONS]
+```
+
+Positional args are rendered `<name>` when required and `[name]` when optional
+(`min-params` decides), with a trailing `...` for `params: unlimited`.
 
 Application items are separated from drea's built-ins: options registered by
 `Config::addDefaults()` (`--log-*`, `--config-*`, `-v`, `-h`, `-V`, ...) are
@@ -44,12 +57,32 @@ For `sensitive` options both render as `(hidden)`:
 --tier tier        simulated staff tier. One of: none, readonly, operator. Current value operator
 ```
 
-## `--describe`
+## `describe`
 
-`./myapp --describe` prints the full app description — commands (with
-sub commands), options and their limits — as a single JSON object on
-stdout and quits. It is aimed at AI agents and other tools that want to
-discover the CLI without scraping `--help`.
+Apps expose a built-in `describe` command that prints the full app
+description — commands (with sub commands), options and their limits — as a
+single JSON object on stdout. It is aimed at AI agents and other tools that
+want to discover the CLI without scraping `--help`.
+
+```bash
+./myapp describe
+./myapp describe | jq .commands
+./myapp describe > myapp-cli.json
+```
+
+Like `man` and `completion` it is a command, not a flag: it emits a standalone
+artifact about the app and ignores the rest of the command line. `--help`,
+`--version` and `--validate` stay flags because they answer about *this*
+invocation (`myapp deploy --help` documents `deploy`; `--validate` checks the
+config resolved from the very args being passed).
+
+`describe` works even when the configuration is invalid — it describes the
+interface, not the values. An app that defines a command of its own named
+`describe` keeps it, and does not get the builtin.
+
+`usage` lists every form the app accepts, joined with ` | `. `root` is present
+only when the app takes arguments of its own (see
+[Commands → Root params](commands.md#root-params-an-app-that-takes-arguments-of-its-own)).
 
 ```json
 {
@@ -57,7 +90,7 @@ discover the CLI without scraping `--help`.
   "app": "myapp",
   "version": "1.2.3",
   "description": "...",
-  "usage": "myapp COMMAND [SUBCOMMAND ...] [PARAMS] [OPTIONS]",
+  "usage": "myapp [OPTIONS] [name]... | myapp COMMAND [SUBCOMMAND ...] [PARAMS] [OPTIONS]",
   "conventions": {
     "option-syntax": "pass options as --name value or --name=value; an option with a short version also accepts -x",
     "bool-options": "bool options are flags: --name enables, --no-name disables",
@@ -71,6 +104,7 @@ discover the CLI without scraping `--help`.
     "command-options": "a command accepts its local-options and global-options; global-options are also accepted by its subcommands",
     "command-params": "param-choices, when present, is the closed set of legal values of a command's single positional param; absent means the values are unrestricted",
     "command-groups": "a command listing groups is only available when one of those groups is enabled by the app; commands gated by disabled groups are omitted from this description",
+    "root-params": "root, when present, describes the positional arguments the app accepts with no command given; a leading -- forces the remaining arguments to be root params",
     "config-precedence": "defaults, then remote config sources, then the config file, then environment variables, then command line flags; later sources win"
   },
   "env-prefix": "MYAPP",
@@ -103,6 +137,13 @@ discover the CLI without scraping `--help`.
       "sensitive": false
     }
   ],
+  "root": {
+    "description": "greets every name given",
+    "params-names": "name",
+    "examples": ["myapp Ada Alan"],
+    "min-params": 0,
+    "max-params": "unlimited"
+  },
   "commands": [
     {
       "name": "repeat",
@@ -163,7 +204,7 @@ Notes:
   command's `local-options`/`global-options` refers to an entry in the
   top-level `options` array — `App::parse` enforces this invariant.
 
-`--describe` has a runtime counterpart: `--validate` checks the
+`describe` has a runtime counterpart: `--validate` checks the
 configuration resolved from every source and reports the problems (with
 `--json` for machine output). See
 [Configuration → Checking the configuration](configuration.md#checking-the-configuration---validate).
@@ -220,7 +261,8 @@ The page is derived from the same metadata as `--help`. Hidden and gated
 commands are omitted.
 
 The `man` builtin is registered automatically only when your app does not
-already define a command with the same name.
+already define a command with the same name. `./myapp man --help` documents
+both the argument and what to do with the output.
 
 ### Build-time vs runtime man pages
 
@@ -244,7 +286,10 @@ for `bash`, `zsh`, or `fish`:
 ./myapp completion bash
 ./myapp completion zsh
 ./myapp completion fish
+eval "$(./myapp completion bash)"     # load in the current shell
 ```
+
+`./myapp completion --help` lists the shells and the install one-liners.
 
 Typical install:
 

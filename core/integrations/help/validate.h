@@ -12,7 +12,7 @@
 
 namespace drea::core::integrations::Help {
 
-/*! Runtime counterpart of describe: --describe emits the static command and
+/*! Runtime counterpart of describe: the describe builtin emits the static command and
 	option tree, --validate checks the configuration resolved from every
 	source (defaults, remote sources, config file, environment, flags) and
 	reports the problems plus the effective values, their sources and

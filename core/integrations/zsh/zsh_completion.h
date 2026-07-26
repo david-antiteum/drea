@@ -6,6 +6,7 @@
 #include "App.h"
 #include "Commander.h"
 #include "Config.h"
+#include "utilities/string.h"
 
 namespace drea::core::integrations::Zsh {
 
@@ -114,7 +115,7 @@ inline void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 		if( !app.commander().isVisible( cmd ) || !cmd.mParentCommand.empty() ){
 			return;
 		}
-		out << "        '" << escape( cmd.mName ) << ":" << escape( cmd.mDescription ) << "'\n";
+		out << "        '" << escape( cmd.mName ) << ":" << escape( utilities::string::firstLine( cmd.mDescription ) ) << "'\n";
 	});
 	out << "    )\n";
 

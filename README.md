@@ -22,7 +22,7 @@ from the same declaration, so the help text and the code stay in step.
   masked in help and description output.
 - Logging based on spdlog, with an optional Graylog sink.
 - `--help` rendering with a dynamic footer hook.
-- `--describe`: the full command and option tree (types, bounds, choices,
+- `describe`: a builtin command printing the full command and option tree (types, bounds, choices,
   defaults, scopes, environment mapping) as versioned JSON, so tools and agents
   can read the interface without parsing `--help`.
 - `--validate`: check the configuration resolved from every source and report
@@ -128,7 +128,7 @@ target_link_libraries(main PRIVATE drea)
 
 - [Commands](docs/commands.md) — anatomy, parameters, hierarchy, hiding, groups
 - [Configuration](docs/configuration.md) — options, sources, evaluation order, sensitive values
-- [Help and shell integration](docs/help-and-shell.md) — `--help`, dynamic footer, `man`, completion, `--describe`
+- [Help and shell integration](docs/help-and-shell.md) — `--help`, dynamic footer, `man`, completion, `describe`
 - [API reference](docs/api-reference.md) — `App`, `Commander`, `Config`, `Command`, `Option`
 - [Examples](docs/examples.md) — index of `examples/`
 
@@ -185,4 +185,4 @@ together.
 - [Man pages](https://liw.fi/manpages/)
 - [On formats](https://news.ycombinator.com/item?id=19653834)
 - [AGENTS.md](https://agents.md/) — a convention for guiding AI agents, related
-  to Drea's `--describe`
+  to Drea's `describe`

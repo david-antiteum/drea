@@ -5,7 +5,7 @@ All samples live under [`examples/`](../examples). Build with `BUILD_EXAMPLES=ON
 
 | Example | What it shows |
 |---|---|
-| [`hello`](../examples/hello) | Bare-minimum app skeleton. No commands, just description and version. |
+| [`hello`](../examples/hello) | Bare-minimum app skeleton: no commands, just root params (`hello Ada Alan`), description and version. |
 | [`saythis`](../examples/saythis) | Single command (`this <arg>`) with one local option (`--reverse`). The shortest meaningful drea program. |
 | [`say`](../examples/say) | Nested subcommands, three levels deep (`repeat parrot blue`), inherited global options. |
 | [`calculator`](../examples/calculator) | Multiple commands (`sum`, `power`, `count`), typed options (`int`, `double`), env-prefix (`CAL_*`), `params: unlimited`, short forms. Ships `config-invalid.yml` to demo `--validate` (see the Try lines in its `commands.yml`). |

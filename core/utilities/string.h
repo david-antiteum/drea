@@ -34,6 +34,18 @@ namespace drea::core::utilities::string {
 	return res;
 }
 
+/*! First line of \a str. Descriptions may span several lines: the places that
+	need exactly one line (command lists, completion scripts, the man NAME
+	section) use the first line as the summary.
+*/
+[[nodiscard]] [[maybe_unused]] static std::string firstLine( std::string_view str )
+{
+	if( auto eol = str.find( '\n' ); eol != std::string_view::npos ){
+		return std::string{ str.substr( 0, eol ) };
+	}
+	return std::string{ str };
+}
+
 [[nodiscard]] [[maybe_unused]] static std::string replace( std::string_view str, std::string_view from, std::string_view to )
 {
 	std::string	res{ str };

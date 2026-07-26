@@ -5,6 +5,62 @@ All notable changes to drea are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- **`--describe` is gone**: the app description is printed by the `describe`
+  builtin **command** (`myapp describe`). No alias — `--describe` is now an
+  unknown option. Rationale: `man`, `completion` and `describe` emit a
+  standalone artifact about the app and ignore the rest of the command line, so
+  they are commands; `--help`, `--version` and `--validate` answer about *this*
+  invocation (`myapp deploy --help`, `--validate` on the args actually passed),
+  so they stay flags. `describe` still works when the configuration is invalid,
+  and an app defining its own `describe` command keeps it, as with the other
+  builtins. `Commander::remove("describe")` drops it;
+  `Config::remove("describe")` no longer applies.
+
+### Added
+
+- **Root params**: an app can declare the positional arguments it takes with
+  no command at all, through the top level `root:` block in the YAML
+  (`params-names`, `params`, `min-params`, `param-choices`, `description`,
+  `examples`) or `Commander::setRoot()`. The arguments arrive through
+  `arguments()` with an empty command name, and are counted and checked
+  exactly like the params of a command. `Commander::root()` exposes the
+  declaration; `--help`, `man` and `--describe` (new `root` object, `usage`
+  now lists every accepted form) render it. A command still wins over root
+  params: a leading `--` forces the remaining arguments through
+  (`./hello -- man`).
+- `Commander::hasAppCommands()` — commands of the app itself, ignoring the
+  builtins — and `Commander::invalidCommand()`, true when the arguments could
+  not be dispatched.
+
+### Changed
+
+- An argument that is not a command, in an app that declares no root params,
+  is a usage error: drea reports it (as before) and now quits with
+  `ExitCode::UsageError` (64) **without** calling the `run()` callback. It
+  used to log `Unknown command "…"` and then dispatch an empty command, so a
+  mistyped invocation could still do real work. `--help` and `--version` keep
+  working on a typo.
+- The `usage:` line follows what the app declares instead of always demanding
+  a `COMMAND`: apps with only the builtins get `[COMMAND]`, apps with root
+  params get their own form (both lines when they have commands too). Only
+  commands of the app itself make `COMMAND` required.
+- Positional params in help and man render `<name>` when required and
+  `[name]` when optional, with a trailing `...` for `params: unlimited`.
+  Required params used to be printed as `[name]`, reading as optional.
+- The `man` and `completion` builtins document what to do with their output:
+  the description says where it goes and the examples show loading and
+  installing the completion script and reading or saving the man page.
+- Multi line descriptions stay one line where a single line is required: the
+  command lists in `--help`, the zsh/fish completion scripts and the man
+  `NAME` section use the first line (`utilities::string::firstLine`). The man
+  `NAME` section of an app with a multi line description was malformed.
+- `--` on the command line ends option parsing: it is no longer passed to the
+  command as an argument.
+
 ## [0.37.1] — 2026-07-25
 
 ### Fixed

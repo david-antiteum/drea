@@ -23,7 +23,13 @@ public:
 
 		// TODO expand args (for example -v to --verbose or -zvf <filename> to --compress --verbose --file <filename)
 		for( size_t i = 1; i < mArgs.size(); i++ ){
-			if( std::string arg = mArgs.at(i); arg.find( "--" ) == 0 ){
+			if( std::string arg = mArgs.at(i); arg == "--" ){
+				// end of options: the rest are arguments, verbatim
+				for( ; i < mArgs.size(); i++ ){
+					res.push_back( mArgs.at( i ) );
+				}
+				break;
+			}else if( arg.find( "--" ) == 0 ){
 				res.push_back( arg );
 			}else if( arg.size() >= 2 && arg.at( 0 ) == '-' && ( std::isdigit( static_cast<unsigned char>( arg.at( 1 ) ) ) || arg.at( 1 ) == '.' ) ){
 				// Negative number / numeric positional: pass through unchanged.
@@ -53,7 +59,15 @@ public:
 
 		auto expandedArgs = expand();
 		for( size_t i = 0; i < expandedArgs.size(); ){
-			if( std::string arg = expandedArgs.at( i++ ); arg.find( "--" ) == 0 ){
+			if( std::string arg = expandedArgs.at( i++ ); arg == "--" ){
+				// end of options: keep the marker as the first command-side
+				// argument so Commander knows the rest are not commands
+				cmds.push_back( arg );
+				for( ; i < expandedArgs.size(); i++ ){
+					cmds.push_back( expandedArgs.at( i ) );
+				}
+				break;
+			}else if( arg.find( "--" ) == 0 ){
 				args.push_back( arg );
 				std::string nameOnly = arg.substr( 2 );
 				bool hasInlineValue = false;

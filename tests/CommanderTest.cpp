@@ -8,6 +8,7 @@
 
 #include "integrations/bash/bash_completion.h"
 #include "integrations/fish/fish_completion.h"
+#include "integrations/help/help.h"
 #include "integrations/man/man.h"
 #include "integrations/zsh/zsh_completion.h"
 
@@ -247,11 +248,14 @@ struct BuiltinFixture {
 };
 }
 
-TEST_CASE( "Commander::addDefaults registers completion and man builtins", "[commander][builtins]" )
+TEST_CASE( "Commander::addDefaults registers the completion, man and describe builtins", "[commander][builtins]" )
 {
 	BuiltinFixture fx;
 	REQUIRE( fx.app.commander().find( "completion" ) );
 	REQUIRE( fx.app.commander().find( "man" ) );
+	REQUIRE( fx.app.commander().find( "describe" ) );
+	// describe is a command, not an option
+	REQUIRE_FALSE( fx.app.config().find( "describe" ) );
 }
 
 TEST_CASE( "completion bash produces a bash script", "[commander][builtins]" )
@@ -438,11 +442,10 @@ TEST_CASE( "Commander::addDefaults marks its commands as predefined", "[commande
 	REQUIRE_FALSE( fx.app.commander().find( "hello" )->mPredefined );
 }
 
-TEST_CASE( "--describe prints the app description as JSON", "[commander][describe]" )
+TEST_CASE( "describe prints the app description as JSON", "[commander][describe]" )
 {
 	BuiltinFixture fx;
-	fx.app.config().configure( { "--describe" } );
-	fx.app.commander().configure( {} );
+	fx.app.commander().configure( { "describe" } );
 
 	CoutCapture cap;
 	bool called = false;
@@ -466,7 +469,7 @@ TEST_CASE( "--describe prints the app description as JSON", "[commander][describ
 	REQUIRE( std::count( out.begin(), out.end(), '[' ) == std::count( out.begin(), out.end(), ']' ) );
 }
 
-TEST_CASE( "--describe includes limits, defaults and env var names", "[commander][describe]" )
+TEST_CASE( "describe includes limits, defaults and env var names", "[commander][describe]" )
 {
 	BuiltinFixture fx;
 
@@ -488,8 +491,7 @@ TEST_CASE( "--describe includes limits, defaults and env var names", "[commander
 	fx.app.config().add( secret );
 
 	fx.app.config().setEnvPrefix( "MYAPP" );
-	fx.app.config().configure( { "--describe" } );
-	fx.app.commander().configure( {} );
+	fx.app.commander().configure( { "describe" } );
 
 	CoutCapture cap;
 	fx.app.commander().run( [&]( const std::string & ){} );
@@ -503,7 +505,7 @@ TEST_CASE( "--describe includes limits, defaults and env var names", "[commander
 	REQUIRE( out.find( "s3cr3t" ) == std::string::npos );
 }
 
-TEST_CASE( "--describe omits hidden commands", "[commander][describe]" )
+TEST_CASE( "describe omits hidden commands", "[commander][describe]" )
 {
 	BuiltinFixture fx;
 
@@ -513,8 +515,7 @@ TEST_CASE( "--describe omits hidden commands", "[commander][describe]" )
 	ghost.mHidden = true;
 	fx.app.commander().add( ghost );
 
-	fx.app.config().configure( { "--describe" } );
-	fx.app.commander().configure( {} );
+	fx.app.commander().configure( { "describe" } );
 
 	CoutCapture cap;
 	fx.app.commander().run( [&]( const std::string & ){} );
@@ -522,7 +523,7 @@ TEST_CASE( "--describe omits hidden commands", "[commander][describe]" )
 	REQUIRE( cap.str().find( "\"ghost\"" ) == std::string::npos );
 }
 
-TEST_CASE( "--describe nests subcommands as JSON objects", "[commander][describe]" )
+TEST_CASE( "describe nests subcommands as JSON objects", "[commander][describe]" )
 {
 	BuiltinFixture fx;
 
@@ -537,8 +538,7 @@ TEST_CASE( "--describe nests subcommands as JSON objects", "[commander][describe
 	open.mDescription = "open the box";
 	fx.app.commander().add( open );
 
-	fx.app.config().configure( { "--describe" } );
-	fx.app.commander().configure( {} );
+	fx.app.commander().configure( { "describe" } );
 
 	CoutCapture cap;
 	fx.app.commander().run( [&]( const std::string & ){} );
@@ -559,7 +559,7 @@ TEST_CASE( "--describe nests subcommands as JSON objects", "[commander][describe
 	REQUIRE( out.find( "\"subcommands\":" ) == std::string::npos );
 }
 
-TEST_CASE( "--describe lists choices and machine readable value sets", "[commander][describe]" )
+TEST_CASE( "describe lists choices and machine readable value sets", "[commander][describe]" )
 {
 	BuiltinFixture fx;
 
@@ -570,8 +570,7 @@ TEST_CASE( "--describe lists choices and machine readable value sets", "[command
 	color.mChoices = { "auto", "always", "never" };
 	fx.app.config().add( color );
 
-	fx.app.config().configure( { "--describe" } );
-	fx.app.commander().configure( {} );
+	fx.app.commander().configure( { "describe" } );
 
 	CoutCapture cap;
 	fx.app.commander().run( [&]( const std::string & ){} );
@@ -583,7 +582,7 @@ TEST_CASE( "--describe lists choices and machine readable value sets", "[command
 	REQUIRE( out.find( "\"env-derivation\":" ) != std::string::npos );
 }
 
-TEST_CASE( "--describe lists the groups of a visible gated command", "[commander][describe]" )
+TEST_CASE( "describe lists the groups of a visible gated command", "[commander][describe]" )
 {
 	BuiltinFixture fx;
 
@@ -594,8 +593,7 @@ TEST_CASE( "--describe lists the groups of a visible gated command", "[commander
 	fx.app.commander().add( gated );
 	fx.app.commander().setEnabledGroups( { "beta" } );
 
-	fx.app.config().configure( { "--describe" } );
-	fx.app.commander().configure( {} );
+	fx.app.commander().configure( { "describe" } );
 
 	CoutCapture cap;
 	fx.app.commander().run( [&]( const std::string & ){} );
@@ -605,7 +603,7 @@ TEST_CASE( "--describe lists the groups of a visible gated command", "[commander
 	REQUIRE( out.find( "\"groups\": [\"beta\"]" ) != std::string::npos );
 }
 
-TEST_CASE( "--describe omits env for command-line scoped options and marks deprecated", "[commander][describe]" )
+TEST_CASE( "describe omits env for command-line scoped options and marks deprecated", "[commander][describe]" )
 {
 	BuiltinFixture fx;
 
@@ -619,8 +617,7 @@ TEST_CASE( "--describe omits env for command-line scoped options and marks depre
 	fx.app.config().add( cliOnly );
 
 	fx.app.config().setEnvPrefix( "MYAPP" );
-	fx.app.config().configure( { "--describe" } );
-	fx.app.commander().configure( {} );
+	fx.app.commander().configure( { "describe" } );
 
 	CoutCapture cap;
 	fx.app.commander().run( [&]( const std::string & ){} );
@@ -633,7 +630,7 @@ TEST_CASE( "--describe omits env for command-line scoped options and marks depre
 	REQUIRE( out.find( "\"deprecated\": true", burstPos ) != std::string::npos );
 }
 
-TEST_CASE( "--describe lists command examples", "[commander][describe]" )
+TEST_CASE( "describe lists command examples", "[commander][describe]" )
 {
 	BuiltinFixture fx;
 
@@ -645,8 +642,7 @@ TEST_CASE( "--describe lists command examples", "[commander][describe]" )
 	copy.mExamples = { "myapp copy in.txt out.txt" };
 	fx.app.commander().add( copy );
 
-	fx.app.config().configure( { "--describe" } );
-	fx.app.commander().configure( {} );
+	fx.app.commander().configure( { "describe" } );
 
 	CoutCapture cap;
 	fx.app.commander().run( [&]( const std::string & ){} );
@@ -654,7 +650,7 @@ TEST_CASE( "--describe lists command examples", "[commander][describe]" )
 	REQUIRE( cap.str().find( "\"examples\": [\"myapp copy in.txt out.txt\"]" ) != std::string::npos );
 }
 
-TEST_CASE( "--describe reports the declared default, not the resolved value", "[commander][describe]" )
+TEST_CASE( "describe reports the declared default, not the resolved value", "[commander][describe]" )
 {
 	BuiltinFixture fx;
 
@@ -665,8 +661,8 @@ TEST_CASE( "--describe reports the declared default, not the resolved value", "[
 	threshold.mValues = { 0.5 };
 	fx.app.config().add( threshold );
 
-	fx.app.config().configure( { "--describe", "--threshold", "0.9" } );
-	fx.app.commander().configure( {} );
+	fx.app.config().configure( { "--threshold", "0.9" } );
+	fx.app.commander().configure( { "describe" } );
 
 	CoutCapture cap;
 	fx.app.commander().run( [&]( const std::string & ){} );
@@ -765,8 +761,7 @@ TEST_CASE( "the completion builtin declares its shells as param-choices", "[comm
 	REQUIRE( completion->mParamChoices == std::vector<std::string>{ "bash", "zsh", "fish" } );
 
 	// scripts and describe pick them up
-	fx.app.config().configure( { "--describe" } );
-	fx.app.commander().configure( {} );
+	fx.app.commander().configure( { "describe" } );
 
 	std::ostringstream bash, zsh, fish;
 	drea::core::integrations::Bash::generateAutoCompletion( fx.app, bash );
@@ -779,6 +774,252 @@ TEST_CASE( "the completion builtin declares its shells as param-choices", "[comm
 	CoutCapture cap;
 	fx.app.commander().run( [&]( const std::string & ){} );
 	REQUIRE( cap.str().find( "\"param-choices\": [\"bash\", \"zsh\", \"fish\"]" ) != std::string::npos );
+}
+
+TEST_CASE( "an app with root params takes arguments with no command", "[commander][root]" )
+{
+	AppFixture fx;
+	Command root;
+	root.mParamName = "name";
+	root.mNbParams = Command::mUnlimitedParams;
+	fx.app.commander().setRoot( root );
+
+	fx.app.commander().configure( { "Ada", "Alan" } );
+
+	REQUIRE( fx.app.commander().requestedCommand().empty() );
+	REQUIRE_FALSE( fx.app.commander().invalidCommand() );
+	REQUIRE( fx.app.commander().arguments() == std::vector<std::string>{ "Ada", "Alan" } );
+
+	std::string seen = "unset";
+	fx.app.commander().run( [&]( const std::string & c ){ seen = c; } );
+	REQUIRE( seen.empty() );
+}
+
+TEST_CASE( "a command wins over root params", "[commander][root]" )
+{
+	AppFixture fx;
+	Command root;
+	root.mParamName = "name";
+	root.mNbParams = Command::mUnlimitedParams;
+	fx.app.commander().setRoot( root );
+
+	Command cmd;
+	cmd.mName = "status";
+	cmd.mNbParams = 0;
+	fx.app.commander().add( cmd );
+
+	fx.app.commander().configure( { "status" } );
+
+	REQUIRE( fx.app.commander().requestedCommand() == "status" );
+	REQUIRE( fx.app.commander().arguments().empty() );
+}
+
+TEST_CASE( "a leading -- forces the arguments to be root params", "[commander][root]" )
+{
+	AppFixture fx;
+	Command root;
+	root.mParamName = "name";
+	root.mNbParams = Command::mUnlimitedParams;
+	fx.app.commander().setRoot( root );
+
+	Command cmd;
+	cmd.mName = "status";
+	cmd.mNbParams = 0;
+	fx.app.commander().add( cmd );
+
+	fx.app.commander().configure( { "--", "status" } );
+
+	REQUIRE( fx.app.commander().requestedCommand().empty() );
+	REQUIRE_FALSE( fx.app.commander().invalidCommand() );
+	REQUIRE( fx.app.commander().arguments() == std::vector<std::string>{ "status" } );
+}
+
+TEST_CASE( "root params are counted like the params of a command", "[commander][root]" )
+{
+	AppFixture fx;
+	Command root;
+	root.mParamName = "src dst";
+	root.mNbParams = 2;
+	fx.app.commander().setRoot( root );
+
+	fx.app.commander().configure( { "only-one" } );
+
+	bool called = false;
+	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
+	REQUIRE_FALSE( called );
+}
+
+TEST_CASE( "root param-choices are checked", "[commander][root]" )
+{
+	AppFixture fx;
+	Command root;
+	root.mParamName = "stage";
+	root.mNbParams = 1;
+	root.mParamChoices = { "dev", "prod" };
+	fx.app.commander().setRoot( root );
+
+	fx.app.commander().configure( { "staging" } );
+
+	bool called = false;
+	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
+	REQUIRE_FALSE( called );
+}
+
+TEST_CASE( "without root params an argument that is not a command is invalid", "[commander][root]" )
+{
+	AppFixture fx;
+	Command cmd;
+	cmd.mName = "status";
+	cmd.mNbParams = 0;
+	fx.app.commander().add( cmd );
+
+	fx.app.commander().configure( { "stauts" } );
+
+	// run() quits with ExitCode::UsageError here, so the flag is what a test
+	// can check: the callback is never reached
+	REQUIRE( fx.app.commander().invalidCommand() );
+	REQUIRE( fx.app.commander().requestedCommand().empty() );
+}
+
+TEST_CASE( "-- without root params is invalid", "[commander][root]" )
+{
+	AppFixture fx;
+	Command cmd;
+	cmd.mName = "status";
+	cmd.mNbParams = 0;
+	fx.app.commander().add( cmd );
+
+	fx.app.commander().configure( { "--", "status" } );
+
+	REQUIRE( fx.app.commander().invalidCommand() );
+}
+
+TEST_CASE( "parse reads the root block from yml definitions", "[commander][root]" )
+{
+	AppFixture fx;
+	fx.app.parse( R"(
+app: drea-test
+root:
+  params-names: name
+  params: unlimited
+  min-params: 1
+  description: greets every name
+  examples:
+    - drea-test Ada
+)" );
+
+	auto root = fx.app.commander().root();
+	REQUIRE( root );
+	REQUIRE( root->mName.empty() );
+	REQUIRE( root->mParamName == "name" );
+	REQUIRE( root->mNbParams == Command::mUnlimitedParams );
+	REQUIRE( root->mMinParams == 1 );
+	REQUIRE( root->mDescription == "greets every name" );
+	REQUIRE( root->mExamples == std::vector<std::string>{ "drea-test Ada" } );
+	REQUIRE( root->nameOfParamsForHelp() == "<name>..." );
+}
+
+TEST_CASE( "hasAppCommands ignores the builtins", "[commander][root]" )
+{
+	BuiltinFixture fx;
+	REQUIRE( fx.app.commander().hasAppCommands() );
+
+	AppFixture bare;
+	bare.app.commander().addDefaults();
+	REQUIRE_FALSE( bare.app.commander().empty() );
+	REQUIRE_FALSE( bare.app.commander().hasAppCommands() );
+}
+
+TEST_CASE( "the usage line reflects root params and commands", "[commander][root][help]" )
+{
+	{
+		// root params and commands: both forms are documented
+		BuiltinFixture fx;
+		Command root;
+		root.mParamName = "name";
+		root.mNbParams = Command::mUnlimitedParams;
+		fx.app.commander().setRoot( root );
+
+		REQUIRE( drea::core::integrations::Help::usageLines( fx.app ) ==
+			"usage: myapp [OPTIONS] [name]...\n"
+			"       myapp COMMAND [OPTIONS]\n" );
+	}
+	{
+		// commands of its own: a command is required
+		BuiltinFixture fx;
+		REQUIRE( drea::core::integrations::Help::usageLines( fx.app ) == "usage: myapp COMMAND [OPTIONS]\n" );
+	}
+	{
+		// only the builtins: a command is one option among others
+		AppFixture fx;
+		fx.app.setName( "bare" );
+		fx.app.commander().addDefaults();
+		REQUIRE( drea::core::integrations::Help::usageLines( fx.app ) == "usage: bare [COMMAND] [OPTIONS]\n" );
+	}
+	{
+		// neither commands nor root params
+		AppFixture fx;
+		fx.app.setName( "bare" );
+		REQUIRE( drea::core::integrations::Help::usageLines( fx.app ) == "usage: bare [OPTIONS]\n" );
+	}
+}
+
+TEST_CASE( "describe reports the root params", "[commander][root][describe]" )
+{
+	BuiltinFixture fx;
+	Command root;
+	root.mParamName = "name";
+	root.mNbParams = Command::mUnlimitedParams;
+	root.mMinParams = 1;
+	fx.app.commander().setRoot( root );
+
+	fx.app.commander().configure( { "describe" } );
+
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+	const std::string out = cap.str();
+	REQUIRE( out.find( "\"root\": {" ) != std::string::npos );
+	REQUIRE( out.find( "\"params-names\": \"name\"" ) != std::string::npos );
+	REQUIRE( out.find( "\"min-params\": 1" ) != std::string::npos );
+	REQUIRE( out.find( "\"max-params\": \"unlimited\"" ) != std::string::npos );
+}
+
+TEST_CASE( "the man synopsis reflects root params", "[commander][root][man]" )
+{
+	BuiltinFixture fx;
+	Command root;
+	root.mParamName = "name";
+	root.mNbParams = Command::mUnlimitedParams;
+	fx.app.commander().setRoot( root );
+
+	std::ostringstream out;
+	drea::core::integrations::Man::generateManPage( fx.app, out );
+	REQUIRE( out.str().find( "[\\fIOPTIONS\\fR] \\fIname\\fR..." ) != std::string::npos );
+	REQUIRE( out.str().find( "[\\fIOPTIONS\\fR] \\fICOMMAND\\fR [\\fIARGS\\fR...]" ) != std::string::npos );
+}
+
+TEST_CASE( "the builtins document what to do with their output", "[commander][builtins]" )
+{
+	BuiltinFixture fx;
+
+	auto completion = fx.app.commander().find( "completion" );
+	REQUIRE( completion );
+	REQUIRE( completion->mDescription.find( "myapp" ) != std::string::npos );
+	REQUIRE( completion->mExamples.size() > 1 );
+	REQUIRE( completion->mExamples.front() == "eval \"$(myapp completion bash)\"" );
+
+	auto man = fx.app.commander().find( "man" );
+	REQUIRE( man );
+	REQUIRE_FALSE( man->mExamples.empty() );
+
+	// a multi line description stays a one liner in the command list and in the
+	// generated completion scripts
+	std::ostringstream zsh, fish;
+	drea::core::integrations::Zsh::generateAutoCompletion( fx.app, zsh );
+	drea::core::integrations::Fish::generateAutoCompletion( fx.app, fish );
+	REQUIRE( zsh.str().find( "\n" ) != std::string::npos );
+	REQUIRE( zsh.str().find( "'completion:Print a shell completion script for myapp to stdout.'" ) != std::string::npos );
+	REQUIRE( fish.str().find( "-d 'Print a shell completion script for myapp to stdout.'" ) != std::string::npos );
 }
 
 TEST_CASE( "parse reads param-choices from yml definitions", "[commander][param-choices]" )

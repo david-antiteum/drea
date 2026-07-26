@@ -30,18 +30,30 @@ TEST_CASE( "Command::numberOfParams supports unlimited", "[command]" )
 	REQUIRE( cmd.numberOfParams() == Command::mUnlimitedParams );
 }
 
-TEST_CASE( "Command::nameOfParamsForHelp wraps each name in brackets", "[command]" )
+TEST_CASE( "Command::nameOfParamsForHelp marks the names above the minimum as optional", "[command]" )
 {
 	Command cmd;
 	cmd.mParamName = "src dst";
-	REQUIRE( cmd.nameOfParamsForHelp() == "[src] [dst]" );
+	// mNbParams defaults to 1: only the first name is ever read
+	REQUIRE( cmd.nameOfParamsForHelp() == "<src> [dst]" );
 }
 
 TEST_CASE( "Command::nameOfParamsForHelp handles single name", "[command]" )
 {
 	Command cmd;
 	cmd.mParamName = "file";
-	REQUIRE( cmd.nameOfParamsForHelp() == "[file]" );
+	REQUIRE( cmd.nameOfParamsForHelp() == "<file>" );
+}
+
+TEST_CASE( "Command::nameOfParamsForHelp marks unlimited params with an ellipsis", "[command]" )
+{
+	Command cmd;
+	cmd.mParamName = "value";
+	cmd.mNbParams = Command::mUnlimitedParams;
+	REQUIRE( cmd.nameOfParamsForHelp() == "[value]..." );
+
+	cmd.mMinParams = 1;
+	REQUIRE( cmd.nameOfParamsForHelp() == "<value>..." );
 }
 
 TEST_CASE( "Command::minParams defaults to numberOfParams when mMinParams unset", "[command]" )
@@ -72,12 +84,12 @@ TEST_CASE( "Command::nameOfParamsForHelp renders required vs optional when mMinP
 	REQUIRE( cmd.nameOfParamsForHelp() == "<src> [dst]" );
 }
 
-TEST_CASE( "Command::nameOfParamsForHelp preserves legacy bracket style without mMinParams", "[command]" )
+TEST_CASE( "Command::nameOfParamsForHelp marks every name required without mMinParams", "[command]" )
 {
 	Command cmd;
 	cmd.mParamName = "src dst";
 	cmd.mNbParams = 2;
-	REQUIRE( cmd.nameOfParamsForHelp() == "[src] [dst]" );
+	REQUIRE( cmd.nameOfParamsForHelp() == "<src> <dst>" );
 }
 
 TEST_CASE( "Command::mHidden defaults to false", "[command]" )
