@@ -634,3 +634,91 @@ TEST_CASE( "describe reports negatable only when false", "[config]" )
 	REQUIRE( json.find( "\"negatable\": false" ) != std::string::npos );
 	REQUIRE( json.find( "\"negatable\": true" ) == std::string::npos );
 }
+
+TEST_CASE( "values: defaults are stored with the declared type", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: ports\n"
+		"    description: ports to listen on\n"
+		"    params-names: port\n"
+		"    params: unlimited\n"
+		"    type: int\n"
+		"    values: [80, 443]\n"
+	);
+
+	// used to be kept as strings, so these threw std::bad_variant_access
+	REQUIRE( fx.app.config().get<int>( "ports" ) == 80 );
+	REQUIRE( fx.app.config().getAll<int>( "ports" ) == std::vector<int>{ 80, 443 } );
+	REQUIRE( fx.app.config().find( "ports" )->toString( fx.app.config().find( "ports" )->mValues.front() ) == "80" );
+}
+
+TEST_CASE( "values: declared before the type are still typed", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: ratios\n"
+		"    description: ratios\n"
+		"    params-names: ratio\n"
+		"    params: unlimited\n"
+		"    values: [0.5, 1.5]\n"
+		"    type: double\n"
+	);
+
+	REQUIRE( fx.app.config().getAll<double>( "ratios" ) == std::vector<double>{ 0.5, 1.5 } );
+}
+
+TEST_CASE( "values: without a type stay strings", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: hosts\n"
+		"    description: hosts\n"
+		"    params-names: host\n"
+		"    params: unlimited\n"
+		"    values: [a, b]\n"
+	);
+
+	REQUIRE( fx.app.config().find( "hosts" )->mType == typeid( std::string ) );
+	REQUIRE( fx.app.config().getAll<std::string>( "hosts" ) == std::vector<std::string>{ "a", "b" } );
+}
+
+TEST_CASE( "values: on a bool option are parsed as booleans", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: flags\n"
+		"    description: flags\n"
+		"    params-names: flag\n"
+		"    params: unlimited\n"
+		"    type: bool\n"
+		"    values: [true, false]\n"
+	);
+
+	REQUIRE( fx.app.config().getAll<bool>( "flags" ) == std::vector<bool>{ true, false } );
+}
+
+TEST_CASE( "an option with values: is not inferred to be a bool", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: mode\n"
+		"    description: no params-names, but a declared default\n"
+		"    values: [fast]\n"
+	);
+
+	auto opt = fx.app.config().find( "mode" );
+	REQUIRE( opt );
+	REQUIRE( opt->mType == typeid( std::string ) );
+	REQUIRE( fx.app.config().get<std::string>( "mode" ) == "fast" );
+}

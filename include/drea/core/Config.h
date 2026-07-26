@@ -103,8 +103,14 @@ public:
 	*/
 	[[nodiscard]] jss::object_ptr<Option> find( std::string_view optionName ) const;
 
-	/*! Returns true if the option has been set, either via flags, config files, sets... or because
-		it has a default value.
+	/*! Whether some source supplied the option: a command line flag, a config
+		file, a remote source, the environment or a Config::set call. A declared
+		default does not count, which is what makes this the way to tell
+		`--equal 0` from no `--equal` at all.
+
+		This is a presence question. For a bool option ask for the value
+		instead, with get<bool>(): a config file or environment variable may
+		carry "false", which counts as supplied but means off.
 	*/
 	[[nodiscard]] bool used( const std::string & optionName ) const;
 

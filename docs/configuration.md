@@ -102,8 +102,10 @@ const int workers      = app.config().get<int>( "workers" );
 const auto hosts = app.config().getAll<std::string>( "host" );
 ```
 
-`used()` returns true when the option was given on the command line, set in
-a config file, present in the environment, or has a default value.
+`used()` returns true when some source supplied the option: a command-line
+flag, a config file, a remote source, the environment, or a `Config::set` call.
+A declared default does **not** count — that is what makes `used()` the way to
+tell `--equal 0` from no `--equal` at all.
 
 `intensity()` returns how many times an option appeared (useful for `-vvv`
 verbosity).

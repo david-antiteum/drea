@@ -20,6 +20,17 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `values:` defaults were always stored as strings, ignoring the declared
+  `type:`, so an `int` option with `values: [80, 443]` threw
+  `std::bad_variant_access` through `Config::get<int>()` or
+  `Option::toString()`. Each entry now goes through `Option::fromString`, the
+  same conversion every other source uses, and a default that does not fit the
+  type is a fatal declaration error. Conversion happens once the whole option
+  is parsed, so `values:` may appear before `type:`. Without a `type:` the
+  values stay strings, which is what the default `string` type means.
+  `--describe` reports typed defaults accordingly (`[80, 443]`, not
+  `["80", "443"]`).
+
 - A config file could trigger an action or set any command-line-only option:
   the YAML, JSON and TOML readers never checked `scope`, so `help: true` in a
   config file printed the help on every run. All three now go through

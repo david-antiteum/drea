@@ -169,8 +169,9 @@ void _parseCmd( drea::core::App & app, const YAML::Node & cmdsNode, const std::s
 void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 {
 	if( optionsNode.IsMap()  ){
-		drea::core::Option	option;
-		bool				hasType = false;
+		drea::core::Option			option;
+		bool						hasType = false;
+		std::vector<std::string>	rawValues;	//!< values: entries, converted once the declared type is known
 
 		for( auto optionNode: optionsNode ){
 			const std::string key = optionNode.first.as<std::string>();
@@ -255,9 +256,11 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 				}
 			}else if( optionNode.second.IsSequence() ){
 				if( key == "values" ){
+					// kept as text for now: the type may be declared after the
+					// values, and it decides how each default is stored
 					for( auto valueNode: optionNode.second ){
 						if( valueNode.IsScalar() ){
-							option.mValues.push_back( valueNode.as<std::string>() );
+							rawValues.push_back( valueNode.as<std::string>() );
 						}
 					}
 				}else if( key == "choices" ){
@@ -278,8 +281,21 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 		// value of its own. choices are exempt too: bool has a closed domain
 		// already, and inferring would turn the declaration into a finding.
 		if( !hasType && option.mParamName.empty() && option.mChoices.empty()
+			&& option.mValues.empty() && rawValues.empty()
 			&& option.mScope != drea::core::Option::Scope::None ){
 			option.mType = typeid( bool );
+		}
+		// The declared type decides how a default is stored: a string kept in
+		// an int option would throw later, through Config::get<int> or
+		// Option::toString. Same conversion as every other source.
+		for( const std::string & rawValue: rawValues ){
+			if( auto value = option.fromString( rawValue ); value.index() > 0 ){
+				option.mValues.push_back( value );
+			}else{
+				app.logger().critical( "Default value \"{}\" declared for option {} is not a valid {}",
+					rawValue, option.mName, option.typeName() );
+				exit( drea::core::toInt( drea::core::ExitCode::ConfigError ) );
+			}
 		}
 		app.config().add( option );
 	}
