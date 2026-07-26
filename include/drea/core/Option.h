@@ -31,8 +31,8 @@ struct DREA_CORE_API Option
 	std::string					mShortVersion = "";
 	bool						mSensitive = false;
 	bool						mRequired = false;
-	std::optional<double>		mMin;
-	std::optional<double>		mMax;
+	std::optional<double>		mMin = std::nullopt;
+	std::optional<double>		mMax = std::nullopt;
 	std::vector<std::string>	mChoices = {};	//!< closed set of legal values (compared against Option::toString); empty = unrestricted
 	bool						mDeprecated = false;	//!< kept working but discouraged; flagged in help and describe
 	bool						mPredefined = false;	//!< added by Config::addDefaults; shown under "Common options" in help
