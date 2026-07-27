@@ -160,6 +160,9 @@ struct drea::core::Config::Private
 	std::map<std::string, std::vector<OptionValue>>	mDeclaredDefaults;
 	// problems collected while sources are applied; Config::findings adds the declarative checks
 	std::vector<Config::Finding>			mFindings;
+	// problems found while expanding the arguments, which happens before
+	// Config::configure and so must survive the reset it does
+	std::vector<Config::Finding>			mArgFindings;
 	// the config file being read, for unknown-key messages
 	std::string								mActiveConfigFile;
 	App										& mApp;
@@ -310,7 +313,10 @@ struct drea::core::Config::Private
 
 		for( size_t i = 0; i < args.size(); i++ ){
 			if( args.at( i ) == flag ){
-				if( i + 1 < args.size() ){
+				// the next token is the value unless it is another option, the
+				// same rule the general flag parsing follows: "--config-file
+				// --validate" is a missing value, not a file called --validate
+				if( i + 1 < args.size() && args.at( i + 1 ).rfind( "-", 0 ) != 0 ){
 					res.push_back( args.at( ++i ) );
 				}
 			}else if( args.at( i ).rfind( inlineFlag, 0 ) == 0 ){
@@ -585,7 +591,7 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 	// order options alphabetically
 	std::sort( d->mOptions.begin(), d->mOptions.end(), []( const auto & a, const auto & b ){ return a->mName < b->mName; });
 
-	d->mFindings.clear();
+	d->mFindings = d->mArgFindings;
 	d->mDeclaredDefaults.clear();
 	// Add values with defaults, and snapshot them before sources overwrite
 	// them: the resolved-config model keeps value, source and declared default
@@ -689,11 +695,22 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 			}
 
 			if( auto option = d->find( arg ) ){
+				// A flag that takes no value carries none: "--help=false" used to
+				// warn and then set help anyway, which is the opposite of what
+				// was asked. Reported and dropped whole.
+				const bool	valueOnFlag = hasInlineValue && !option->takesValues();
+
+				if( valueOnFlag ){
+					const std::string message = fmt::format( "Option --{} takes no value; \"={}\" ignored", option->mName, inlineValue );
+
+					d->mFindings.push_back( { option->mName, d->mCurrentSource, "unexpected_value", message } );
+					spdlog::warn( "{}", message );
+				}
 				// A scope the command line does not own refuses the flag before
 				// anything is written, so "the flag is ignored" is the truth
 				// rather than a report about a value already applied. Its values
 				// are still consumed, or they would be read as arguments.
-				const bool	accepted = acceptsCurrentSource( option->mName );
+				const bool	accepted = !valueOnFlag && acceptsCurrentSource( option->mName );
 
 				if( accepted ){
 					registerUse( arg );
@@ -705,9 +722,7 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 					}
 				}
 				if( hasInlineValue ){
-					if( !option->takesValues() ){
-						spdlog::warn( "Flag {} does not take a value; ignoring '={}'", arg, inlineValue );
-					}else if( accepted ){
+					if( accepted ){
 						append( option->mName, inlineValue );
 					}
 				}else{
@@ -1103,6 +1118,16 @@ bool drea::core::Config::acceptsCurrentSource( const std::string & optionName )
 	spdlog::warn( "{}", message );
 
 	return false;
+}
+
+void drea::core::Config::reportUnknownShortOption( const std::string & letter ) const
+{
+	const std::string	message = fmt::format( "Unknown short option -{}", letter );
+
+	// the argument expansion runs before configure(), which resets the findings
+	d->mArgFindings.push_back( { letter, "flag", "unknown_key", message } );
+	d->mFindings.push_back( { letter, "flag", "unknown_key", message } );
+	spdlog::warn( "{}", message );
 }
 
 void drea::core::Config::reportUnknownArgument( const std::string & optionName ) const

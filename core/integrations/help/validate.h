@@ -40,7 +40,7 @@ inline ExitCode validateExitCode( const std::vector<Config::Finding> & findings 
 		}
 		structural = structural || finding.mCode == "unknown_key" || finding.mCode == "missing_required"
 			|| finding.mCode == "wrong_scope" || finding.mCode == "not_negatable"
-			|| finding.mCode == "unknown_command"
+			|| finding.mCode == "unexpected_value" || finding.mCode == "unknown_command"
 			|| finding.mCode == "disabled_group" || finding.mCode == "unknown_option_ref"
 			|| finding.mCode == "bad_source" || finding.mCode == "bad_definition";
 	}

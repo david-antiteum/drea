@@ -4,6 +4,7 @@
 #include <drea/core/Config.h>
 #include <drea/core/Option.h>
 
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -253,3 +254,39 @@ TEST_CASE( "the default config file is still read when no flag is given", "[conf
 
 	REQUIRE( fx.app.config().get<int>( "port" ) == 7070 );
 }
+
+#ifdef ENABLE_JSON
+
+TEST_CASE( "JSON numbers keep the precision a double holds", "[config-file][json]" )
+{
+	AppFixture fx;
+	Option ratio;
+	ratio.mName = "ratio";
+	ratio.mParamName = "x";
+	ratio.mType = typeid( double );
+	fx.app.config().add( ratio );
+	Option big;
+	big.mName = "big";
+	big.mParamName = "x";
+	big.mType = typeid( double );
+	fx.app.config().add( big );
+	Option count;
+	count.mName = "count";
+	count.mParamName = "n";
+	count.mType = typeid( int );
+	fx.app.config().add( count );
+
+	fx.app.config().setDefaultConfigFile( writeFile( "drea-precision.json",
+		"{ \"ratio\": 0.12345678901234567, \"big\": 1e40, \"count\": 2147483647 }\n" ) );
+
+	fx.app.config().configure( {} );
+
+	// read as float, 0.12345678901234567 became 0.12345679 and 1e40 became inf
+	REQUIRE( fx.app.config().get<double>( "ratio" ) == 0.12345678901234566 );
+	REQUIRE( fx.app.config().get<double>( "big" ) > 1e39 );
+	REQUIRE( std::isfinite( fx.app.config().get<double>( "big" ) ) );
+	REQUIRE( fx.app.config().get<int>( "count" ) == 2147483647 );
+	REQUIRE( fx.app.config().findings().empty() );
+}
+
+#endif

@@ -45,7 +45,9 @@ private:
 		std::string		res;
 
 		if( value.is_number_float() ){
-			res = fmt::format( "{}", value.get<float>() );
+			// double, not float: options carry doubles, and a float loses
+			// digits (0.12345678901234567) or overflows to inf (1e40)
+			res = fmt::format( "{}", value.get<double>() );
 		}else if( value.is_string() ){
 			res = value.get<std::string>();
 		}else if( value.is_boolean() ){
@@ -55,7 +57,7 @@ private:
 				res = "false";
 			}
 		}else if( value.is_number() ){
-			res = fmt::format( "{}", value.get<int>() );
+			res = fmt::format( "{}", value.get<int64_t>() );
 		}
 		return res;
 	}

@@ -333,20 +333,20 @@ void drea::core::App::parse( const std::string & definitions )
 	if( useCommanderDefaults ){
 		commander().addDefaults();
 	}
+	// In validate mode the report is the only output, so nothing may log before
+	// it: the argument parsing itself warns (an unknown short option, for one)
+	// and the console sinks write to stdout, where --validate --json must emit
+	// clean JSON. Detected on the raw arguments for that reason, ahead of every
+	// other step.
+	const bool	validateMode = config().find( "validate" )
+		&& std::find( d->mArgs.begin(), d->mArgs.end(), "--validate" ) != d->mArgs.end();
+
+	if( validateMode ){
+		spdlog::default_logger()->set_level( spdlog::level::off );
+	}
 	if( auto args = utilities::Parser( *this, d->mArgs ).parse(); !args.second.empty() && args.second.at(0) == "autocomplete" ){
 		commander().configureForAutocompletion( d->mArgs );
 	}else{
-		// In validate mode the report is the only output: parse-time log
-		// noise (which the findings duplicate) would pollute it — the
-		// console sinks write to stdout, where --validate --json must emit
-		// clean JSON. Checked on the raw args because it must act before
-		// Config::configure emits anything.
-		const bool validateMode = config().find( "validate" )
-			&& std::find( args.first.begin(), args.first.end(), "--validate" ) != args.first.end();
-
-		if( validateMode ){
-			spdlog::default_logger()->set_level( spdlog::level::off );
-		}
 		configureInRunTime();
 		config().configure( args.first );
 		d->mLogger = config().setupLogger();

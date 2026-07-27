@@ -85,6 +85,34 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- An unknown short option was logged and dropped, so `myapp -z --validate`
+  called the command line valid and exited 0 where the long form `--zz` reports
+  `unknown_key` and exits 78 — and a real command would run with the typo
+  ignored. It is reported now, through `Config::reportUnknownShortOption`. The
+  argument expansion runs before `Config::configure`, which resets the findings,
+  so those pre-parse findings are kept across the reset.
+
+- `myapp -z --validate --json` printed the warning to stdout ahead of the JSON,
+  so the document did not parse. Validate mode is detected on the raw arguments
+  before the argument parsing runs, not after, so nothing can log before the
+  report.
+
+- `--config-file` and `--config-source` swallowed the following token even when
+  it was another option: `--config-file --validate` tried to read a file named
+  `--validate`. The pre-scan follows the same rule as the general flag parsing
+  and reports a missing value instead.
+
+- A value on a flag that takes none was documented as rejected but applied
+  anyway: `--help=false` still showed the help, and `--verbose=false` set
+  verbose. The flag is dropped whole now and reported as `unexpected_value`
+  (structural under `--validate`, non-fatal at parse time, like an unknown
+  argument).
+
+- JSON config files read floating point values as `float`, so
+  `0.12345678901234567` arrived as `0.12345679` and `1e40` as `inf` before any
+  validation could see it. They are read as `double`, and integers as `int64_t`,
+  matching the TOML reader and the type options actually carry.
+
 - A mistyped command line was reported as a valid configuration: `--validate`
   runs before the dispatch checks, so `myapp typo --validate` exited 0 while
   `myapp typo` exits 64, and validate mode silences the log that would have said

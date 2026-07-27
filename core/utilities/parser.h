@@ -42,7 +42,9 @@ public:
 					if( auto option = mApp.config().find( mini )){
 						res.push_back( fmt::format( "--{}", option->mName ) );
 					}else{
-						mApp.logger().warn( "Unknown short option -{}", arg.at( j ) );
+						// reported, not only logged: dropping it silently let
+						// --validate call a mistyped command line valid
+						mApp.config().reportUnknownShortOption( mini );
 					}
 				}
 			}else{

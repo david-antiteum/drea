@@ -466,6 +466,7 @@ single source applies), a human message, and one of these stable codes:
 | `missing_params`     | A value-taking option was used without satisfying its `params` count |
 | `wrong_scope`        | An option was set through a source its `scope` disallows (e.g. a `line` option in a config file) |
 | `not_negatable`      | `--no-<name>` was passed for an action, which has no off state (`--no-help`) |
+| `unexpected_value`   | A value was given to a flag that takes none (`--help=false`); the flag is ignored |
 | `unknown_command`    | The command line named something that is not a command (`Commander::run` quits with 64 for it on its own) |
 | `unknown_option_ref` | A command's `local-options`/`global-options` references an option that does not exist |
 | `disabled_group`     | The requested command is gated by groups that are not enabled |
@@ -486,7 +487,7 @@ Exit codes map the main failure categories:
 |------|---------------|------|
 | 0    | `Ok`          | The configuration is valid |
 | 66   | `NoInput`     | A config file or remote source cannot be read (`file_error`) — beats every other category |
-| 78   | `ConfigError` | Structural problems: `unknown_key`, `missing_required`, `wrong_scope`, `not_negatable`, `unknown_command`, `unknown_option_ref`, `disabled_group`, `bad_source`, `bad_definition` |
+| 78   | `ConfigError` | Structural problems: `unknown_key`, `missing_required`, `wrong_scope`, `not_negatable`, `unexpected_value`, `unknown_command`, `unknown_option_ref`, `disabled_group`, `bad_source`, `bad_definition` |
 | 65   | `DataError`   | Only values are wrong: `parse_error`, `out_of_range`, `bad_choice`, `missing_params` |
 
 Like `--help` and `describe`, `--validate` works even when the

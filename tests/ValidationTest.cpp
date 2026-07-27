@@ -7,6 +7,7 @@
 #include <drea/core/ExitCode.h>
 #include <drea/core/Option.h>
 
+#include "utilities/parser.h"
 #include "integrations/help/describe.h"
 #include "integrations/help/validate.h"
 
@@ -1201,4 +1202,56 @@ TEST_CASE( "the root params get the declarative param-choices check", "[findings
 	root.mNbParams = 1;
 	fx.app.commander().setRoot( root );
 	REQUIRE_FALSE( hasFinding( fx.app.config().findings(), "bad_definition", "root" ) );
+}
+
+TEST_CASE( "an unknown short option is reported, not only logged", "[findings]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	// the expansion of the short forms runs before configure() and used to drop
+	// the unknown letter silently, so --validate called the line valid
+	drea::core::utilities::Parser( fx.app, { "myapp", "-z" } ).parse();
+	fx.app.config().configure( {} );
+
+	const auto		findings = fx.app.config().findings();
+	const auto *	finding = getFinding( findings, "unknown_key", "z" );
+	REQUIRE( finding );
+	REQUIRE( finding->mMessage.find( "short option -z" ) != std::string::npos );
+	REQUIRE( drea::core::integrations::Help::validateExitCode( findings ) == drea::core::ExitCode::ConfigError );
+}
+
+TEST_CASE( "a flag needing a value does not swallow the next option", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "config-file";
+	opt.mParamName = "file";
+	opt.mType = typeid( std::string );
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--config-file", "--verbose" } );
+
+	// "--config-file --verbose" is a missing value, not a file called --verbose
+	REQUIRE_FALSE( hasFinding( fx.app.config().findings(), "file_error", "config-file" ) );
+	REQUIRE( fx.app.config().get<std::string>( "config-file" ).empty() );
+}
+
+TEST_CASE( "a value on a flag that takes none is refused", "[findings]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	fx.app.config().configure( { "--verbose=false" } );
+
+	const auto		findings = fx.app.config().findings();
+	const auto *	finding = getFinding( findings, "unexpected_value", "verbose" );
+	REQUIRE( finding );
+	// dropped whole: it used to warn and then set the flag to true anyway
+	REQUIRE_FALSE( fx.app.config().used( "verbose" ) );
+	REQUIRE( fx.app.config().get<bool>( "verbose" ) == false );
+	// structural for --validate, but not fatal at parse time: a malformed flag
+	// is reported and ignored, like an unknown argument
+	REQUIRE( drea::core::integrations::Help::validateExitCode( findings ) == drea::core::ExitCode::ConfigError );
+	REQUIRE( fx.app.config().validate().empty() );
 }

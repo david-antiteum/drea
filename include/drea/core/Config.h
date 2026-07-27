@@ -45,7 +45,7 @@ public:
 	{
 		std::string		mName;		//!< option name, config key or dotted command name
 		std::string		mSource;	//!< source of the offending value: "default", "config-source", "config-file", "environment" or "flag"; empty when no single source applies
-		std::string		mCode;		//!< stable machine code: "parse_error", "file_error", "unknown_key", "missing_required", "bad_choice", "out_of_range", "missing_params", "wrong_scope", "not_negatable", "unknown_command", "unknown_option_ref", "disabled_group", "bad_source" or "bad_definition"
+		std::string		mCode;		//!< stable machine code: "parse_error", "file_error", "unknown_key", "missing_required", "bad_choice", "out_of_range", "missing_params", "wrong_scope", "not_negatable", "unexpected_value", "unknown_command", "unknown_option_ref", "disabled_group", "bad_source" or "bad_definition"
 		std::string		mMessage;	//!< human readable message. Values of sensitive options are masked as [redacted]
 	};
 
@@ -217,6 +217,12 @@ public:
 	void logEffective( drea::log::Logger & logger ) const;
 
 	void reportUnknownArgument( const std::string & optionName ) const;
+
+	/*! Report a short option that matches no declared option, as
+		reportUnknownArgument does for the long form: an "unknown_key" finding,
+		so --validate does not call a mistyped command line valid.
+	*/
+	void reportUnknownShortOption( const std::string & letter ) const;
 
 	/*! Whether the option may take a value from the source being read right
 		now — a config file, a remote source or the environment. Options scoped
