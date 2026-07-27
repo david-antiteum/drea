@@ -118,6 +118,14 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `validate` are `Scope::Line` accordingly. The finding is a warning during a
   normal run and exit 78 under `--validate`, as before.
 
+- `--no-verbose` turned debug logging **on** and `--validate --no-json` printed
+  JSON. Both are legitimately negatable, unlike an action, but drea read them by
+  presence: `verbose` through `intensity()` (which the negation increments) and
+  `json` through `used()`. The logger now switches on the value and uses the
+  count only to pick debug or trace (`-vv`), and the validate report picks its
+  format from the value. `verbose: false` in a config file is no longer
+  "verbose" either.
+
 - `--no-help` printed the help, `--no-version` printed the version and
   `--no-validate` ran the validation (reporting `validate=false (from flag)`
   while doing it). Negation was offered for every `bool` option, and these are

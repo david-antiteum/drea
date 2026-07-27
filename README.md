@@ -68,7 +68,7 @@ int main( int argc, char * argv[] )
     app.commander().run( [ &app ]( const std::string & cmd ){
         if( cmd == "this" ){
             std::string say = app.commander().arguments().front();
-            if( app.config().used( "reverse" ) ){
+            if( app.config().get<bool>( "reverse" ) ){
                 std::reverse( say.begin(), say.end() );
             }
             app.logger().info( "{}", say );

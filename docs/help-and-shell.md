@@ -26,7 +26,7 @@ Positional args are rendered `<name>` when required and `[name]` when optional
 Application items are separated from drea's built-ins: options registered by
 `Config::addDefaults()` (`--log-*`, `--config-*`, `-v`, `-h`, `-V`, ...) are
 listed under *Common options* after the app's own *Options*, and the
-commands added by `Commander::addDefaults()` (`completion`, `man`) under
+commands added by `Commander::addDefaults()` (`completion`, `man`, `describe`) under
 *Common commands* after the app's *Commands*. A section that would be empty
 is omitted. The split is driven by the `mPredefined` flag on `Option` and
 `Command`, which both `addDefaults()` set — an app can flip it to move an

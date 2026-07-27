@@ -807,10 +807,12 @@ std::shared_ptr<spdlog::logger> drea::core::Config::setupLogger() const
 	}
 #endif
 	res = std::make_shared<spdlog::logger>( d->mApp.name(), sinks.begin(), sinks.end() );
-	if( intensity( "verbose" ) == 1 ){
-		res->set_level( spdlog::level::debug );
-	}else if( intensity( "verbose" ) > 1 ){
-		res->set_level( spdlog::level::trace );
+	// intensity counts the occurrences (-vv is trace), but the value decides
+	// whether it is on at all: --no-verbose and "verbose: false" in a config
+	// file both register a use, and reading the count alone turned them into
+	// "verbose"
+	if( get<bool>( "verbose" ) ){
+		res->set_level( intensity( "verbose" ) > 1 ? spdlog::level::trace : spdlog::level::debug );
 	}
 
 	auto flushLevel = spdlog::level::warn;

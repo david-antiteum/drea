@@ -401,7 +401,8 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 	// a finding, and before --help and --version so the exit code always
 	// reflects the check.
 	if( d->mApp.config().used( "validate" ) ){
-		const int code = integrations::Help::validateConfig( d->mApp, d->mApp.config().used( "json" ) );
+		// the value, not the presence: --no-json asks for human output
+		const int code = integrations::Help::validateConfig( d->mApp, d->mApp.config().get<bool>( "json" ) );
 
 		d->mExit( code );
 		return;

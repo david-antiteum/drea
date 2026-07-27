@@ -4,6 +4,8 @@
 #include <drea/core/Config.h>
 #include <drea/core/Option.h>
 
+#include <spdlog/spdlog.h>
+
 #include "integrations/help/describe.h"
 
 #include <filesystem>
@@ -820,4 +822,57 @@ TEST_CASE( "Option::takesValues covers the unlimited sentinel", "[config]" )
 	flag.mType = typeid( bool );
 	REQUIRE_FALSE( flag.unlimitedParams() );
 	REQUIRE_FALSE( flag.takesValues() );
+}
+
+TEST_CASE( "verbose honours its value, not only its occurrences", "[config]" )
+{
+	SECTION( "no flag keeps the default level" ){
+		AppFixture fx;
+		fx.app.config().addDefaults();
+		fx.app.config().configure( {} );
+		REQUIRE( fx.app.config().setupLogger()->level() != spdlog::level::debug );
+	}
+	SECTION( "-v is debug" ){
+		AppFixture fx;
+		fx.app.config().addDefaults();
+		fx.app.config().configure( { "--verbose" } );
+		REQUIRE( fx.app.config().setupLogger()->level() == spdlog::level::debug );
+	}
+	SECTION( "-vv is trace" ){
+		AppFixture fx;
+		fx.app.config().addDefaults();
+		fx.app.config().configure( { "--verbose", "--verbose" } );
+		REQUIRE( fx.app.config().setupLogger()->level() == spdlog::level::trace );
+	}
+	SECTION( "--no-verbose is not verbose" ){
+		AppFixture fx;
+		fx.app.config().addDefaults();
+		fx.app.config().configure( { "--no-verbose" } );
+
+		// the negation registers a use, so reading intensity alone made
+		// --no-verbose turn debug logging on
+		REQUIRE( fx.app.config().intensity( "verbose" ) == 1 );
+		REQUIRE( fx.app.config().setupLogger()->level() != spdlog::level::debug );
+	}
+	SECTION( "verbose: false in a config file is not verbose" ){
+		AppFixture fx;
+		fx.app.config().addDefaults();
+		fx.app.config().setDefaultConfigFile( writeConfigFile( "drea-noverbose.yaml", "verbose: false\n" ) );
+		fx.app.config().configure( {} );
+
+		REQUIRE( fx.app.config().setupLogger()->level() != spdlog::level::debug );
+	}
+}
+
+TEST_CASE( "--no-json asks for human output", "[config]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	fx.app.config().configure( { "--no-json" } );
+
+	// used() is true either way, which is why the machine-output decision reads
+	// the value
+	REQUIRE( fx.app.config().used( "json" ) );
+	REQUIRE( fx.app.config().get<bool>( "json" ) == false );
 }
