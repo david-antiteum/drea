@@ -22,6 +22,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `Commander::hasAppCommands()` — commands of the app itself, ignoring the
   builtins — and `Commander::invalidCommand()`, true when the arguments could
   not be dispatched.
+- Tests for the config-file readers: the JSON and TOML paths had no coverage at
+  all, so the format each build actually supports is now exercised — values,
+  bool toggles set to false, sequences, nested/table keys, unknown keys and the
+  scope refusal. `core/CMakeLists.txt` publishes `DREA_JSON_ENABLED` and
+  `DREA_TOML_ENABLED` so `tests/` gates its cases exactly as the library does.
 
 ### Changed
 

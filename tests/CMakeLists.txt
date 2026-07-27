@@ -13,6 +13,7 @@ set( SOURCES
 	LoggerTest.cpp
 	LogHelpersTest.cpp
 	ValidationTest.cpp
+	ConfigFileTest.cpp
 )
 
 add_executable( ${PROJECT_NAME} ${SOURCES} )
@@ -31,6 +32,15 @@ target_link_libraries( ${PROJECT_NAME}
 		Catch2::Catch2WithMain
 		drea
 )
+
+# same format gates as the library, so the config-file cases only run for the
+# formats this build actually reads (see core/CMakeLists.txt)
+if( DREA_JSON_ENABLED )
+	target_compile_definitions( ${PROJECT_NAME} PRIVATE ENABLE_JSON )
+endif()
+if( DREA_TOML_ENABLED )
+	target_compile_definitions( ${PROJECT_NAME} PRIVATE ENABLE_TOML )
+endif()
 
 clang_format_setup( ${SOURCES} )
 

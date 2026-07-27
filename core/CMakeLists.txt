@@ -58,6 +58,12 @@ else()
 	set( DREA_TOML_ENABLED ON )
 endif()
 
+# Which config-file formats this build supports, visible to sibling directories:
+# tests/ gates its JSON and TOML cases on these. INTERNAL, so every configure
+# recomputes them rather than trusting a stale cache.
+set( DREA_JSON_ENABLED ${DREA_JSON_ENABLED} CACHE INTERNAL "JSON config-file support available" )
+set( DREA_TOML_ENABLED ${DREA_TOML_ENABLED} CACHE INTERNAL "TOML config-file support available" )
+
 #
 # Library target
 #
