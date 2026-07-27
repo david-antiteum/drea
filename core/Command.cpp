@@ -30,6 +30,11 @@ int drea::core::Command::maxParams() const
 std::string drea::core::Command::nameOfParamsForHelp() const
 {
 	std::string		res;
+
+	if( mParamName.empty() ){
+		// nothing to name: splitting an empty string would render "[]"
+		return res;
+	}
 	auto names = utilities::string::split( mParamName, " " );
 	const bool unlimited = mNbParams == mUnlimitedParams;
 	// Names before the minimum are required (<name>), the rest are optional

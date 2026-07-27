@@ -95,6 +95,12 @@ public:
 	*/
 	[[nodiscard]] bool invalidCommand() const;
 
+	/*! The argument that could not be dispatched, empty when there was none.
+		Config::findings reports it as an "unknown_command" finding, so
+		--validate does not call a mistyped command line valid.
+	*/
+	[[nodiscard]] const std::string & invalidCommandName() const;
+
 	/*! Access the commands
 	*/
 	void commands( const std::function<void(const Command&)> & f ) const;

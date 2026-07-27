@@ -33,6 +33,7 @@ struct drea::core::Commander::Private
 	std::set<std::string>					mBuiltins;
 	std::vector<std::string>				mEnabledGroups;
 	bool									mInvalidCommand = false;
+	std::string								mInvalidCommandName;
 	std::function<void( int )>				mExit = []( int code ){ std::exit( code ); };
 	App										& mApp;
 
@@ -325,6 +326,7 @@ void drea::core::Commander::configure( const std::vector<std::string> & rawArgs 
 	d->createHierarchy();
 	d->detectLocalOptionCollisions();
 	d->mInvalidCommand = false;
+	d->mInvalidCommandName.clear();
 	if( !rawArgs.empty() && rawArgs.at( 0 ) == "--" ){
 		// explicit end of commands: everything left is a root param, even if
 		// it happens to be the name of a command
@@ -333,6 +335,7 @@ void drea::core::Commander::configure( const std::vector<std::string> & rawArgs 
 		}
 		if( !d->mRoot ){
 			d->mInvalidCommand = true;
+			d->mInvalidCommandName = "--";
 			d->mApp.logger().error( "The application \"{}\" takes no arguments of its own, only commands.", d->mApp.name() );
 		}
 		return;
@@ -372,6 +375,7 @@ void drea::core::Commander::configure( const std::vector<std::string> & rawArgs 
 			d->mArguments = args;
 		}else{
 			d->mInvalidCommand = true;
+			d->mInvalidCommandName = args.at( 0 );
 			unknownCommand( args.at( 0 ) );
 		}
 	}
@@ -571,4 +575,9 @@ bool drea::core::Commander::hasAppCommands() const
 bool drea::core::Commander::invalidCommand() const
 {
 	return d->mInvalidCommand;
+}
+
+const std::string & drea::core::Commander::invalidCommandName() const
+{
+	return d->mInvalidCommandName;
 }

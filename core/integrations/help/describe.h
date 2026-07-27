@@ -167,10 +167,12 @@ inline void describe( const drea::core::App & app, std::ostream & os )
 		}else{
 			os << fmt::format( "      \"nb-params\": {},\n", option.numberOfParams() );
 		}
-		if( option.mMin ){
+		// a non finite bound is omitted rather than printed: it cannot act (see
+		// the bad_definition finding) and nan is not a JSON number
+		if( option.mMin && std::isfinite( *option.mMin ) ){
 			os << fmt::format( "      \"min\": {},\n", *option.mMin );
 		}
-		if( option.mMax ){
+		if( option.mMax && std::isfinite( *option.mMax ) ){
 			os << fmt::format( "      \"max\": {},\n", *option.mMax );
 		}
 		if( !option.mChoices.empty() ){

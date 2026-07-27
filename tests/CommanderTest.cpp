@@ -1210,3 +1210,29 @@ TEST_CASE( "--help wins over an unknown command", "[commander][exit]" )
 	// help still works on a typo, and then there is nothing left to dispatch
 	REQUIRE_FALSE( exits.code );
 }
+
+TEST_CASE( "root params with no names render nothing extra", "[commander][root]" )
+{
+	AppFixture fx;
+	fx.app.setName( "bare" );
+	Command root;
+	root.mNbParams = Command::mUnlimitedParams;	// no params-names declared
+	fx.app.commander().setRoot( root );
+
+	REQUIRE( root.nameOfParamsForHelp().empty() );
+	REQUIRE( drea::core::integrations::Help::usageLines( fx.app ) == "usage: bare [OPTIONS]\n" );
+}
+
+TEST_CASE( "a CRLF description does not leak a carriage return", "[commander][builtins]" )
+{
+	AppFixture fx;
+	fx.app.parse( "app: drea-test\r\ncommands:\r\n  - command: ship\r\n    description: send it\r\n" );
+
+	auto cmd = fx.app.commander().find( "ship" );
+	REQUIRE( cmd );
+	REQUIRE( drea::core::utilities::string::firstLine( cmd->mDescription ) == "send it" );
+
+	std::ostringstream zsh;
+	drea::core::integrations::Zsh::generateAutoCompletion( fx.app, zsh );
+	REQUIRE( zsh.str().find( "'ship:send it'" ) != std::string::npos );
+}

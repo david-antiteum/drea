@@ -85,6 +85,28 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A mistyped command line was reported as a valid configuration: `--validate`
+  runs before the dispatch checks, so `myapp typo --validate` exited 0 while
+  `myapp typo` exits 64, and validate mode silences the log that would have said
+  why. The unknown command is a finding now (`unknown_command`, structural, exit
+  78 under `--validate`), the way a command gated by disabled groups already was.
+  It is deliberately absent from the fatal subset `App::parse` enforces, so a
+  plain typo still quits from `Commander::run` with `UsageError`, and `--help`
+  still wins over a typo.
+
+- A `min`/`max` that is not a finite number reached the `describe` JSON as a
+  bare `nan`, the same defect as a non-finite value: such a bound compares false
+  against everything, so it cannot act. It is a `bad_definition` finding (fatal
+  through `App::parse`, so `min: .nan` in the YAML stops the app) and it is
+  omitted from the JSON, which has no `nan`.
+
+- The root params skipped the declarative check that a command's params get:
+  declaring `param-choices` without exactly one positional param was reported
+  for a command and passed silently for `root:`.
+
+- `Command::nameOfParamsForHelp()` rendered `[]` for a root command declaring no
+  `params-names`, so the usage line read `usage: myapp [OPTIONS] []`.
+
 - `--config-file=path` and `--config-source=uri` were silently ignored. Both are
   loaded before the general flag parsing — they decide what the later sources
   are — and that pre-scan only looked for the split `--flag value` form, so

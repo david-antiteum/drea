@@ -7,6 +7,7 @@
 #include <set>
 #include <stdlib.h>
 #include <cctype>
+#include <cmath>
 #include <fstream>
 
 // the full environment, for reporting variables under the app prefix that
@@ -906,6 +907,12 @@ std::vector<drea::core::Config::Finding> drea::core::Config::findings() const
 			res.push_back( { option->mName, {}, "bad_definition",
 				fmt::format( "Option --{} declares min/max but its type {} is not numeric", option->mName, option->typeName() ) } );
 		}
+		// a non finite bound compares false against every value, so it cannot
+		// act; it is also not a number any JSON reader would take
+		if( ( option->mMin && !std::isfinite( *option->mMin ) ) || ( option->mMax && !std::isfinite( *option->mMax ) ) ){
+			res.push_back( { option->mName, {}, "bad_definition",
+				fmt::format( "Option --{} declares a min/max that is not a finite number", option->mName ) } );
+		}
 		if( !option->mChoices.empty() && option->mType == typeid( bool ) ){
 			res.push_back( { option->mName, {}, "bad_definition",
 				fmt::format( "Option --{} declares choices but bool options already have a closed domain", option->mName ) } );
@@ -979,6 +986,19 @@ std::vector<drea::core::Config::Finding> drea::core::Config::findings() const
 				fmt::format( "Command \"{}\" declares param-choices but does not take exactly one positional param", command.mName ) } );
 		}
 	});
+	// the root params get the declarative checks a command's params get
+	if( auto root = d->mApp.commander().root(); root && !root->mParamChoices.empty() && root->maxParams() != 1 ){
+		res.push_back( { "root", {}, "bad_definition",
+			"The root params declare param-choices but do not take exactly one positional param" } );
+	}
+	// the command line named something that is not a command: reported so that
+	// --validate does not call a mistyped invocation valid. Deliberately absent
+	// from Config::validate's fatal subset, so a plain typo still exits from
+	// Commander::run with UsageError instead of ConfigError at parse time
+	if( const std::string & unknown = d->mApp.commander().invalidCommandName(); !unknown.empty() ){
+		res.push_back( { unknown, "flag", "unknown_command",
+			fmt::format( "Unknown command \"{}\"", unknown ) } );
+	}
 	// the requested command exists but its groups are disabled
 	if( const std::string & requested = d->mApp.commander().requestedCommand(); !requested.empty() ){
 		if( auto cmd = d->mApp.commander().find( requested ); cmd && !cmd->mHidden && !d->mApp.commander().isVisible( *cmd ) ){

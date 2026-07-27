@@ -7,6 +7,7 @@
 #include <drea/core/ExitCode.h>
 #include <drea/core/Option.h>
 
+#include "integrations/help/describe.h"
 #include "integrations/help/validate.h"
 
 #include <cstdlib>
@@ -1110,4 +1111,94 @@ TEST_CASE( "the JSON output stays parseable when a value is not finite", "[findi
 	// quoted, so the document parses; a bare nan is not JSON
 	REQUIRE( out.str().find( "\"nan\"" ) != std::string::npos );
 	REQUIRE( out.str().find( "[nan]" ) == std::string::npos );
+}
+
+TEST_CASE( "a non finite min or max cannot act and is reported", "[findings]" )
+{
+	// through the yml this is fatal already: bad_definition is part of the
+	// subset App::parse enforces, so "min: .nan" stops the app with the message
+	// below. Built in code it reaches the emitters, which is what this pins.
+	AppFixture fx;
+	Option opt;
+	opt.mName = "ratio";
+	opt.mParamName = "x";
+	opt.mType = typeid( double );
+	opt.mMin = std::numeric_limits<double>::quiet_NaN();
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--ratio", "0.5" } );
+
+	// a bound that compares false against every value is a declaration error,
+	// like min/max on a non-numeric option
+	const auto		findings = fx.app.config().findings();
+	const auto *	finding = getFinding( findings, "bad_definition", "ratio" );
+	REQUIRE( finding );
+	REQUIRE( finding->mMessage.find( "finite" ) != std::string::npos );
+	// the fatal subset, so an app declaring it does not start
+	REQUIRE_FALSE( fx.app.config().validate().empty() );
+
+	// and it must not reach the JSON, where nan is not a number
+	std::ostringstream out;
+	drea::core::integrations::Help::describe( fx.app, out );
+	REQUIRE( out.str().find( "nan" ) == std::string::npos );
+	REQUIRE( out.str().find( "\"min\"" ) == std::string::npos );
+}
+
+TEST_CASE( "a command line that names no command is reported by --validate", "[findings]" )
+{
+	AppFixture fx;
+	drea::core::Command cmd;
+	cmd.mName = "deploy";
+	cmd.mNbParams = 0;
+	fx.app.commander().add( cmd );
+	fx.app.config().addDefaults();
+
+	fx.app.config().configure( {} );
+	fx.app.commander().configure( { "delpoy" } );
+
+	const auto		findings = fx.app.config().findings();
+	const auto *	finding = getFinding( findings, "unknown_command", "delpoy" );
+	REQUIRE( finding );
+	// structural: --validate must not call a mistyped command line valid
+	REQUIRE( drea::core::integrations::Help::validateExitCode( findings ) == drea::core::ExitCode::ConfigError );
+
+	// but not part of the fatal subset App::parse enforces, so a plain typo
+	// still leaves Commander::run to quit with UsageError
+	REQUIRE( fx.app.config().validate().empty() );
+}
+
+TEST_CASE( "a dispatched command line reports no unknown_command", "[findings]" )
+{
+	AppFixture fx;
+	drea::core::Command cmd;
+	cmd.mName = "deploy";
+	cmd.mNbParams = 0;
+	fx.app.commander().add( cmd );
+	fx.app.config().addDefaults();
+
+	fx.app.config().configure( {} );
+	fx.app.commander().configure( { "deploy" } );
+
+	REQUIRE( fx.app.commander().invalidCommandName().empty() );
+	REQUIRE( fx.app.config().findings().empty() );
+}
+
+TEST_CASE( "the root params get the declarative param-choices check", "[findings]" )
+{
+	AppFixture fx;
+	drea::core::Command root;
+	root.mParamName = "stage";
+	root.mNbParams = drea::core::Command::mUnlimitedParams;
+	root.mParamChoices = { "dev", "prod" };
+	fx.app.commander().setRoot( root );
+
+	fx.app.config().configure( {} );
+
+	// same rule as a command declaring param-choices: it needs exactly one param
+	REQUIRE( hasFinding( fx.app.config().findings(), "bad_definition", "root" ) );
+
+	// one param and it is a valid declaration
+	root.mNbParams = 1;
+	fx.app.commander().setRoot( root );
+	REQUIRE_FALSE( hasFinding( fx.app.config().findings(), "bad_definition", "root" ) );
 }

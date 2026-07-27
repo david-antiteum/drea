@@ -197,8 +197,10 @@ inline void generateManPage( const drea::core::App & app, std::ostream & out )
 	if( auto root = app.commander().root() ){
 		out << ".B " << escape( name ) << "\n";
 		out << "[\\fIOPTIONS\\fR]";
-		for( const auto & param: utilities::string::split( root->mParamName, " " ) ){
-			out << " \\fI" << escape( param ) << "\\fR";
+		if( !root->mParamName.empty() ){
+			for( const auto & param: utilities::string::split( root->mParamName, " " ) ){
+				out << " \\fI" << escape( param ) << "\\fR";
+			}
 		}
 		if( root->mNbParams == drea::core::Command::mUnlimitedParams ){
 			out << "...";

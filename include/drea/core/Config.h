@@ -45,7 +45,7 @@ public:
 	{
 		std::string		mName;		//!< option name, config key or dotted command name
 		std::string		mSource;	//!< source of the offending value: "default", "config-source", "config-file", "environment" or "flag"; empty when no single source applies
-		std::string		mCode;		//!< stable machine code: "parse_error", "file_error", "unknown_key", "missing_required", "bad_choice", "out_of_range", "missing_params", "wrong_scope", "not_negatable", "unknown_option_ref", "disabled_group", "bad_source" or "bad_definition"
+		std::string		mCode;		//!< stable machine code: "parse_error", "file_error", "unknown_key", "missing_required", "bad_choice", "out_of_range", "missing_params", "wrong_scope", "not_negatable", "unknown_command", "unknown_option_ref", "disabled_group", "bad_source" or "bad_definition"
 		std::string		mMessage;	//!< human readable message. Values of sensitive options are masked as [redacted]
 	};
 

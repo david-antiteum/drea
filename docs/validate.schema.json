@@ -43,12 +43,13 @@
             "missing_params",
             "wrong_scope",
             "not_negatable",
+            "unknown_command",
             "unknown_option_ref",
             "disabled_group",
             "bad_source",
             "bad_definition"
           ],
-          "description": "Stable machine code; exit codes group them as 66 file_error, 78 unknown_key/missing_required/wrong_scope/not_negatable/unknown_option_ref/disabled_group/bad_source/bad_definition, 65 the rest"
+          "description": "Stable machine code; exit codes group them as 66 file_error, 78 unknown_key/missing_required/wrong_scope/not_negatable/unknown_command/unknown_option_ref/disabled_group/bad_source/bad_definition, 65 the rest"
         },
         "message": { "type": "string", "description": "Human readable message. Values of sensitive options are masked as [redacted]" }
       }
