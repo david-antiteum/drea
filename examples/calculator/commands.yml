@@ -21,7 +21,7 @@ options:
     short: e
 commands:
   - command: sum
-    params-names: number...
+    params-names: number
     params: unlimited
     description: sum all the arguments
     local-options:
@@ -35,7 +35,8 @@ commands:
       - round
       - equal
   - command: count
-    params-names: string...
+    params-names: string
+    params: unlimited
     description: count the characters of a text arguments
     local-options:
       - equal
