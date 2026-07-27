@@ -59,8 +59,21 @@ public:
 
 	/*! Use this method to be called with the command to execute.
 		Do it after configuring the app and parsing the options (\see App::parse)
+
+		A misuse of the command line — an unknown command, a command gated by
+		disabled groups, the wrong number of arguments, an argument outside
+		`param-choices` — is reported and quits with ExitCode::UsageError
+		instead of calling \a f.
 	*/
 	void run( std::function<void( std::string )> f );
+
+	/*! Replace how run() quits, which is std::exit by default.
+
+		Meant for tests and for embedders that must not end the process. run()
+		returns immediately after the handler, without dispatching, so a handler
+		that returns normally is safe.
+	*/
+	void setExitHandler( std::function<void( int )> handler );
 
 	/*! Get the arguments of the command
 	*/

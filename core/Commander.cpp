@@ -1,6 +1,7 @@
 #include <vector>
 #include <algorithm>
 #include <optional>
+#include <functional>
 #include <memory>
 #include <set>
 #include <iostream>
@@ -32,6 +33,7 @@ struct drea::core::Commander::Private
 	std::set<std::string>					mBuiltins;
 	std::vector<std::string>				mEnabledGroups;
 	bool									mInvalidCommand = false;
+	std::function<void( int )>				mExit = []( int code ){ std::exit( code ); };
 	App										& mApp;
 
 	explicit Private( App & app ) : mApp( app )
@@ -375,15 +377,34 @@ void drea::core::Commander::configure( const std::vector<std::string> & rawArgs 
 	}
 }
 
+void drea::core::Commander::setExitHandler( std::function<void( int )> handler )
+{
+	if( handler ){
+		d->mExit = std::move( handler );
+	}
+}
+
 void drea::core::Commander::run( std::function<void( std::string )> f )
 {
+	// Every way out of run() other than dispatching goes through here, so a
+	// misuse of the command line always reaches the shell as an exit code and
+	// tests can observe the code without ending the process (\see
+	// setExitHandler). The caller returns right after.
+	auto quit = [ this ]( ExitCode code ){
+		d->mApp.logger().flush();
+		d->mExit( toInt( code ) );
+	};
+
 	// --validate is a mode of its own: check the resolved configuration,
 	// report and quit with the mapped exit code. It runs before the
 	// visibility gate so a command gated by disabled groups is reported as
 	// a finding, and before --help and --version so the exit code always
 	// reflects the check.
 	if( d->mApp.config().used( "validate" ) ){
-		exit( integrations::Help::validateConfig( d->mApp, d->mApp.config().used( "json" ) ) );
+		const int code = integrations::Help::validateConfig( d->mApp, d->mApp.config().used( "json" ) );
+
+		d->mExit( code );
+		return;
 	}
 	// Visibility gate: a command whose groups are not enabled (or that has
 	// been hidden) must be indistinguishable from a typo. This covers both
@@ -391,6 +412,7 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 	if( !d->mCommand.empty() ){
 		if( auto cmd = find( d->mCommand ); cmd && !d->isVisible( *cmd ) ){
 			unknownCommand( d->mCommand );
+			quit( ExitCode::UsageError );
 			return;
 		}
 	}
@@ -411,8 +433,8 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 		// params, is a usage error: never dispatch it to the app. Checked
 		// after --help and --version so those keep working on a typo.
 		if( d->mInvalidCommand ){
-			d->mApp.logger().flush();
-			exit( toInt( ExitCode::UsageError ) );
+			quit( ExitCode::UsageError );
+			return;
 		}
 		// the root command carries the params accepted with no command given
 		if( auto cmd = d->mCommand.empty() ? root() : find( d->mCommand ); cmd ){
@@ -422,10 +444,12 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 			if( maxP != drea::core::Command::mUnlimitedParams ){
 				if( actual < minP || actual > maxP ){
 					wrongNumberOfArguments( d->mCommand );
+					quit( ExitCode::UsageError );
 					return;
 				}
 			}else if( actual < minP ){
 				wrongNumberOfArguments( d->mCommand );
+				quit( ExitCode::UsageError );
 				return;
 			}
 			// param-choices: the positional argument must be one of the
@@ -438,6 +462,7 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 								? fmt::format( "application \"{}\"", d->mApp.name() )
 								: fmt::format( "command \"{}\"", utilities::string::replace( d->mCommand, ".", " " ) ),
 							argument, utilities::string::join( cmd->mParamChoices, ", " ) );
+						quit( ExitCode::UsageError );
 						return;
 					}
 				}

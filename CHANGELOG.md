@@ -25,12 +25,20 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- An argument that is not a command, in an app that declares no root params,
-  is a usage error: drea reports it (as before) and now quits with
-  `ExitCode::UsageError` (64) **without** calling the `run()` callback. It
-  used to log `Unknown command "…"` and then dispatch an empty command, so a
-  mistyped invocation could still do real work. `--help` and `--version` keep
-  working on a typo.
+- Every misuse of the command line that drea detects quits with
+  `ExitCode::UsageError` (64) instead of exiting 0: an argument that is not a
+  command in an app with no root params (which used to log
+  `Unknown command "…"` and then dispatch an empty command, so a mistyped
+  invocation could still do real work), a command gated by disabled groups, the
+  wrong number of arguments, and an argument outside `param-choices`. The
+  callback is not called. `--help` and `--version` keep working on a typo.
+  `Commander::setExitHandler()` replaces how `run()` quits, for tests and for
+  embedders that must not end the process.
+- `Commander::unknownCommand()` and `wrongNumberOfArguments()` still only
+  report, so a misuse the app itself detects stays the app's to report: the
+  `calculator` and `say` samples now keep an exit code and return it from
+  `main`, which is why `calculator` with no command and `say repeat` (a parent
+  needing a subcommand) exit 64 rather than 0.
 - The `usage:` line follows what the app declares instead of always demanding
   a `COMMAND`: apps with only the builtins get `[COMMAND]`, apps with root
   params get their own form (both lines when they have commands too). Only

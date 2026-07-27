@@ -185,7 +185,14 @@ actually typed (analytics, custom dispatch, footer logic).
 
 Emit the standard error messages. The wording matches what drea would emit
 on its own; call these from your dispatch when rejecting commands so the UX
-stays consistent.
+stays consistent. They report only — the process keeps running, so set your
+own exit code (\see `ExitCode`) when you call them to refuse an invocation.
+
+### `setExitHandler(fn)`
+
+Replaces how `run()` quits, `std::exit` by default. For tests and for
+embedders that must not end the process; `run()` returns immediately after the
+handler, so a handler that returns normally never dispatches.
 
 ---
 
@@ -282,6 +289,33 @@ enum class ExitCode : int {
 };
 int toInt( ExitCode code );
 ```
+
+Drea returns them itself for the problems it detects: `ConfigError` (78) when
+declarative option validation fails, `UsageError` (64) from `Commander::run()`
+for a misused command line — an unknown or gated command, the wrong number of
+arguments, an argument outside `param-choices` — and the codes `--validate`
+maps from its findings.
+
+What the *app* rejects is the app's to report. `run()` takes a `void`
+callback, so keep the code and return it from `main`:
+
+```cpp
+int exitCode = drea::core::toInt( drea::core::ExitCode::Ok );
+
+app.commander().run( [&]( const std::string & cmd ){
+    if( cmd == "deploy" ){
+        // ...
+    }else{
+        app.commander().unknownCommand( cmd );      // reports, does not quit
+        exitCode = drea::core::toInt( drea::core::ExitCode::UsageError );
+    }
+});
+return exitCode;
+```
+
+`unknownCommand()` and `wrongNumberOfArguments()` only report; they never end
+the process, so an app is free to carry on after calling them. See
+`examples/calculator` and `examples/say`.
 
 ---
 

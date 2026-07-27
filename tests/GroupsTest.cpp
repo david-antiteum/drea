@@ -4,6 +4,9 @@
 #include <drea/core/Commander.h>
 #include <drea/core/Command.h>
 #include <drea/core/Config.h>
+#include <drea/core/ExitCode.h>
+
+#include <optional>
 
 
 using drea::core::App;
@@ -16,6 +19,22 @@ struct AppFixture {
 	char* argv[1]   = { argv0 };
 	App   app;
 	AppFixture() : app( 1, argv ) {}
+};
+
+// run() quits through its exit handler on a usage error; capture the code
+// instead of ending the test process.
+struct ExitCapture {
+	std::optional<int>	code;
+
+	explicit ExitCapture( App & app )
+	{
+		app.commander().setExitHandler( [ this ]( int c ){ code = c; } );
+	}
+
+	bool usageError() const
+	{
+		return code && *code == drea::core::toInt( drea::core::ExitCode::UsageError );
+	}
 };
 
 }
@@ -153,9 +172,12 @@ TEST_CASE( "Invocation of gated command is refused without callback", "[groups]"
 
 	fx.app.commander().configure( { "secret" } );
 
+	ExitCapture exits( fx.app );
 	bool called = false;
 	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
 	REQUIRE_FALSE( called );
+	// a gated command is indistinguishable from a typo, exit code included
+	REQUIRE( exits.usageError() );
 }
 
 TEST_CASE( "Invocation of gated command runs when group enabled", "[groups]" )
@@ -245,9 +267,11 @@ TEST_CASE( "Run callback is not invoked for gated command", "[groups]" )
 	fx.app.commander().configure( { "secret" } );
 	fx.app.config().registerUse( "help" );
 
+	ExitCapture exits( fx.app );
 	bool called = false;
 	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
 	REQUIRE_FALSE( called );
+	REQUIRE( exits.usageError() );
 }
 
 TEST_CASE( "YAML group: scalar parses into mGroups", "[groups]" )

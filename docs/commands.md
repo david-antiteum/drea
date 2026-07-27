@@ -7,9 +7,9 @@ your callback, and renders help/completion/man output for free.
 ## Anatomy
 
 ```bash
-./myapp container ls --all my-container
-       └────┬───┘ └┬┘ └─┬─┘ └─────┬─────┘
-       command  sub  opt    argument
+./myapp container ls  --all my-container
+        └────┬──┘ └┬┘ └─┬─┘ └────┬─────┘
+         command  sub  opt    argument
 ```
 
 Drea passes the dotted command path (`container.ls`) to your `run()` callback.
@@ -146,6 +146,12 @@ a command: drea logs `Unknown command "…"` (with a *did you mean?* suggestion)
 and quits with `ExitCode::UsageError` (64) **without** calling the callback.
 `--help` and `--version` still work in that case. `Commander::invalidCommand()`
 reports the same condition programmatically.
+
+`run()` quits the same way for every misuse it detects: a command gated by
+disabled groups (indistinguishable from a typo, exit code included), the wrong
+number of arguments, an argument outside `param-choices`. A misuse the *app*
+detects is the app's to report — see [API reference →
+`ExitCode`](api-reference.md#exitcode) for the pattern.
 
 The usage line follows from the two declarations:
 

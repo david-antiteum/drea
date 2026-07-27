@@ -73,7 +73,11 @@ int main( int argc, char * argv[] )
 	app.addToParser( std::string( version_yml, version_yml + version_yml_len ) );
 	app.addToParser( std::string( commands_yml, commands_yml + commands_yml_len ) );
 	app.parse();
-	app.commander().run( [ &app ]( const std::string & cmd ){
+	// drea quits with ExitCode::UsageError for the misuses it detects itself.
+	// What the app rejects is the app's to report: keep the code and return it.
+	int		exitCode = drea::core::toInt( drea::core::ExitCode::Ok );
+
+	app.commander().run( [ &app, &exitCode ]( const std::string & cmd ){
 		app.logger().debug( "Run called for command {}", cmd );
 
 		std::optional<double>		valueMaybe;
@@ -83,24 +87,29 @@ int main( int argc, char * argv[] )
 				valueMaybe = sum( app );
 			}else{
 				app.commander().wrongNumberOfArguments( cmd );
+				exitCode = drea::core::toInt( drea::core::ExitCode::UsageError );
 			}
 		}else if( cmd == "power" ){
 			if( app.commander().arguments().size() == 2 ){		
 				valueMaybe = power( app );
 			}else{
 				app.commander().wrongNumberOfArguments( cmd );
+				exitCode = drea::core::toInt( drea::core::ExitCode::UsageError );
 			}
 		}else if( cmd == "count" ){
 			if( !app.commander().arguments().empty() ){
 				valueMaybe = static_cast<double>( count( app ) );
 			}else{
 				app.commander().wrongNumberOfArguments( cmd );
+				exitCode = drea::core::toInt( drea::core::ExitCode::UsageError );
 			}
 		}else{
 			app.commander().unknownCommand( cmd );
+			exitCode = drea::core::toInt( drea::core::ExitCode::UsageError );
 		}
 		if( valueMaybe ){
 			writeResult( app, valueMaybe.value() );
 		}
 	});
+	return exitCode;
 }

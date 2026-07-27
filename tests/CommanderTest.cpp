@@ -4,6 +4,7 @@
 #include <drea/core/Commander.h>
 #include <drea/core/Command.h>
 #include <drea/core/Config.h>
+#include <drea/core/ExitCode.h>
 #include <drea/core/Option.h>
 
 #include "integrations/bash/bash_completion.h"
@@ -14,6 +15,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <optional>
 #include <sstream>
 
 using drea::core::App;
@@ -26,6 +28,23 @@ struct AppFixture {
 	char* argv[1]   = { argv0 };
 	App   app;
 	AppFixture() : app( 1, argv ) {}
+};
+
+// run() quits through its exit handler on a usage error (an unknown or gated
+// command, a wrong number of arguments, an argument outside param-choices).
+// Capture the code instead of ending the test process.
+struct ExitCapture {
+	std::optional<int>	code;
+
+	explicit ExitCapture( App & app )
+	{
+		app.commander().setExitHandler( [ this ]( int c ){ code = c; } );
+	}
+
+	bool usageError() const
+	{
+		return code && *code == drea::core::toInt( drea::core::ExitCode::UsageError );
+	}
 };
 
 }
@@ -108,9 +127,11 @@ TEST_CASE( "Commander::run auto-validates param count and skips callback on mism
 
 	fx.app.commander().configure( { "copy", "only-one" } );
 
+	ExitCapture exits( fx.app );
 	bool called = false;
 	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
 	REQUIRE_FALSE( called );
+	REQUIRE( exits.usageError() );
 }
 
 TEST_CASE( "Commander::run calls callback when param count matches", "[commander]" )
@@ -205,9 +226,11 @@ TEST_CASE( "Commander::run rejects over-max args with min-params set", "[command
 
 	fx.app.commander().configure( { "status", "42", "extra" } );
 
+	ExitCapture exits( fx.app );
 	bool called = false;
 	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
 	REQUIRE_FALSE( called );
+	REQUIRE( exits.usageError() );
 }
 
 // Capture std::cout during a callable's execution.
@@ -309,11 +332,14 @@ TEST_CASE( "completion with unsupported shell does not print a script", "[comman
 	BuiltinFixture fx;
 	fx.app.commander().configure( { "completion", "powershell" } );
 
+	ExitCapture exits( fx.app );
 	CoutCapture cap;
 	fx.app.commander().run( [&]( const std::string & ){} );
 
 	REQUIRE( cap.str().find( "#!/usr/bin/env bash" ) == std::string::npos );
 	REQUIRE( cap.str().find( "#compdef" ) == std::string::npos );
+	// powershell is outside the declared param-choices: a usage error
+	REQUIRE( exits.usageError() );
 }
 
 TEST_CASE( "man produces a roff man page", "[commander][builtins]" )
@@ -746,9 +772,11 @@ TEST_CASE( "param-choices gate the positional argument", "[commander][param-choi
 	SECTION( "an unknown value is rejected before dispatch" ){
 		fx.app.config().configure( {} );
 		fx.app.commander().configure( { "deploy", "prd" } );
+		ExitCapture exits( fx.app );
 		bool called = false;
 		fx.app.commander().run( [&]( const std::string & ){ called = true; } );
 		REQUIRE_FALSE( called );
+		REQUIRE( exits.usageError() );
 	}
 }
 
@@ -844,9 +872,11 @@ TEST_CASE( "root params are counted like the params of a command", "[commander][
 
 	fx.app.commander().configure( { "only-one" } );
 
+	ExitCapture exits( fx.app );
 	bool called = false;
 	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
 	REQUIRE_FALSE( called );
+	REQUIRE( exits.usageError() );
 }
 
 TEST_CASE( "root param-choices are checked", "[commander][root]" )
@@ -860,9 +890,11 @@ TEST_CASE( "root param-choices are checked", "[commander][root]" )
 
 	fx.app.commander().configure( { "staging" } );
 
+	ExitCapture exits( fx.app );
 	bool called = false;
 	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
 	REQUIRE_FALSE( called );
+	REQUIRE( exits.usageError() );
 }
 
 TEST_CASE( "without root params an argument that is not a command is invalid", "[commander][root]" )
@@ -1102,4 +1134,79 @@ TEST_CASE( "the man synopsis of a command has no trailing space", "[commander][m
 	for( const auto & line: drea::core::utilities::string::split( out.str(), "\n" ) ){
 		REQUIRE( ( line.empty() || line.back() != ' ' ) );
 	}
+}
+
+TEST_CASE( "run quits with a usage error on an unknown command", "[commander][exit]" )
+{
+	AppFixture fx;
+	Command cmd;
+	cmd.mName = "status";
+	cmd.mNbParams = 0;
+	fx.app.commander().add( cmd );
+
+	fx.app.commander().configure( { "stauts" } );
+
+	ExitCapture exits( fx.app );
+	bool called = false;
+	fx.app.commander().run( [&]( const std::string & ){ called = true; } );
+
+	REQUIRE_FALSE( called );
+	REQUIRE( exits.usageError() );
+}
+
+TEST_CASE( "run does not quit when it dispatches", "[commander][exit]" )
+{
+	AppFixture fx;
+	Command cmd;
+	cmd.mName = "status";
+	cmd.mNbParams = 0;
+	fx.app.commander().add( cmd );
+
+	fx.app.commander().configure( { "status" } );
+
+	ExitCapture exits( fx.app );
+	std::string seen;
+	fx.app.commander().run( [&]( const std::string & c ){ seen = c; } );
+
+	REQUIRE( seen == "status" );
+	REQUIRE_FALSE( exits.code );
+}
+
+TEST_CASE( "run does not quit for --help or a builtin", "[commander][exit]" )
+{
+	SECTION( "--help" ){
+		BuiltinFixture fx;
+		fx.app.config().configure( { "--help" } );
+		fx.app.commander().configure( {} );
+
+		ExitCapture exits( fx.app );
+		CoutCapture cap;
+		fx.app.commander().run( [&]( const std::string & ){} );
+
+		REQUIRE_FALSE( exits.code );
+	}
+	SECTION( "a builtin" ){
+		BuiltinFixture fx;
+		fx.app.commander().configure( { "describe" } );
+
+		ExitCapture exits( fx.app );
+		CoutCapture cap;
+		fx.app.commander().run( [&]( const std::string & ){} );
+
+		REQUIRE_FALSE( exits.code );
+	}
+}
+
+TEST_CASE( "--help wins over an unknown command", "[commander][exit]" )
+{
+	BuiltinFixture fx;
+	fx.app.config().configure( { "--help" } );
+	fx.app.commander().configure( { "stauts" } );
+
+	ExitCapture exits( fx.app );
+	CoutCapture cap;
+	fx.app.commander().run( [&]( const std::string & ){} );
+
+	// help still works on a typo, and then there is nothing left to dispatch
+	REQUIRE_FALSE( exits.code );
 }
