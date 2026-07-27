@@ -876,3 +876,92 @@ TEST_CASE( "--no-json asks for human output", "[config]" )
 	REQUIRE( fx.app.config().used( "json" ) );
 	REQUIRE( fx.app.config().get<bool>( "json" ) == false );
 }
+
+TEST_CASE( "value: does not depend on the order of the yml keys", "[config]" )
+{
+	SECTION( "type before value" ){
+		AppFixture fx;
+		fx.app.parse(
+			"app: drea-test\n"
+			"options:\n"
+			"  - option: workers\n"
+			"    description: parallel workers\n"
+			"    params-names: n\n"
+			"    type: int\n"
+			"    value: 4\n"
+		);
+		REQUIRE( fx.app.config().get<int>( "workers" ) == 4 );
+	}
+	SECTION( "value before type" ){
+		AppFixture fx;
+		fx.app.parse(
+			"app: drea-test\n"
+			"options:\n"
+			"  - option: workers\n"
+			"    description: parallel workers\n"
+			"    params-names: n\n"
+			"    value: 4\n"
+			"    type: int\n"
+		);
+		// used to be fatal: "Option value for workers requires the type to be
+		// declared", although a YAML mapping has no order to rely on
+		REQUIRE( fx.app.config().get<int>( "workers" ) == 4 );
+	}
+	SECTION( "no type at all keeps the value a string" ){
+		AppFixture fx;
+		fx.app.parse(
+			"app: drea-test\n"
+			"options:\n"
+			"  - option: mode\n"
+			"    description: mode\n"
+			"    params-names: mode\n"
+			"    value: fast\n"
+		);
+		REQUIRE( fx.app.config().find( "mode" )->mType == typeid( std::string ) );
+		REQUIRE( fx.app.config().get<std::string>( "mode" ) == "fast" );
+	}
+	SECTION( "a bool default is parsed as a boolean" ){
+		AppFixture fx;
+		fx.app.parse(
+			"app: drea-test\n"
+			"options:\n"
+			"  - option: round\n"
+			"    description: round the result\n"
+			"    value: true\n"
+			"    type: bool\n"
+		);
+		REQUIRE( fx.app.config().get<bool>( "round" ) == true );
+		REQUIRE( fx.app.config().declaredDefault( "round" ).size() == 1 );
+	}
+}
+
+TEST_CASE( "a declared default counts as used, a real source is named by source()", "[config]" )
+{
+	AppFixture fx;
+	fx.app.parse(
+		"app: drea-test\n"
+		"options:\n"
+		"  - option: port\n"
+		"    description: port\n"
+		"    params-names: n\n"
+		"    type: int\n"
+		"    value: 8080\n"
+		"  - option: equal\n"
+		"    description: compare with\n"
+		"    params-names: number\n"
+		"    type: double\n"
+	);
+
+	// the default makes the option "used": source() is what tells a real source
+	// from the declared default
+	REQUIRE( fx.app.config().used( "port" ) );
+	REQUIRE( fx.app.config().source( "port" ) == "default" );
+
+	// an option with no default is what used() distinguishes: "--equal 0" is a
+	// value, no --equal at all is not
+	REQUIRE_FALSE( fx.app.config().used( "equal" ) );
+	fx.app.config().configure( { "--equal", "0" } );
+	REQUIRE( fx.app.config().used( "equal" ) );
+	REQUIRE( fx.app.config().get<double>( "equal" ) == 0.0 );
+	REQUIRE( fx.app.config().source( "equal" ) == "flag" );
+}

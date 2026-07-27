@@ -171,7 +171,7 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 	if( optionsNode.IsMap()  ){
 		drea::core::Option			option;
 		bool						hasType = false;
-		std::vector<std::string>	rawValues;	//!< values: entries, converted once the declared type is known
+		std::vector<std::string>	rawValues;	//!< value:/values: entries, converted once the declared type is known
 
 		for( auto optionNode: optionsNode ){
 			const std::string key = optionNode.first.as<std::string>();
@@ -228,30 +228,14 @@ void _parseOption( drea::core::App & app, const YAML::Node & optionsNode )
 					}
 					hasType = true;
 				}else if( key == "value" ){
-					try{
-						if( hasType ){
-							if( std::string possibleValue = optionNode.second.as< std::string >(); possibleValue.empty() ){
-								app.logger().critical( "Empty value for option {}", option.mName );
-								exit( drea::core::toInt( drea::core::ExitCode::ConfigError ) );
-							}else{
-								if( option.mType == typeid( bool ) ){
-									option.mValues.push_back( optionNode.second.as< bool >() );
-								}else if( option.mType == typeid( int ) ){
-									option.mValues.push_back( optionNode.second.as< int >() );
-								}else if( option.mType == typeid( double ) ){
-									option.mValues.push_back( optionNode.second.as< double >() );
-								}else if( option.mType == typeid( std::string ) ){
-									option.mValues.push_back( optionNode.second.as< std::string >() );
-								}
-							}
-						}else{
-							// fatal, wrong order
-							app.logger().critical( "Option value for {} requires the type to be declared", option.mName );
-							exit( drea::core::toInt( drea::core::ExitCode::ConfigError ) );
-						}
-					}catch(...){
-						app.logger().critical( "Option value for {} cannot be converted to its declared type", option.mName );
+					// kept as text like values:, so a mapping stays what YAML
+					// says it is, unordered: this used to be converted here and
+					// died when it came before type:
+					if( std::string declared = optionNode.second.as<std::string>(); declared.empty() ){
+						app.logger().critical( "Empty value for option {}", option.mName );
 						exit( drea::core::toInt( drea::core::ExitCode::ConfigError ) );
+					}else{
+						rawValues.push_back( declared );
 					}
 				}
 			}else if( optionNode.second.IsSequence() ){

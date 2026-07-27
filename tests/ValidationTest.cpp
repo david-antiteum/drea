@@ -972,3 +972,85 @@ TEST_CASE( "an option readable from config sources is applied normally", "[findi
 	REQUIRE( fx.app.config().findings().empty() );
 	REQUIRE( fx.app.config().get<int>( "workers" ) == 7 );
 }
+
+TEST_CASE( "the command line cannot set a config-file-only option", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "db-password";
+	opt.mParamName = "secret";
+	opt.mType = typeid( std::string );
+	opt.mScope = Option::Scope::File;
+	fx.app.config().add( opt );
+	Option port;
+	port.mName = "port";
+	port.mParamName = "n";
+	port.mType = typeid( int );
+	fx.app.config().add( port );
+
+	fx.app.config().configure( { "--db-password", "hunter2", "--port", "8080" } );
+
+	// reported and left untouched: the value used to be applied anyway
+	const auto		findings = fx.app.config().findings();
+	const auto *	finding = getFinding( findings, "wrong_scope", "db-password" );
+	REQUIRE( finding );
+	REQUIRE( finding->mSource == "flag" );
+	REQUIRE( finding->mMessage.find( "command line" ) != std::string::npos );
+	REQUIRE_FALSE( fx.app.config().used( "db-password" ) );
+	REQUIRE( fx.app.config().get<std::string>( "db-password" ).empty() );
+	REQUIRE( fx.app.config().source( "db-password" ) == "default" );
+	// the refused flag consumed its value, so the next option still parses
+	REQUIRE( fx.app.config().get<int>( "port" ) == 8080 );
+	REQUIRE_FALSE( hasFinding( fx.app.config().findings(), "unknown_key", "hunter2" ) );
+}
+
+TEST_CASE( "the command line cannot set a scope none option", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "build-id";
+	opt.mParamName = "id";
+	opt.mType = typeid( std::string );
+	opt.mScope = Option::Scope::None;
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--build-id", "abc" } );
+
+	REQUIRE( hasFinding( fx.app.config().findings(), "wrong_scope", "build-id" ) );
+	REQUIRE_FALSE( fx.app.config().used( "build-id" ) );
+	// the app still sets it in code, which is the point of scope none
+	fx.app.config().set( "build-id", "abc" );
+	REQUIRE( fx.app.config().get<std::string>( "build-id" ) == "abc" );
+}
+
+TEST_CASE( "the command line cannot negate a config-file-only toggle", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "cache";
+	opt.mType = typeid( bool );
+	opt.mValues = { true };
+	opt.mScope = Option::Scope::File;
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--no-cache" } );
+
+	REQUIRE( hasFinding( fx.app.config().findings(), "wrong_scope", "cache" ) );
+	REQUIRE( fx.app.config().get<bool>( "cache" ) == true );
+}
+
+TEST_CASE( "an inline value on a refused flag is not applied either", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "db-password";
+	opt.mParamName = "secret";
+	opt.mType = typeid( std::string );
+	opt.mScope = Option::Scope::File;
+	fx.app.config().add( opt );
+
+	fx.app.config().configure( { "--db-password=hunter2" } );
+
+	REQUIRE( hasFinding( fx.app.config().findings(), "wrong_scope", "db-password" ) );
+	REQUIRE( fx.app.config().get<std::string>( "db-password" ).empty() );
+}

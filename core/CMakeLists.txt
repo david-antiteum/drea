@@ -99,6 +99,12 @@ target_include_directories( ${PROJECT_NAME}
 		${CMAKE_CURRENT_SOURCE_DIR}/../include/drea/core
 )
 
+# The public headers use std::variant, std::optional and inline constexpr, so
+# C++17 is a usage requirement, not just a build setting: CMAKE_CXX_STANDARD in
+# cmake/Common.cmake never reaches an installed consumer, target_compile_features
+# does, through INTERFACE_COMPILE_FEATURES in the exported target.
+target_compile_features( ${PROJECT_NAME} PUBLIC cxx_std_17 )
+
 # spdlog appears in public headers (Config::setupLogger returns
 # std::shared_ptr<spdlog::logger>), so it must be PUBLIC. fmt is a header-only
 # transitive via spdlog but is also used directly in examples -> PUBLIC.

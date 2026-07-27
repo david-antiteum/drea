@@ -85,6 +85,38 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Command line flags applied their value before the scope was checked, so a
+  `scope: file` or `scope: none` option could still be set with `--flag`; the
+  `wrong_scope` finding then described a value that had already taken effect,
+  and it is not part of the fatal subset. `Config::acceptsCurrentSource()` now
+  gates the flag path too — each side refuses what the other owns — and the
+  refused flag still consumes its values so the rest of the command line parses
+  as written. `--no-<name>` on an out-of-scope toggle is refused as well.
+
+- Installed consumers could not use the package: `dreaConfig.cmake` searched
+  for Boost only when built with `BUILD_REST_USE=ON`, while `core` links
+  `Boost::headers` unconditionally and a PRIVATE dependency of a static library
+  still reaches the exported target as `$<LINK_ONLY:...>`, so `find_package(drea)`
+  failed with an undefined `Boost::headers`. And C++17, needed by the public
+  headers, was only a build setting (`CMAKE_CXX_STANDARD`), never a usage
+  requirement, so a consumer compiling at its own default failed on
+  `std::variant`. Boost is searched unconditionally, and
+  `target_compile_features( drea PUBLIC cxx_std_17 )` exports the standard.
+  Verified by installing with `BUILD_REST_USE=OFF` and building a separate
+  project against it.
+
+- A default declared with `value:` had to come after `type:` in the YAML or the
+  app died with "requires the type to be declared", although a mapping has no
+  order to depend on. Both `value:` and `values:` are converted once the whole
+  option has been read.
+
+- The documented contract of `Config::used()` was wrong, not the code:
+  `Config::configure` registers a use for every option carrying a declared
+  default, so `used()` means "ended up with a value", including from the
+  default. The header and the docs say so again, and point at `source()` — which
+  reads `"default"` until a real source wins — as the way to tell a real setting
+  from a default.
+
 - The man page never rendered `examples`, although the docs promised it was
   built from the same metadata as `--help`: a command's worked invocations
   reached `--help` and `describe` but not `man`. Both page builders now emit an

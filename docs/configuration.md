@@ -49,6 +49,12 @@ Fields:
 them to true. They can be explicitly disabled with `--no-<name>` (see
 *Boolean negation* below).
 
+Defaults declared with `value:` or `values:` are converted once the whole
+option has been read, so they may appear before or after `type:` — a YAML
+mapping has no order to depend on. Without a `type:` they stay strings, which is
+what the default `string` type means, and a default that does not fit the
+declared type is a fatal declaration error.
+
 An option that declares neither `type:` nor `params-names:` is a toggle, and
 drea infers `type: bool` for it, so these two declarations are the same:
 
@@ -125,10 +131,27 @@ const int workers      = app.config().get<int>( "workers" );
 const auto hosts = app.config().getAll<std::string>( "host" );
 ```
 
-`used()` returns true when some source supplied the option: a command-line
-flag, a config file, a remote source, the environment, or a `Config::set` call.
-A declared default does **not** count — that is what makes `used()` the way to
-tell `--equal 0` from no `--equal` at all.
+`used()` returns true when the option ended up with a value, from any source
+*including its declared default*. For an option with no default that is how you
+tell `--equal 0` from no `--equal` at all:
+
+```cpp
+if( app.config().used( "equal" ) ) {          // was it given?
+    const double target = app.config().get<double>( "equal" );
+}
+```
+
+When the option does have a default, `used()` is true from the start; ask
+`source()` for the source that won — it reads `"default"` when no real source
+set the option:
+
+```cpp
+if( app.config().source( "port" ) != "default" ) { /* someone set it */ }
+```
+
+`declaredDefault( name )` returns the default as declared, before source
+resolution, and `redundant( name )` is true when a real source supplied exactly
+that default.
 
 `intensity()` returns how many times an option appeared (useful for `-vvv`
 verbosity).
@@ -576,13 +599,20 @@ set it:
 
 Refused means exactly that: the value is **not applied**, and a `wrong_scope`
 finding is reported (a warning during a normal run, exit 78 under
-`--validate`). Every source goes through the same check, so a `line`-scoped
-option cannot be set behind the app's back:
+`--validate`). Every source goes through the same check — config files, remote
+sources, the environment **and the command line** — so neither side can write
+what the other owns:
 
 ```bash
 $ myapp --config-file with-help.yaml run
 [warning] Option --help has scope command-line and cannot be set from a config-file; the value is ignored
+
+$ myapp --db-password hunter2 run
+[warning] Option --db-password has scope config-file and may not be set from the command line; the flag is ignored
 ```
+
+A refused flag still consumes its values, so the rest of the command line
+parses as written.
 
 drea's own actions — `--help`, `--version`, `--validate` — are `line` scoped
 for this reason: a config file saying `help: true` would otherwise print the

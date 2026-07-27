@@ -665,18 +665,26 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 			}
 
 			if( auto option = d->find( arg ) ){
-				registerUse( arg );
-				d->mSources[ option->mName ] = "flag";
-				if( optionsWithDefault.count( option ) > 0 ){
-					// override default. Clean value and keep values from user
-					option->mValues.clear();
-					optionsWithDefault.erase( option );
+				// A scope the command line does not own refuses the flag before
+				// anything is written, so "the flag is ignored" is the truth
+				// rather than a report about a value already applied. Its values
+				// are still consumed, or they would be read as arguments.
+				const bool	accepted = acceptsCurrentSource( option->mName );
+
+				if( accepted ){
+					registerUse( arg );
+					d->mSources[ option->mName ] = "flag";
+					if( optionsWithDefault.count( option ) > 0 ){
+						// override default. Clean value and keep values from user
+						option->mValues.clear();
+						optionsWithDefault.erase( option );
+					}
 				}
 				if( hasInlineValue ){
-					if( option->takesValues() ){
-						append( option->mName, inlineValue );
-					}else{
+					if( !option->takesValues() ){
 						spdlog::warn( "Flag {} does not take a value; ignoring '={}'", arg, inlineValue );
+					}else if( accepted ){
+						append( option->mName, inlineValue );
 					}
 				}else{
 					// params: unlimited consumes until the next option, the end
@@ -688,15 +696,19 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 						if( subArg.find( "-" ) == 0 ){
 							break;
 						}
-						append( option->mName, subArg );
+						if( accepted ){
+							append( option->mName, subArg );
+						}
 						i++;
 					}
 				}
-				if( option->takesValues() && option->mValues.empty() ){
-					spdlog::warn( "Missing arguments for flag {}", arg );
-				}else if( option->numberOfParams() == 0 && option->mType == typeid( bool ) ){
-					option->mValues.clear();
-					option->mValues.push_back( true );
+				if( accepted ){
+					if( option->takesValues() && option->mValues.empty() ){
+						spdlog::warn( "Missing arguments for flag {}", arg );
+					}else if( option->numberOfParams() == 0 && option->mType == typeid( bool ) ){
+						option->mValues.clear();
+						option->mValues.push_back( true );
+					}
 				}
 			}else if( arg.rfind( "no-", 0 ) == 0 ){
 				std::string boolName = arg.substr( 3 );
@@ -709,11 +721,13 @@ void drea::core::Config::configure( const std::vector<std::string> & args )
 					d->mFindings.push_back( { boolOpt->mName, d->mCurrentSource, "not_negatable", message } );
 					spdlog::warn( "{}", message );
 				}else if( auto boolOpt = d->find( boolName ); boolOpt && boolOpt->mType == typeid( bool ) ){
-					registerUse( boolName );
-					d->mSources[ boolOpt->mName ] = "flag";
-					boolOpt->mValues.clear();
-					boolOpt->mValues.push_back( false );
-					optionsWithDefault.erase( boolOpt );
+					if( acceptsCurrentSource( boolOpt->mName ) ){
+						registerUse( boolName );
+						d->mSources[ boolOpt->mName ] = "flag";
+						boolOpt->mValues.clear();
+						boolOpt->mValues.push_back( false );
+						optionsWithDefault.erase( boolOpt );
+					}
 				}else{
 					reportUnknownArgument( arg );
 				}
@@ -1018,14 +1032,27 @@ bool drea::core::Config::acceptsCurrentSource( const std::string & optionName )
 	if( !option ){
 		return false;
 	}
-	if( option->mScope != Option::Scope::Line && option->mScope != Option::Scope::None ){
+	const bool	fromCommandLine = d->mCurrentSource == "flag";
+	// scope: none is set by the app in code, so no user source may write it;
+	// otherwise each side refuses what the other owns
+	const bool	refused = option->mScope == Option::Scope::None
+		|| ( fromCommandLine ? option->mScope == Option::Scope::File
+		                     : option->mScope == Option::Scope::Line );
+
+	if( !refused ){
 		return true;
 	}
-	// present in a source the scope forbids: report instead of applying the
-	// value and killing the app later, or silently dropping it
-	const std::string	where = d->mCurrentSource == "environment"
-		? "is not read from the environment; the variable is ignored"
-		: fmt::format( "cannot be set from a {}; the value is ignored", d->mCurrentSource );
+	// named by a source the scope forbids: report instead of applying the value
+	// and reporting it afterwards, or silently dropping it
+	std::string		where;
+
+	if( fromCommandLine ){
+		where = "may not be set from the command line; the flag is ignored";
+	}else if( d->mCurrentSource == "environment" ){
+		where = "is not read from the environment; the variable is ignored";
+	}else{
+		where = fmt::format( "cannot be set from a {}; the value is ignored", d->mCurrentSource );
+	}
 	const std::string	message = fmt::format( "Option --{} has scope {} and {}",
 		option->mName, option->scopeName(), where );
 

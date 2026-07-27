@@ -6,6 +6,10 @@ find_dependency(fmt CONFIG)
 find_dependency(spdlog CONFIG)
 find_dependency(yaml-cpp CONFIG)
 find_dependency(tl-expected CONFIG)
+# core links Boost::headers unconditionally, and a PRIVATE dependency of a
+# static library still reaches the exported target as $<LINK_ONLY:...>, so the
+# imported target has to exist for every consumer, REST or no REST
+find_dependency(Boost)
 
 set(DREA_BUILT_WITH_REST @BUILD_REST_USE@)
 set(DREA_BUILT_WITH_AWS @ENABLE_AWS@)
@@ -13,7 +17,6 @@ set(DREA_BUILT_WITH_JSON @DREA_JSON_ENABLED@)
 
 if(DREA_BUILT_WITH_REST)
 	find_dependency(uriparser CONFIG)
-	find_dependency(Boost)
 endif()
 if(DREA_BUILT_WITH_JSON)
 	find_dependency(nlohmann_json CONFIG)
