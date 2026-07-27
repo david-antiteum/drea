@@ -85,6 +85,29 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `--config-file=path` and `--config-source=uri` were silently ignored. Both are
+  loaded before the general flag parsing — they decide what the later sources
+  are — and that pre-scan only looked for the split `--flag value` form, so
+  `myapp --config-file=broken.yml --validate` reported a valid configuration
+  while the split form exited 78. One helper now collects the values of an option
+  in both accepted forms, and it returns nothing when the option is no longer
+  registered, so `Config::remove( "config-file" )` drops the pre-scan too rather
+  than reading a file for an option the app removed.
+
+- `not_negatable`, the code emitted when `--no-<name>` is refused, was missing
+  from the documented code list, from `docs/validate.schema.json` and from the
+  exit-code mapping: `myapp --no-help --validate --json` produced output its own
+  schema rejected, and exited 65 as though a value were wrong. It is registered
+  now and grouped with the structural problems (78), where a refused flag
+  belongs.
+
+- `nan` and `inf` were accepted for a `double` option, and the JSON emitters
+  printed them raw, so `myapp --equal=nan --validate --json` claimed the
+  configuration was valid and emitted `"value": [nan]`, which no JSON parser
+  accepts. `Option::fromString` refuses a non-finite value as a `parse_error` —
+  neither can be compared against `min`/`max` anyway — and the emitter quotes one
+  should an app write it straight into `Option::mValues`.
+
 - Command line flags applied their value before the scope was checked, so a
   `scope: file` or `scope: none` option could still be set with `--flag`; the
   `wrong_scope` finding then described a value that had already taken effect,

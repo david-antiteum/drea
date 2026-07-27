@@ -1,5 +1,7 @@
 #include "Option.h"
 
+#include <cmath>
+
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/fmt.h>
 
@@ -73,10 +75,14 @@ drea::core::OptionValue drea::core::Option::fromString( const std::string & val 
 			size_t	consumed = 0;
 			double	parsed = std::stod( val, &consumed );
 
-			if( consumed == val.size() ){
-				res = parsed;
-			}else{
+			if( consumed != val.size() ){
 				spdlog::critical( "Incorrect argument type for option {}: \"{}\". Must be an floating number", mName, val );
+			}else if( !std::isfinite( parsed ) ){
+				// std::stod accepts "nan" and "inf": neither can be compared
+				// against min/max, and neither is representable in JSON
+				spdlog::critical( "Incorrect argument type for option {}: \"{}\". Must be a finite floating number", mName, val );
+			}else{
+				res = parsed;
 			}
 		}catch( const std::exception & e ){
 			spdlog::critical( "Incorrect argument type for option {}: {}. Must be an floating number", mName, e.what() );

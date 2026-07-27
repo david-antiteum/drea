@@ -205,3 +205,51 @@ TEST_CASE( "a TOML config file turning a toggle on keeps it on", "[config-file][
 }
 
 #endif
+
+TEST_CASE( "--config-file is read in both accepted forms", "[config-file]" )
+{
+	const std::string path = writeFile( "drea-both-forms.yaml", "port: 8080\n" );
+
+	SECTION( "split form" ){
+		AppFixture fx;
+		declareOptions( fx.app );
+		fx.app.config().addDefaults();
+		fx.app.config().configure( { "--config-file", path } );
+		REQUIRE( fx.app.config().get<int>( "port" ) == 8080 );
+	}
+	SECTION( "inline form" ){
+		AppFixture fx;
+		declareOptions( fx.app );
+		fx.app.config().addDefaults();
+		// the loader that runs before the general flag parsing used to scan for
+		// the split form only, so --config-file=path read nothing at all
+		fx.app.config().configure( { "--config-file=" + path } );
+		REQUIRE( fx.app.config().get<int>( "port" ) == 8080 );
+	}
+}
+
+TEST_CASE( "a config file is not read once config-file has been removed", "[config-file]" )
+{
+	AppFixture fx;
+	declareOptions( fx.app );
+	fx.app.config().addDefaults();
+	const std::string path = writeFile( "drea-removed-option.yaml", "port: 9090\n" );
+
+	fx.app.config().remove( "config-file" );
+	fx.app.config().configure( { "--config-file", path } );
+
+	// Config::remove drops the pre-scan too: the flag is unknown now
+	REQUIRE_FALSE( fx.app.config().used( "port" ) );
+	REQUIRE( hasFinding( fx.app, "unknown_key", "config-file" ) );
+}
+
+TEST_CASE( "the default config file is still read when no flag is given", "[config-file]" )
+{
+	AppFixture fx;
+	declareOptions( fx.app );
+	fx.app.config().setDefaultConfigFile( writeFile( "drea-default-file.yaml", "port: 7070\n" ) );
+
+	fx.app.config().configure( {} );
+
+	REQUIRE( fx.app.config().get<int>( "port" ) == 7070 );
+}

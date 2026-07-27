@@ -11,6 +11,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <limits>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -1053,4 +1054,60 @@ TEST_CASE( "an inline value on a refused flag is not applied either", "[findings
 
 	REQUIRE( hasFinding( fx.app.config().findings(), "wrong_scope", "db-password" ) );
 	REQUIRE( fx.app.config().get<std::string>( "db-password" ).empty() );
+}
+
+TEST_CASE( "not_negatable is a registered finding code", "[findings]" )
+{
+	AppFixture fx;
+	fx.app.config().addDefaults();
+
+	fx.app.config().configure( { "--no-help" } );
+
+	const auto		findings = fx.app.config().findings();
+	const auto *	finding = getFinding( findings, "not_negatable", "help" );
+	REQUIRE( finding );
+	REQUIRE( finding->mSource == "flag" );
+	// structural, like wrong_scope: the invocation asked for something that
+	// cannot be, so --validate must not call the configuration valid
+	REQUIRE( drea::core::integrations::Help::validateExitCode( findings ) == drea::core::ExitCode::ConfigError );
+}
+
+TEST_CASE( "a non finite double is refused, not carried into the output", "[findings]" )
+{
+	for( const char * text: { "nan", "inf", "-inf" } ){
+		AppFixture fx;
+		Option opt;
+		opt.mName = "equal";
+		opt.mParamName = "number";
+		opt.mType = typeid( double );
+		fx.app.config().add( opt );
+
+		fx.app.config().configure( { std::string( "--equal=" ) + text } );
+
+		// std::stod accepts these: nothing can compare them against min/max and
+		// JSON cannot represent them
+		REQUIRE( hasFinding( fx.app.config().findings(), "parse_error", "equal" ) );
+		REQUIRE( fx.app.config().find( "equal" )->mValues.empty() );
+	}
+}
+
+TEST_CASE( "the JSON output stays parseable when a value is not finite", "[findings]" )
+{
+	AppFixture fx;
+	Option opt;
+	opt.mName = "ratio";
+	opt.mParamName = "x";
+	opt.mType = typeid( double );
+	fx.app.config().add( opt );
+	fx.app.config().configure( {} );
+	// an app may write straight into mValues, bypassing fromString
+	fx.app.config().find( "ratio" )->mValues = { std::numeric_limits<double>::quiet_NaN() };
+	fx.app.config().registerUse( "ratio" );
+
+	std::ostringstream out, err;
+	drea::core::integrations::Help::validateConfig( fx.app, true, out, err );
+
+	// quoted, so the document parses; a bare nan is not JSON
+	REQUIRE( out.str().find( "\"nan\"" ) != std::string::npos );
+	REQUIRE( out.str().find( "[nan]" ) == std::string::npos );
 }

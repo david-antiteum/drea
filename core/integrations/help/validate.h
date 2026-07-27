@@ -39,7 +39,8 @@ inline ExitCode validateExitCode( const std::vector<Config::Finding> & findings 
 			return ExitCode::NoInput;
 		}
 		structural = structural || finding.mCode == "unknown_key" || finding.mCode == "missing_required"
-			|| finding.mCode == "wrong_scope" || finding.mCode == "disabled_group" || finding.mCode == "unknown_option_ref"
+			|| finding.mCode == "wrong_scope" || finding.mCode == "not_negatable"
+			|| finding.mCode == "disabled_group" || finding.mCode == "unknown_option_ref"
 			|| finding.mCode == "bad_source" || finding.mCode == "bad_definition";
 	}
 	return structural ? ExitCode::ConfigError : ExitCode::DataError;

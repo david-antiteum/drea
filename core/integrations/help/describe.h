@@ -3,6 +3,7 @@
 #include <spdlog/fmt/fmt.h>
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <functional>
 #include <ostream>
 #include <string>
@@ -67,7 +68,15 @@ inline std::string valueLiteral( const Option & option, const OptionValue & valu
 	}else if( std::holds_alternative<int>( value ) ){
 		return fmt::format( "{}", std::get<int>( value ) );
 	}else if( std::holds_alternative<double>( value ) ){
-		return fmt::format( "{}", std::get<double>( value ) );
+		const double	number = std::get<double>( value );
+
+		// JSON has no nan or inf. fromString refuses them, but an app may put
+		// one straight into Option::mValues, and invalid JSON is worse than a
+		// quoted oddity
+		if( !std::isfinite( number ) ){
+			return jsonQuoted( fmt::format( "{}", number ) );
+		}
+		return fmt::format( "{}", number );
 	}else if( std::holds_alternative<std::string>( value ) ){
 		return jsonQuoted( std::get<std::string>( value ) );
 	}

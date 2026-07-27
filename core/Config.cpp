@@ -289,17 +289,42 @@ struct drea::core::Config::Private
 		return { res, boost::algorithm::to_lower_copy( path.extension().string() ) };
 	}
 
+	/*! The values an option was given on the command line, in both accepted
+		forms (--name value and --name=value).
+
+		Used by the loaders that must run before the general flag parsing:
+		--config-file and --config-source decide what the later sources even
+		are. Empty when the option is not registered, so Config::remove drops
+		the pre-scan too and not only the flag parsing.
+	*/
+	std::vector<std::string> flagValues( const std::vector<std::string> & args, const std::string & optionName )
+	{
+		std::vector<std::string>	res;
+
+		if( !find( optionName ) ){
+			return res;
+		}
+		const std::string	flag = "--" + optionName;
+		const std::string	inlineFlag = flag + "=";
+
+		for( size_t i = 0; i < args.size(); i++ ){
+			if( args.at( i ) == flag ){
+				if( i + 1 < args.size() ){
+					res.push_back( args.at( ++i ) );
+				}
+			}else if( args.at( i ).rfind( inlineFlag, 0 ) == 0 ){
+				res.push_back( args.at( i ).substr( inlineFlag.size() ) );
+			}
+		}
+		return res;
+	}
+
 	void readConfig( const std::vector<std::string> & args )
 	{
 		// --config-file is repeatable: files are merged in order, later wins
 		// (same rule as --config-source). Any flag overrides the default file.
-		std::vector<std::string>	configFileNames;
+		std::vector<std::string>	configFileNames = flagValues( args, "config-file" );
 
-		for( int i = 0; i < int(args.size())-1; i++ ){
-			if( std::string( args.at( i ) ) == "--config-file" ){
-				configFileNames.push_back( args.at( i+1 ) );
-			}
-		}
 		if( configFileNames.empty() && !mDefaultConfigFile.empty() ){
 			configFileNames.push_back( mDefaultConfigFile );
 		}
@@ -377,10 +402,8 @@ struct drea::core::Config::Private
 
 	void readConfigSources( const std::vector<std::string> & args )
 	{
-		for( int i = 0; i < int(args.size()) - 1; i++ ){
-			if( args.at( i ) == "--config-source" ){
-				fetchConfigSource( args.at( i + 1 ) );
-			}
+		for( const std::string & uri: flagValues( args, "config-source" ) ){
+			fetchConfigSource( uri );
 		}
 	}
 };
