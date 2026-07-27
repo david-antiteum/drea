@@ -1040,3 +1040,66 @@ commands:
 	REQUIRE( cmd->mParamChoices == std::vector<std::string>{ "dev", "staging", "prod" } );
 	REQUIRE( fx.app.config().validate().empty() );
 }
+
+TEST_CASE( "the man page renders the examples of a command", "[commander][man]" )
+{
+	BuiltinFixture fx;
+	auto hello = fx.app.commander().find( "hello" );
+	REQUIRE( hello );
+	hello->mExamples = { "myapp hello --loud", "./myapp hello" };
+
+	std::ostringstream out;
+	drea::core::integrations::Man::generateManPage( fx.app, "hello", out );
+	const std::string page = out.str();
+
+	REQUIRE( page.find( ".SH EXAMPLES" ) != std::string::npos );
+	// hyphens escaped so the flag stays copy pasteable
+	REQUIRE( page.find( "myapp hello \\-\\-loud" ) != std::string::npos );
+	// a leading dot would otherwise be read as a roff request and the line lost
+	REQUIRE( page.find( "\\&./myapp hello" ) != std::string::npos );
+	// unfilled, so a command line is not reflowed
+	REQUIRE( page.find( ".nf" ) != std::string::npos );
+}
+
+TEST_CASE( "the man page of an app carries the root description and examples", "[commander][man][root]" )
+{
+	BuiltinFixture fx;
+	Command root;
+	root.mParamName = "name";
+	root.mNbParams = Command::mUnlimitedParams;
+	root.mDescription = "Greets every name given";
+	root.mExamples = { "myapp Ada Alan" };
+	fx.app.commander().setRoot( root );
+
+	std::ostringstream out;
+	drea::core::integrations::Man::generateManPage( fx.app, out );
+	const std::string page = out.str();
+
+	REQUIRE( page.find( "Greets every name given" ) != std::string::npos );
+	REQUIRE( page.find( ".SH EXAMPLES" ) != std::string::npos );
+	REQUIRE( page.find( "myapp Ada Alan" ) != std::string::npos );
+	// EXAMPLES belongs before ENVIRONMENT, as man pages conventionally order them
+	REQUIRE( page.find( ".SH EXAMPLES" ) < page.find( ".SH ENVIRONMENT" ) );
+}
+
+TEST_CASE( "a page without examples has no EXAMPLES section", "[commander][man]" )
+{
+	BuiltinFixture fx;
+
+	std::ostringstream out;
+	drea::core::integrations::Man::generateManPage( fx.app, "hello", out );
+
+	REQUIRE( out.str().find( ".SH EXAMPLES" ) == std::string::npos );
+}
+
+TEST_CASE( "the man synopsis of a command has no trailing space", "[commander][man]" )
+{
+	BuiltinFixture fx;
+
+	std::ostringstream out;
+	drea::core::integrations::Man::generateManPage( fx.app, "completion", out );
+
+	for( const auto & line: drea::core::utilities::string::split( out.str(), "\n" ) ){
+		REQUIRE( ( line.empty() || line.back() != ' ' ) );
+	}
+}

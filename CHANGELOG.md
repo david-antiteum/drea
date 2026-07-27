@@ -7,82 +7,6 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Changed
-
-- An option declared in YAML with neither `type:` nor `params-names:` is a
-  toggle, and its type is inferred as `bool`. It used to default to `string`
-  while taking no value, so it could never hold anything: `--opt` only marked
-  it as used, `--no-opt` did not apply, and a value from a config file or the
-  environment was ignored — the trap the `calculator` sample fell into. An
-  explicit `type: string` is respected, and `scope: none` (the app sets those
-  in code) and options declaring `choices` are exempt. Options built
-  programmatically are untouched: `mType` is right there in the struct.
-
-### Fixed
-
-- `params: unlimited` on an *option* consumed nothing. `numberOfParams()`
-  returns the `mUnlimitedParams` sentinel, which is negative as an `int`, so
-  the value-consuming loops (`np < numberOfParams()`) never ran and the inline
-  form `--opt=value` was rejected as "does not take a value". The option now
-  consumes arguments until the next option, a `--` terminator or the end of the
-  command line, and accepts the inline form. New `Option::unlimitedParams()`
-  and `Option::takesValues()` express the test the sentinel breaks; use those
-  rather than comparing `numberOfParams()`.
-
-- `values:` defaults were always stored as strings, ignoring the declared
-  `type:`, so an `int` option with `values: [80, 443]` threw
-  `std::bad_variant_access` through `Config::get<int>()` or
-  `Option::toString()`. Each entry now goes through `Option::fromString`, the
-  same conversion every other source uses, and a default that does not fit the
-  type is a fatal declaration error. Conversion happens once the whole option
-  is parsed, so `values:` may appear before `type:`. Without a `type:` the
-  values stay strings, which is what the default `string` type means.
-  `--describe` reports typed defaults accordingly (`[80, 443]`, not
-  `["80", "443"]`).
-
-- A config file could trigger an action or set any command-line-only option:
-  the YAML, JSON and TOML readers never checked `scope`, so `help: true` in a
-  config file printed the help on every run. All three now go through
-  `Config::acceptsCurrentSource()` — the same gate the environment scan uses,
-  and where the scope rules now live — which reports `wrong_scope` and leaves
-  the option untouched instead of applying the value. `help`, `version` and
-  `validate` are `Scope::Line` accordingly. The finding is a warning during a
-  normal run and exit 78 under `--validate`, as before.
-
-- `--no-help` printed the help, `--no-version` printed the version and
-  `--no-validate` ran the validation (reporting `validate=false (from flag)`
-  while doing it). Negation was offered for every `bool` option, and these are
-  read with `used()`, so denying one registered a use and triggered the very
-  action being denied. `Option::mNegatable` (yml `negatable: false`) marks an
-  action: `--no-<name>` is then refused with a `not_negatable` finding —
-  non-fatal, like an unknown argument — instead of being applied. Set for
-  `help`, `version` and `validate`; toggles such as `--no-verbose`,
-  `--no-log-redact` and `--no-json` are unaffected. `--describe` exposes
-  `"negatable": false` for the options that carry it.
-
-- Config files ignored the value of a `bool` option: the YAML, JSON and TOML
-  readers registered the option as used and parsed a value only when it had a
-  param name, so `round: false` left the toggle on. All three now parse the
-  scalar the way the environment path already did, so a config file can turn a
-  toggle off, and a bad value (`round: banana`) is a `parse_error` finding.
-  The `calculator` sample carried the matching app-side bug: its `round`
-  option declared no `type:` — making it a valueless `string` option, readable
-  only through `used()` — and it now declares `type: bool` and is read with
-  `get<bool>()`.
-
-### Removed
-
-- **`--describe` is gone**: the app description is printed by the `describe`
-  builtin **command** (`myapp describe`). No alias — `--describe` is now an
-  unknown option. Rationale: `man`, `completion` and `describe` emit a
-  standalone artifact about the app and ignore the rest of the command line, so
-  they are commands; `--help`, `--version` and `--validate` answer about *this*
-  invocation (`myapp deploy --help`, `--validate` on the args actually passed),
-  so they stay flags. `describe` still works when the configuration is invalid,
-  and an app defining its own `describe` command keeps it, as with the other
-  builtins. `Commander::remove("describe")` drops it;
-  `Config::remove("describe")` no longer applies.
-
 ### Added
 
 - **Root params**: an app can declare the positional arguments it takes with
@@ -91,7 +15,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `examples`) or `Commander::setRoot()`. The arguments arrive through
   `arguments()` with an empty command name, and are counted and checked
   exactly like the params of a command. `Commander::root()` exposes the
-  declaration; `--help`, `man` and `--describe` (new `root` object, `usage`
+  declaration; `--help`, `man` and `describe` (new `root` object, `usage`
   now lists every accepted form) render it. A command still wins over root
   params: a leading `--` forces the remaining arguments through
   (`./hello -- man`).
@@ -124,6 +48,88 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `--` on the command line ends option parsing: it is no longer passed to the
   command as an argument.
 
+- An option declared in YAML with neither `type:` nor `params-names:` is a
+  toggle, and its type is inferred as `bool`. It used to default to `string`
+  while taking no value, so it could never hold anything: `--opt` only marked
+  it as used, `--no-opt` did not apply, and a value from a config file or the
+  environment was ignored — the trap the `calculator` sample fell into. An
+  explicit `type: string` is respected, and `scope: none` (the app sets those
+  in code) and options declaring `choices` are exempt. Options built
+  programmatically are untouched: `mType` is right there in the struct.
+
+### Removed
+
+- **`--describe` is gone**: the app description is printed by the `describe`
+  builtin **command** (`myapp describe`). No alias — `--describe` is now an
+  unknown option. Rationale: `man`, `completion` and `describe` emit a
+  standalone artifact about the app and ignore the rest of the command line, so
+  they are commands; `--help`, `--version` and `--validate` answer about *this*
+  invocation (`myapp deploy --help`, `--validate` on the args actually passed),
+  so they stay flags. `describe` still works when the configuration is invalid,
+  and an app defining its own `describe` command keeps it, as with the other
+  builtins. `Commander::remove("describe")` drops it;
+  `Config::remove("describe")` no longer applies.
+
+### Fixed
+
+- The man page never rendered `examples`, although the docs promised it was
+  built from the same metadata as `--help`: a command's worked invocations
+  reached `--help` and `describe` but not `man`. Both page builders now emit an
+  `EXAMPLES` section (unfilled, hyphens escaped so a flag stays copy
+  pasteable, a leading `.` guarded so roff does not read the line as a
+  request), and the app page carries the root `description` and `examples` as
+  well. The synopsis of a command page no longer ends in a trailing space,
+  which `mandoc -Tlint` reported.
+
+- `params: unlimited` on an *option* consumed nothing. `numberOfParams()`
+  returns the `mUnlimitedParams` sentinel, which is negative as an `int`, so
+  the value-consuming loops (`np < numberOfParams()`) never ran and the inline
+  form `--opt=value` was rejected as "does not take a value". The option now
+  consumes arguments until the next option, a `--` terminator or the end of the
+  command line, and accepts the inline form. New `Option::unlimitedParams()`
+  and `Option::takesValues()` express the test the sentinel breaks; use those
+  rather than comparing `numberOfParams()`.
+
+- `values:` defaults were always stored as strings, ignoring the declared
+  `type:`, so an `int` option with `values: [80, 443]` threw
+  `std::bad_variant_access` through `Config::get<int>()` or
+  `Option::toString()`. Each entry now goes through `Option::fromString`, the
+  same conversion every other source uses, and a default that does not fit the
+  type is a fatal declaration error. Conversion happens once the whole option
+  is parsed, so `values:` may appear before `type:`. Without a `type:` the
+  values stay strings, which is what the default `string` type means.
+  the `describe` builtin reports typed defaults accordingly (`[80, 443]`, not
+  `["80", "443"]`).
+
+- A config file could trigger an action or set any command-line-only option:
+  the YAML, JSON and TOML readers never checked `scope`, so `help: true` in a
+  config file printed the help on every run. All three now go through
+  `Config::acceptsCurrentSource()` — the same gate the environment scan uses,
+  and where the scope rules now live — which reports `wrong_scope` and leaves
+  the option untouched instead of applying the value. `help`, `version` and
+  `validate` are `Scope::Line` accordingly. The finding is a warning during a
+  normal run and exit 78 under `--validate`, as before.
+
+- `--no-help` printed the help, `--no-version` printed the version and
+  `--no-validate` ran the validation (reporting `validate=false (from flag)`
+  while doing it). Negation was offered for every `bool` option, and these are
+  read with `used()`, so denying one registered a use and triggered the very
+  action being denied. `Option::mNegatable` (yml `negatable: false`) marks an
+  action: `--no-<name>` is then refused with a `not_negatable` finding —
+  non-fatal, like an unknown argument — instead of being applied. Set for
+  `help`, `version` and `validate`; toggles such as `--no-verbose`,
+  `--no-log-redact` and `--no-json` are unaffected. `describe` exposes
+  `"negatable": false` for the options that carry it.
+
+- Config files ignored the value of a `bool` option: the YAML, JSON and TOML
+  readers registered the option as used and parsed a value only when it had a
+  param name, so `round: false` left the toggle on. All three now parse the
+  scalar the way the environment path already did, so a config file can turn a
+  toggle off, and a bad value (`round: banana`) is a `parse_error` finding.
+  The `calculator` sample carried the matching app-side bug: its `round`
+  option declared no `type:` — making it a valueless `string` option, readable
+  only through `used()` — and it now declares `type: bool` and is read with
+  `get<bool>()`.
 ## [0.37.1] — 2026-07-25
 
 ### Fixed

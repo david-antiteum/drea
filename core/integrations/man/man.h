@@ -3,7 +3,10 @@
 #include <ostream>
 #include <set>
 #include <string>
+#include <vector>
 #include <ctime>
+
+#include <spdlog/fmt/fmt.h>
 
 #include "App.h"
 #include "Commander.h"
@@ -49,6 +52,31 @@ inline std::string escapeBody( std::string_view s )
 		atLineStart = ( c == '\n' );
 	}
 	return res;
+}
+
+/*! The EXAMPLES section: worked invocations, one per line, unfilled so that a
+	command line is not reflowed. Examples are shown by --help and by describe;
+	the man page is built from the same metadata.
+*/
+inline void writeExamplesSection( std::ostream & out, const std::vector<std::string> & examples )
+{
+	if( examples.empty() ){
+		return;
+	}
+	out << ".SH EXAMPLES\n";
+	out << ".RS\n";
+	out << ".nf\n";
+	for( const std::string & example: examples ){
+		// escape() also turns hyphens into \- so that flags stay copy
+		// pasteable; a leading "." or "'" would be read as a roff request, so
+		// it gets the zero width guard
+		if( !example.empty() && ( example.front() == '.' || example.front() == '\'' ) ){
+			out << "\\&";
+		}
+		out << escape( example ) << "\n";
+	}
+	out << ".fi\n";
+	out << ".RE\n";
 }
 
 inline std::string today()
@@ -190,9 +218,22 @@ inline void generateManPage( const drea::core::App & app, std::ostream & out )
 		}
 	}
 
-	if( !app.description().empty() ){
-		out << ".SH DESCRIPTION\n";
-		out << escapeBody( app.description() ) << "\n";
+	{
+		// the app description, plus what the root params do when the app takes
+		// arguments of its own
+		auto 		root = app.commander().root();
+		std::string	description = app.description();
+
+		if( root && !root->mDescription.empty() ){
+			if( !description.empty() && description.back() != '\n' ){
+				description += "\n";
+			}
+			description += root->mDescription;
+		}
+		if( !description.empty() ){
+			out << ".SH DESCRIPTION\n";
+			out << escapeBody( description ) << "\n";
+		}
 	}
 
 	// Global options: all options not used as local-only. Mirrors help.h logic.
@@ -272,6 +313,16 @@ inline void generateManPage( const drea::core::App & app, std::ostream & out )
 		}
 	}
 
+	{
+		// the app's own examples: the root params, when declared
+		std::vector<std::string>	examples;
+
+		if( auto root = app.commander().root() ){
+			examples = root->mExamples;
+		}
+		writeExamplesSection( out, examples );
+	}
+
 	out << ".SH ENVIRONMENT\n";
 	out << "Configuration options may be set through environment variables when an env prefix has been configured for this application. See the project documentation for details.\n";
 
@@ -316,16 +367,21 @@ inline void generateManPage( const drea::core::App & app, std::string_view comma
 	auto pathParts = utilities::string::split( commandName, "." );
 	out << ".SH SYNOPSIS\n";
 	out << ".B " << escape( appName ) << " " << escape( utilities::string::join( pathParts, " " ) ) << "\n";
-	if( !cmd->mSubcommand.empty() ){
-		out << "\\fICOMMAND\\fR ";
+	{
+		// no trailing space: mandoc reports one as a style problem
+		std::vector<std::string>	parts;
+
+		if( !cmd->mSubcommand.empty() ){
+			parts.emplace_back( "\\fICOMMAND\\fR" );
+		}
+		if( cmd->numberOfParams() > 0 || cmd->numberOfParams() == drea::core::Command::mUnlimitedParams ){
+			parts.push_back( fmt::format( "\\fI{}\\fR", escape( cmd->nameOfParamsForHelp() ) ) );
+		}
+		if( !cmd->mLocalParameters.empty() || !cmd->mGlobalParameters.empty() ){
+			parts.emplace_back( "[\\fIOPTIONS\\fR]" );
+		}
+		out << utilities::string::join( parts, " " ) << "\n";
 	}
-	if( cmd->numberOfParams() > 0 || cmd->numberOfParams() == drea::core::Command::mUnlimitedParams ){
-		out << "\\fI" << escape( cmd->nameOfParamsForHelp() ) << "\\fR ";
-	}
-	if( !cmd->mLocalParameters.empty() || !cmd->mGlobalParameters.empty() ){
-		out << "[\\fIOPTIONS\\fR]";
-	}
-	out << "\n";
 
 	if( !cmd->mDescription.empty() ){
 		out << ".SH DESCRIPTION\n";
@@ -355,6 +411,8 @@ inline void generateManPage( const drea::core::App & app, std::string_view comma
 	}
 
 	writeOptionsSection( app, out, cmd->mLocalParameters, cmd->mGlobalParameters );
+
+	writeExamplesSection( out, cmd->mExamples );
 
 	out << ".SH SEE ALSO\n";
 	out << ".BR " << escape( appName ) << " (1)\n";

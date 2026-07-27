@@ -93,7 +93,7 @@ only when the app takes arguments of its own (see
   "usage": "myapp [OPTIONS] [name]... | myapp COMMAND [SUBCOMMAND ...] [PARAMS] [OPTIONS]",
   "conventions": {
     "option-syntax": "pass options as --name value or --name=value; an option with a short version also accepts -x",
-    "bool-options": "bool options are flags: --name enables, --no-name disables",
+    "bool-options": "bool options are flags: --name enables, --no-name disables, unless the option is marked negatable false because it is an action (--help, --version, --validate)",
     "option-types": ["bool", "int", "double", "string"],
     "option-scopes": ["both", "command-line", "config-file", "none"],
     "option-fields": "scope tells where an option may be set; min and max bound numeric values; choices is the closed set of legal values; nb-params is the fixed number of values the option takes per use (commands instead declare a min-params/max-params range for their positional params)",
@@ -257,8 +257,11 @@ dot-separated or space-separated paths:
 ./myapp man "container ls" > myapp-container-ls.1
 ```
 
-The page is derived from the same metadata as `--help`. Hidden and gated
-commands are omitted.
+The page is derived from the same metadata as `--help`: descriptions, params,
+options, `param-choices`, declared defaults and the `examples` of the command
+(an `EXAMPLES` section, unfilled so a command line is not reflowed). For the
+app page, the root `description` and `examples` are included too. Hidden and
+gated commands are omitted.
 
 The `man` builtin is registered automatically only when your app does not
 already define a command with the same name. `./myapp man --help` documents
