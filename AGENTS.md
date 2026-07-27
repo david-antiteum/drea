@@ -62,6 +62,12 @@ If dependency resolution fails, prefer fixing CMake/vcpkg configuration rather t
 - At minimum, run build and tests locally before concluding work:
   - `cmake --build build`
   - `ctest --test-dir build --output-on-failure`
+- `ctest` runs two tests: `drea-test` (Catch2, the library through its API) and
+  `drea-cli-checks` (`tests/cli-checks.sh`, the example binaries as a user runs
+  them: the exit code of a misused command line, and `describe` / `--validate
+  --json` against the schemas in `docs/`). Add a case to the script when you
+  change an exit code or the machine-readable output. It needs the examples
+  built, and skips without `python3`.
 
 ## Agent Guardrails
 

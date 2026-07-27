@@ -51,3 +51,14 @@ add_test(
 	NAME ${PROJECT_NAME}
 	COMMAND ${PROJECT_NAME}
 )
+
+# End-to-end checks on the example binaries: the exit code of a misused command
+# line, and the machine-readable output against the published JSON Schemas. Only
+# with the examples built, since it runs them; skipped when python3 is missing.
+if( BUILD_EXAMPLES AND NOT WIN32 )
+	add_test(
+		NAME drea-cli-checks
+		COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/cli-checks.sh $<TARGET_FILE_DIR:hello> ${CMAKE_CURRENT_SOURCE_DIR}/..
+	)
+	set_tests_properties( drea-cli-checks PROPERTIES SKIP_RETURN_CODE 77 )
+endif()

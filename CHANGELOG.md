@@ -22,6 +22,14 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `Commander::hasAppCommands()` — commands of the app itself, ignoring the
   builtins — and `Commander::invalidCommand()`, true when the arguments could
   not be dispatched.
+- `ctest` runs a second test, `drea-cli-checks` (`tests/cli-checks.sh`): it
+  drives the example binaries the way a user does, asserting the exit code of a
+  misused command line and validating `describe` and `--validate --json` against
+  the published schemas. Both classes of defect it covers had happened — an exit
+  code of 0 for a refused invocation, and a warning on stdout leaving
+  `--validate --json` unparseable. Registered only when the examples are built,
+  and skipped when `python3` is unavailable.
+
 - Tests for the config-file readers: the JSON and TOML paths had no coverage at
   all, so the format each build actually supports is now exercised — values,
   bool toggles set to false, sequences, nested/table keys, unknown keys and the
