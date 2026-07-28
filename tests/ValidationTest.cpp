@@ -1211,7 +1211,12 @@ TEST_CASE( "an unknown short option is reported, not only logged", "[findings]" 
 
 	// the expansion of the short forms runs before configure() and used to drop
 	// the unknown letter silently, so --validate called the line valid
-	drea::core::utilities::Parser( fx.app, { "myapp", "-z" } ).parse();
+	const auto		expanded = drea::core::utilities::Parser( fx.app, { "myapp", "-z" } ).parse();
+
+	// -z expands to nothing: unknown, so it reaches neither the options nor the
+	// commands, and only the finding records it
+	REQUIRE( expanded.first.empty() );
+	REQUIRE( expanded.second.empty() );
 	fx.app.config().configure( {} );
 
 	const auto		findings = fx.app.config().findings();
