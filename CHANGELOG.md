@@ -5,7 +5,41 @@ All notable changes to drea are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.38.0] — 2026-07-27
+
+### Highlights
+
+An app can take arguments without a command at all, which was impossible
+before: declare them in the top level `root:` block and they arrive through
+`arguments()`, checked like a command's params. `usage:` follows what the app
+declares instead of always demanding a `COMMAND`, and positional params render
+`<required>` versus `[optional]`.
+
+A misused command line now **exits 64** rather than 0 — an unknown command, the
+wrong number of arguments, a value outside `param-choices`, a gated command —
+and `--validate` reports problems it used to pass over: a mistyped command, an
+unknown option, `--no-help`, `--verbose=false`. Scripts that ignored drea's
+failures will start seeing them.
+
+`--describe` is now the `describe` **command**, with no alias: `man`,
+`completion` and `describe` emit a standalone artifact about the app, while
+`--help`, `--version` and `--validate` answer about the invocation at hand.
+
+Toggles behave: a config file or environment variable can turn one off, an
+option that takes no value is a `bool` (so `--no-<name>` applies to it), and a
+value on a flag that takes none is refused instead of setting the flag. Read
+them with `get<bool>()`; `used()` answers a different question. `scope` is
+enforced before the value is applied, on the command line too.
+
+Finally, an installed drea is usable again: `find_package(drea)` failed on an
+undefined `Boost::headers` for a `BUILD_REST_USE=OFF` build, and C++17 was never
+exported as a usage requirement.
+
+Migrating: replace `--describe` with `describe`, read toggles with `get<bool>()`,
+declare `negatable: false` on your own action flags, expect 64 on misuse (return
+a code from `main` for the usage errors your dispatch reports itself), recompile
+against the new headers — `Option` gained a member — and re-check any golden
+help or man output your tests keep.
 
 ### Added
 

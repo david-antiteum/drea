@@ -1,6 +1,6 @@
 {
 	"name": "drea",
-	"version": "0.37.1",
+	"version": "0.38.0",
 	"dependencies": [
 		"fmt",
 		"spdlog",
