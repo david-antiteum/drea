@@ -5,6 +5,25 @@ All notable changes to drea are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- **The `autocomplete` hook is gone**, along with
+  `Commander::configureForAutocompletion` (public API) and
+  `integrations::Bash::calculateAutoCompletion`. `myapp autocomplete <words…>`
+  used to print completion candidates at run time, intercepted before the command
+  line was parsed. Nothing called it: the scripts emitted by `myapp completion
+  bash|zsh|fish` are entirely static, so the hook only cost a silently reserved
+  first argument — `myapp autocomplete foo` could never reach an app's root params.
+  It was also unfinished: depth 1 only (no candidates past the first subcommand),
+  substring rather than prefix matching (`his` suggested `this`), every option
+  offered regardless of `scope`, and names returned without their `--`.
+  `autocomplete` is now an ordinary argument: an unknown command in a command app
+  (exit 64), a root param in an app that takes them. Shell completion is
+  unaffected. Dynamic completion, if it returns, will be a fresh implementation
+  under a name a user cannot type.
+
 ## [0.38.0] — 2026-07-27
 
 ### Highlights

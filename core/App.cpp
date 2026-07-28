@@ -344,42 +344,40 @@ void drea::core::App::parse( const std::string & definitions )
 	if( validateMode ){
 		spdlog::default_logger()->set_level( spdlog::level::off );
 	}
-	if( auto args = utilities::Parser( *this, d->mArgs ).parse(); !args.second.empty() && args.second.at(0) == "autocomplete" ){
-		commander().configureForAutocompletion( d->mArgs );
-	}else{
-		configureInRunTime();
-		config().configure( args.first );
-		d->mLogger = config().setupLogger();
-		if( validateMode ){
-			d->mLogger->set_level( spdlog::level::off );
-		}
-		d->mLog.reset( *d->mLogger );
-		// the describe builtin describes the CLI, not the configuration: like
-		// --help it must work when the config is broken. An app that defines a
-		// command of its own named describe does not get the exemption.
-		const bool describeMode = [ this, &args ]{
-			if( args.second.empty() || args.second.at( 0 ) != "describe" ){
-				return false;
-			}
-			auto cmd = commander().find( "describe" );
-			return cmd && cmd->mPredefined;
-		}();
-		// --help, --version, describe and --validate must work even when
-		// the config is invalid: --validate reports the problems itself
-		if( !config().used( "help" ) && !config().used( "version" ) && !describeMode && !config().used( "validate" ) ){
-			if( const auto errors = config().validate(); !errors.empty() ){
-				for( const auto & error: errors ){
-					logger().critical( "{}", error );
-				}
-				d->mLogger->flush();
-				exit( toInt( ExitCode::ConfigError ) );
-			}
-			if( config().get<bool>( "log-effective-config" ) ){
-				config().logEffective( logger() );
-			}
-		}
-		commander().configure( args.second );
+	auto args = utilities::Parser( *this, d->mArgs ).parse();
+
+	configureInRunTime();
+	config().configure( args.first );
+	d->mLogger = config().setupLogger();
+	if( validateMode ){
+		d->mLogger->set_level( spdlog::level::off );
 	}
+	d->mLog.reset( *d->mLogger );
+	// the describe builtin describes the CLI, not the configuration: like
+	// --help it must work when the config is broken. An app that defines a
+	// command of its own named describe does not get the exemption.
+	const bool describeMode = [ this, &args ]{
+		if( args.second.empty() || args.second.at( 0 ) != "describe" ){
+			return false;
+		}
+		auto cmd = commander().find( "describe" );
+		return cmd && cmd->mPredefined;
+	}();
+	// --help, --version, describe and --validate must work even when
+	// the config is invalid: --validate reports the problems itself
+	if( !config().used( "help" ) && !config().used( "version" ) && !describeMode && !config().used( "validate" ) ){
+		if( const auto errors = config().validate(); !errors.empty() ){
+			for( const auto & error: errors ){
+				logger().critical( "{}", error );
+			}
+			d->mLogger->flush();
+			exit( toInt( ExitCode::ConfigError ) );
+		}
+		if( config().get<bool>( "log-effective-config" ) ){
+			config().logEffective( logger() );
+		}
+	}
+	commander().configure( args.second );
 }
 
 drea::core::App & drea::core::App::instance()

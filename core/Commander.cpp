@@ -310,17 +310,6 @@ void drea::core::Commander::remove( std::string_view cmdName )
 	d->createHierarchy();
 }
 
-void drea::core::Commander::configureForAutocompletion( const std::vector<std::string> & args )
-{
-	d->createHierarchy();
-	if( args.size() > 1 ){
-		d->mCommand = "autocomplete";
-		for( size_t i = 2; i < args.size(); i++ ){
-			d->mArguments.push_back( args[i] );
-		}
-	}
-}
-
 void drea::core::Commander::configure( const std::vector<std::string> & rawArgs )
 {
 	d->createHierarchy();
@@ -428,10 +417,6 @@ void drea::core::Commander::run( std::function<void( std::string )> f )
 			drea::core::integrations::Help::help( d->mApp );
 		}else{
 			drea::core::integrations::Help::help( d->mApp, d->mCommand );
-		}
-	}else if( d->mCommand == "autocomplete" ){
-		for( auto var: drea::core::integrations::Bash::calculateAutoCompletion( d->mApp )){
-			fmt::print( "{}\n", var );
 		}
 	}else{
 		// An argument that is not a command, in an app that declares no root
