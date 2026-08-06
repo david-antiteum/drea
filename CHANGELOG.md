@@ -7,6 +7,19 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`eval "$(myapp completion zsh)"` works.** The script ended by calling its
+  own completion function, which is right for a file zsh autoloads out of
+  `$fpath` (zsh runs the file inside a completion context) but wrong for the
+  documented `eval` in the current shell: there `_arguments` runs with no
+  completion in progress and zsh reports `_arguments:comparguments:327: can only
+  be called from completion function`, leaving the app with no completion at all.
+  The script now branches on `$funcstack[1]`: called as `_myapp` it completes,
+  otherwise it registers itself with `compdef _myapp myapp`. Both install paths —
+  `eval` and `> "${fpath[1]}/_myapp"` — behave. `eval` requires `compinit` to
+  have run, as any completion-enabled zsh already has.
+
 ### Removed
 
 - **The `autocomplete` hook is gone**, along with

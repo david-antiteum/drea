@@ -311,6 +311,10 @@ TEST_CASE( "completion zsh produces a compdef script", "[commander][builtins]" )
 	REQUIRE( out.find( "#compdef myapp" ) != std::string::npos );
 	REQUIRE( out.find( "_myapp_opts_for" ) != std::string::npos );
 	REQUIRE( out.find( "'hello:print a greeting'" ) != std::string::npos );
+	// eval'ing the script has to register the function, not call it: calling it
+	// outside a completion context makes _arguments fail
+	REQUIRE( out.find( "compdef _myapp myapp" ) != std::string::npos );
+	REQUIRE( out.find( "${funcstack[1]}" ) != std::string::npos );
 }
 
 TEST_CASE( "completion fish produces fish completions", "[commander][builtins]" )

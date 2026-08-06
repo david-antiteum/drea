@@ -290,7 +290,13 @@ for `bash`, `zsh`, or `fish`:
 ./myapp completion zsh
 ./myapp completion fish
 eval "$(./myapp completion bash)"     # load in the current shell
+eval "$(./myapp completion zsh)"      # same, after compinit has run
 ```
+
+The zsh script works both ways: `eval`'d in the current shell it registers the
+completion with `compdef`, and dropped in `$fpath` as `_myapp` it runs as the
+completion function zsh autoloads. `eval` needs `compinit` to have run first,
+which is the case in any shell whose `.zshrc` sets up completion.
 
 `./myapp completion --help` lists the shells and the install one-liners.
 

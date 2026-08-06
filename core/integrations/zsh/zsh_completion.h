@@ -155,7 +155,15 @@ inline void generateAutoCompletion( const drea::core::App & app, std::ostream & 
 	out << "            ;;\n";
 	out << "    esac\n";
 	out << "}\n\n";
-	out << "_" << name << " \"$@\"\n";
+	// The script has to work both ways: autoloaded as _<name> from fpath, where
+	// zsh calls the file itself inside a completion context, and eval'd in the
+	// current shell, where calling the function would run _arguments outside any
+	// completion and fail with "can only be called from completion function".
+	out << "if [[ \"${funcstack[1]}\" == \"_" << name << "\" ]]; then\n";
+	out << "    _" << name << " \"$@\"\n";
+	out << "else\n";
+	out << "    compdef _" << name << " " << name << "\n";
+	out << "fi\n";
 }
 
 }
